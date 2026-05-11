@@ -47,10 +47,14 @@
 22. **模型与路由**：多模型路由、限流、计费扣减钩子；可选工具调用编排。
 23. **库内对话（RAG）**：请求中携带 `libraryId`、可选 `contentId`；服务端注入检索片段与引用 ID，与 `kb-agent-chat` 上下文协议一致。
 
+**OpenClaw 部署与 SKILL 模版编排**（运行时、沙箱、版本与 BFF 组装）：见 [`MIND_V2_PAGE_FEATURE_GOVERNANCE.md`](./MIND_V2_PAGE_FEATURE_GOVERNANCE.md) **§4.2、§4.3**。
+
 ### 6. 内容工厂（Factory）
 
 24. **工厂任务类型**：音频简报、视频简报、闪卡、测验等异步任务；状态机（queued / running / done / failed）。
 25. **产物存储**：生成文件或结构化结果落对象存储或 DB；与 `knowledge-detail` 工厂列表展示字段对齐。
+
+**实现与编排细化**（队列、Worker、API 形状、与 SKILL 管线关系）：见 [`MIND_V2_PAGE_FEATURE_GOVERNANCE.md`](./MIND_V2_PAGE_FEATURE_GOVERNANCE.md) **§4.1、§4.3**。
 
 ### 7. 商业化与积分
 
@@ -111,7 +115,7 @@ Next.js 16、React 19、Tailwind CSS 4；**当前仓库无服务端实现**，�
 | `agent-tab.tsx` | Agent 列表、创建、`AgentChat` |
 | `me-tab.tsx` | 个人中心 |
 | `social-share-row.tsx` | 分享行 |
-| `text-note-editor.tsx` | 文字编辑（未接入主流程） |
+| `text-note-editor.tsx` | 富文本笔记编辑（Notes Tab 内已接入新建/编辑） |
 | `lib/medrix-design-tokens.ts` | 设计 token 与主题色衍生规则 |
 | `lib/share-social.ts` | 分享辅助 |
 

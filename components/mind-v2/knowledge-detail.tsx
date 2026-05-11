@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
@@ -19,8 +19,6 @@ import {
   Sparkles,
   ChevronRight,
   ChevronDown,
-  Play,
-  GripHorizontal,
   Copy,
   ThumbsUp,
   ThumbsDown,
@@ -121,33 +119,15 @@ function notebookSummaryForLibrary(name: string, sourceCount: number): string {
   return `This library "${name}" auto-generates a summary from ${sourceCount} uploaded sources. It weaves transcripts, web clips, and document highlights into one readable thread: first the core takeaway from each source, then where they complement, repeat, or conflict—so you can build context before asking questions. The summary favors retrieval and stable citations—follow up on specific passages in chat for answers with source references.`
 }
 
-type CitationKind = "recording" | "pdf"
-
 export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialView = "content" }: KnowledgeDetailProps) {
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [showNotebookAsk, setShowNotebookAsk] = useState(false)
   const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
   const [showContentDetail, setShowContentDetail] = useState<typeof mockContents[0] | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
-  const [citation, setCitation] = useState<CitationKind | null>(null)
-  const [sheetDragY, setSheetDragY] = useState(0)
-  const dragStartY = useRef(0)
-  const sheetDragYRef = useRef(0)
   const sourceCount = mockContents.length
   const kbDisplayName = knowledgeBase?.name || "Notebook"
   const notebookSummaryBody = notebookSummaryForLibrary(kbDisplayName, sourceCount)
-
-  const closeCitation = useCallback(() => {
-    setCitation(null)
-    setSheetDragY(0)
-  }, [])
-
-  useEffect(() => {
-    if (citation) {
-      setSheetDragY(0)
-      sheetDragYRef.current = 0
-    }
-  }, [citation])
 
   const KbHeaderIcon = knowledgeBaseIconForTitle(
     knowledgeBase?.name ?? "",
@@ -520,55 +500,6 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                 ))}
               </div>
             </div>
-
-            <div className="space-y-4 px-4 pb-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                Chat
-              </p>
-              <div className="flex justify-end">
-                <div className="max-w-[88%] rounded-2xl rounded-br-md bg-zinc-600 px-3.5 py-2.5 text-[15px] leading-relaxed text-white">
-                  How should we think about vector stores for this library?
-                </div>
-              </div>
-              <div className="flex justify-start">
-                <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-white px-3.5 py-2.5 text-[15px] leading-[1.65] text-zinc-800 shadow-sm ring-1 ring-stone-200/60">
-                  <p>
-                    Treat them as the retrieval layer: chunk sources, embed, and ground answers on citations. Your recordings already imply time-aligned snippets—mirror that for PDFs
-                    <button
-                      type="button"
-                      onClick={() => setCitation("recording")}
-                      className="mx-0.5 align-super text-[11px] font-semibold text-blue-600 hover:underline"
-                    >
-                      [1]
-                    </button>
-                    . For long docs, bias toward section boundaries.
-                  </p>
-                  <p className="mt-3 text-zinc-700">
-                    If you need layout fidelity, keep a parallel “highlight pass” for PDFs
-                    <button
-                      type="button"
-                      onClick={() => setCitation("pdf")}
-                      className="mx-0.5 align-super text-[11px] font-semibold text-blue-600 hover:underline"
-                    >
-                      [2]
-                    </button>
-                    .
-                  </p>
-                </div>
-              </div>
-            </div>
-            </div>
-
-            <div className="shrink-0 border-t border-stone-200/80 bg-white p-3">
-              <label className="sr-only" htmlFor="notebook-ask">
-                Ask this notebook
-              </label>
-              <input
-                id="notebook-ask"
-                type="text"
-                placeholder={`Ask using ${sourceCount} sources in this library…`}
-                className="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400/30"
-              />
             </div>
           </div>
         )}
@@ -728,96 +659,6 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
           </div>
         )}
       </div>
-
-      {citation && (
-        <div className="absolute inset-0 z-[55]">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/30"
-            aria-label="Close citation"
-            onClick={closeCitation}
-          />
-          <div
-            className="absolute left-0 right-0 bottom-0 z-[56] flex max-h-[55vh] min-h-[44vh] flex-col rounded-t-[1.25rem] bg-white shadow-[0_-12px_48px_-12px_rgba(0,0,0,0.22)]"
-            style={{ transform: `translateY(${sheetDragY}px)` }}
-          >
-            <div
-              className="flex flex-col items-center border-b border-stone-100 pt-2 pb-1"
-              onTouchStart={(e) => {
-                dragStartY.current = e.touches[0].clientY
-              }}
-              onTouchMove={(e) => {
-                const dy = e.touches[0].clientY - dragStartY.current
-                if (dy > 0) {
-                  sheetDragYRef.current = dy
-                  setSheetDragY(dy)
-                }
-              }}
-              onTouchEnd={() => {
-                if (sheetDragYRef.current > 72) closeCitation()
-                else {
-                  sheetDragYRef.current = 0
-                  setSheetDragY(0)
-                }
-              }}
-            >
-              <GripHorizontal className="h-5 w-5 text-stone-300" strokeWidth={1.5} aria-hidden />
-              <span className="text-[10px] font-medium uppercase tracking-wider text-stone-400">
-                Pull down to close
-              </span>
-            </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {citation === "recording" && (
-                <div className="space-y-4">
-                  <p className="text-[13px] font-semibold text-zinc-900">Recording · OpenWiki tooling</p>
-                  <div className="flex h-12 items-end justify-center gap-px rounded-lg bg-stone-100 px-2 py-2">
-                    {Array.from({ length: 48 }).map((_, i) => {
-                      const h = 0.25 + Math.sin(i * 0.4) * 0.2 + ((i * 13) % 5) * 0.03
-                      return (
-                        <div
-                          key={i}
-                          className={cn(
-                            "w-[2px] rounded-full",
-                            i < 18 ? "bg-zinc-500/50" : "bg-stone-300"
-                          )}
-                          style={{ height: `${h * 100}%`, minHeight: 3 }}
-                        />
-                      )
-                    })}
-                  </div>
-                  <p className="text-[15px] leading-relaxed text-zinc-700">
-                    “Chunk sources, embed, and ground answers on citations—your recordings already imply time-aligned snippets.”
-                  </p>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded-full bg-zinc-500 px-4 py-2.5 text-sm font-semibold text-white"
-                  >
-                    <Play className="h-4 w-4 fill-current" />
-                    Play excerpt
-                  </button>
-                </div>
-              )}
-              {citation === "pdf" && (
-                <div className="space-y-4">
-                  <p className="text-[13px] font-semibold text-zinc-900">PDF · Section boundaries</p>
-                  <div className="relative overflow-hidden rounded-xl border border-stone-200 bg-stone-100 p-4 text-[13px] leading-relaxed text-zinc-700">
-                    <p>
-                      Long documents should be split at natural section boundaries before embedding, so retrieval returns coherent paragraphs instead of mid-sentence cuts.
-                    </p>
-                    <div
-                      className="pointer-events-none absolute left-3 right-3 top-[42%] h-[28%] rounded-md bg-yellow-300/55 mix-blend-multiply ring-1 ring-yellow-500/40"
-                      aria-hidden
-                    />
-                  </div>
-                  <p className="text-[12px] text-zinc-500">
-                    Yellow highlight shows the grounded span in the source PDF.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {shareSheet}
     </div>

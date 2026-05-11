@@ -1,8 +1,8 @@
 # Mind V2 页面与功能治理手册
 
 > **用途**：与团队对齐「有哪些界面、各自要达成什么、谁负责什么、做到哪一步」，便于分工、排期与站会同步进度。  
-> **范围**：当前仓库内 **单页演示应用**（`app/page.tsx` → `MindAppV2`），数据均为 **前端 mock**，无独立后端实现。  
-> **关联文档**：后端与数据域总览见 [`DEVELOPMENT_PLAN.md`](./DEVELOPMENT_PLAN.md)；设计色与 token 见 `lib/medrix-design-tokens.ts`。
+> **范围**：**前端**：仓库内单页演示（`app/page.tsx` → `MindAppV2`），业务数据多为 mock。**后端**：实现不在本仓库，本文 **§4** 给出与前端对齐的 **服务边界、任务形态与 OpenClaw / SKILL 编排** 说明，供与 [`DEVELOPMENT_PLAN.md`](./DEVELOPMENT_PLAN.md)、[`PRODUCT_FEATURES_AND_UX.md`](./PRODUCT_FEATURES_AND_UX.md) 一起治理。  
+> **关联文档**：数据域条目见 `DEVELOPMENT_PLAN.md`；产品与 Clawbot / OpenClaw 叙述见 `PRODUCT_FEATURES_AND_UX.md`；设计 token 见 `lib/medrix-design-tokens.ts`。
 
 ---
 
@@ -222,32 +222,114 @@
 
 ---
 
-## 4. 与后端能力的映射速查
+## 4. 后端架构与实现要点
 
-前端各界面与 `DEVELOPMENT_PLAN.md` **第一节**条目的对应关系已在该文档 **第二节表** 中列出；本手册 **第 3 节**各表「后端依赖」列为执行层补充。落地时以 **OpenAPI / 契约** 为准。
+本节描述 **独立后端 / 运行时** 应承担的职责（与前端 `KnowledgeDetail` Studio、`AgentTab` / `AgentChat`、`MeTab` 离线策略对齐）。实现语言与仓库不限；以下按 **能力域** 拆分，便于接口契约与运维分工。
+
+### 4.1 内容工厂（Content Factory / Studio）
+
+**产品对应**：库详情 **Studio** Tab、`AgentTab` 中 **Studio** 下拉（音频简报、视频简报、闪卡、测验、幻灯等）。**DEVELOPMENT_PLAN** 对应条目 **24–25**（工厂任务类型、产物存储）。
+
+| 子域 | 实现要点 | 与前端契约 |
+|------|----------|------------|
+| **任务模型** | 每条任务：`id`、`libraryId`、`type`（audio_brief / video_brief / flashcards / quiz / slides / …）、`status`（`queued` \| `running` \| `done` \| `failed`）、`progress`（0–100 或阶段枚举）、`errorCode` / `errorMessage`、`createdBy`、`createdAt`、`updatedAt` | Studio 列表与轮询/Webhook 刷新状态 |
+| **入参** | 必选：目标库 ID、任务类型；可选：`contentIds[]`（限定素材子集）、`locale`、`templateId`（见 4.3）、输出风格参数 | 用户在库内勾选范围后创建任务 |
+| **执行管道** | **异步队列**（SQS / Rabbit / Redis Stream 等）+ **Worker 池**；长任务（视频渲染）与短任务（文本测验）可分队列或优先级；**幂等键**（`clientRequestId`）防重复提交 | POST 创建返回 `202` + `taskId` |
+| **Worker 逻辑** | 拉取库内 **检索上下文**（chunk + citation 元数据，对齐库内 RAG）；调用 **模板渲染 / 多模态模型**（TTS、视频合成、幻灯引擎）；失败重试策略（可重试 vs 终态失败） | 失败时前端展示 `errorMessage` |
+| **产物存储** | 音频/视频/ PDF / JSON（闪卡、测验）→ **对象存储**（预签名上传或服务端直传）；结构化结果可写 **DB** 便于列表与权限 | 列表项含 `artifactUrl`、`mimeType`、`thumbnailUrl?` |
+| **计费与配额** | 与 **Credits**（DEVELOPMENT_PLAN 26）扣减规则绑定：按任务类型、时长、输出分辨率计费；提交前校验余额 | 与 `me-tab` 展示一致 |
+| **安全** | 任务仅能访问 **用户有权的库与条目**；产物 URL **短期签名**；敏感库可禁止导出类任务 | 鉴权与笔记域一致 |
+
+**建议 Owner**：后端「异步任务平台」+ 算法/多媒体「生成管线」；前端对接创建任务、列表、下载与错误态。
 
 ---
 
-## 5. 建议的治理节奏与分工维度
+### 4.2 智能体运行时：OpenClaw 部署
 
-### 5.1 垂直切片（可映射到小组或 Owner）
+**产品对应**：`PRODUCT_FEATURES_AND_UX.md` 中 **Clawbot**、**OpenClaw** 云端能力；`me-tab` 中 **全离线** 与「Cloud Claw skills 不可用」的表述一致——即 **默认能力依赖云端执行面**。
+
+| 子域 | 实现要点 |
+|------|----------|
+| **部署形态** | 推荐 **容器化**（如 Kubernetes）：无状态 **API Gateway** + 有状态 **会话 Runner**（按会话或队列伸缩）；与主业务 API 同 VPC 或对等连接，便于访问向量库、对象存储、密钥服务。 |
+| **网络与安全** | 出站策略（模型 API、工具 HTTP）；**Secrets**（模型 Key、用户授权 OAuth token）走 KMS / 托管密钥；可选 **固定出口 IP** 供企业客户加白名单。 |
+| **伸缩与隔离** | 按租户 / 会话限流；**沙箱**执行（容器 seccomp、网络策略）用于用户自定义工具链；与 **全离线模式** 互斥时在网关层短路并返回明确错误码。 |
+| **可观测性** | `traceId` 贯通 App → BFF → OpenClaw；日志中脱敏；核心指标：排队时长、工具调用成功率、token 延迟、每会话成本。 |
+| **版本与发布** | OpenClaw 镜像 **语义化版本**；金丝雀发布；**功能开关** 控制新工具上线。 |
+
+**建议 Owner**：平台 / SRE（部署与容量）+ 安全（密钥与沙箱策略）。
+
+---
+
+### 4.3 SKILL 模版配置与编排
+
+此处 **SKILL** 指：**可版本化的智能体能力单元**（系统提示片段、工具白名单、输入输出 schema、可选多步编排），用于把「官方 Agent / 用户自建 Agent」映射到 **OpenClaw 可执行配置**，并与 **知识库范围**、**内容工厂模版** 解耦又可组合。
+
+| 子域 | 实现要点 |
+|------|----------|
+| **模版存储** | **Git 或 DB + 版本号**：`skillId`、`version`、`name`、`description`、`systemPromptTemplate`（支持变量：`{{libraryName}}`、`{{retrievedChunks}}`）、`allowedTools[]`、`modelPolicy`（默认模型、温度上限）、`inputSchema` / `outputSchema`（JSON Schema） |
+| **编排层** | **BFF 或 Orchestrator** 根据 `agentId` + 用户选中的 `libraryIds` 解析出 **SKILL 链**：例如 `retrieve` → `reason` → `tool:notion_write`；支持 **DAG 或有限状态机**；每步超时与补偿（ Saga / 幂等重放） |
+| **与 RAG 衔接** | 库内对话（`kb-agent-chat`）：编排首步固定注入 `retrieve(libraryId, query)` 结果；引用角标与 `citation` 与笔记详情、工厂 Worker 使用 **同一检索服务** |
+| **与用户 Agent 创建对齐** | 前端 `CreateAgentSheet`（名称、指令、Voice、公开性）→ 持久化后生成 **`agentId` + 默认绑定 `skillPack`**（可多条 SKILL 组合）；「Polish / Autofill」对接 **提示词优化微服务**（可选） |
+| **与内容工厂对齐** | 工厂任务类型可对应 **预设 SKILL 管线**（如 `slides`：摘要 SKILL + 大纲 SKILL + 渲染 SKILL），便于复用与审计 |
+| **治理** | 模版变更 **审批流**（官方 SKILL 需发布审核）；**灰度**：按租户或百分比启用新版本；**回滚**：会话级 pinned 到 `skillVersion` |
+
+**建议 Owner**：AI 平台（模版 schema 与编排引擎）+ 后端 BFF（鉴权、组装上下文）；前端只传 `agentId`、`libraryIds`、用户消息，不暴露原始 SKILL 文件。
+
+---
+
+### 4.4 端到端数据流（简图）
+
+```text
+App（Studio 创建任务）
+    → API：工厂服务写入任务表 + 入队
+    → Worker：检索 library → 执行模版/模型链 → 写产物 OSS + 更新状态
+
+App（AgentChat / kb-agent-chat）
+    → API：BFF 鉴权 + 解析 Agent 绑定 SKILL
+    → OpenClaw：按编排调用检索 / 模型 / 工具 → 流式返回 SSE
+    → 持久化：messages、tool_calls、citations（对齐 DEVELOPMENT_PLAN 20–23）
+```
+
+---
+
+### 4.5 与 DEVELOPMENT_PLAN 条目的对应
+
+| 本文 § | DEVELOPMENT_PLAN 章节 / 条目 |
+|--------|-------------------------------|
+| 4.1 内容工厂 | **6. 内容工厂**（24–25）；与 **4. 知识库检索**（18）共享检索 |
+| 4.2 OpenClaw | **5. Agent 与对话**（20–22）；**10. 基础设施与工程化**（条目 33 可观测性、34 安全） |
+| 4.3 SKILL 编排 | **5**（Agent 配置、会话）；与 **13**（模版驱动生成）可共享模版元数据 |
+
+---
+
+## 5. 与后端能力的映射速查
+
+前端各界面与 `DEVELOPMENT_PLAN.md` **第一节**条目的对应关系已在该文档 **第二节表** 中列出；本手册 **第 3 节**各表「后端依赖」列为执行层补充；**第 4 节**补充工厂与 OpenClaw 侧实现视角。落地时以 **OpenAPI / 契约** 为准。
+
+---
+
+## 6. 建议的治理节奏与分工维度
+
+### 6.1 垂直切片（可映射到小组或 Owner）
 
 1. **采集链路**：Notes 列表 → 录音页 → 上传 → 详情（转写/摘要）→ 移库。  
 2. **知识与 RAG**：Knowledge 列表/发现 → 库详情 Content/Graph/Studio → 库内 Agent 对话。  
 3. **通用 Agent**：Minder Tab、创建/发现、通用 `AgentChat`。  
-4. **账户与商业化**：Me、双空间、积分套餐、设置类 API。  
-5. **设备与同步**：Devices Sheet、录音页设备条、云同步开关。  
-6. **横切**：分享、设计 token、无障碍与国际化（当前未系统化）。
+4. **内容工厂**：任务 API、队列与 Worker、产物存储与计费（**§4.1**）。  
+5. **OpenClaw 与 SKILL**：运行时部署、密钥与沙箱、模版版本与编排（**§4.2–4.3**）。  
+6. **账户与商业化**：Me、双空间、积分套餐、设置类 API。  
+7. **设备与同步**：Devices Sheet、录音页设备条、云同步开关。  
+8. **横切**：分享、设计 token、无障碍与国际化（当前未系统化）。
 
-### 5.2 进度同步建议
+### 6.2 进度同步建议
 
 | 节奏 | 内容 |
 |------|------|
 | 站会 | 按「垂直切片」各报：阻塞（API 未就绪、契约变更）、演示环境是否可点 |
-| 双周 | 对照本文件第 3 节表格，勾选 **已联调 / 仍 Mock**；更新「已知缺口」（如 `NoteDetail` 未接 `note`） |
+| 双周 | 对照第 **3** 节（前端）与第 **4** 节（工厂 / OpenClaw / SKILL） checklist，勾选 **已联调 / 仍 Mock / 已部署**；更新「已知缺口」（如 `NoteDetail` 未接 `note`） |
 | 发版前 | 安全：分享 URL、导出、登录态；性能：长列表、聊天列表 |
 
-### 5.3 状态标签（建议在任务系统中使用）
+### 6.3 状态标签（建议在任务系统中使用）
 
 - **Mock**：仅前端演示，无真实请求。  
 - **Partial**：有导航或本地 state，缺 API 或缺关键闭环。  
@@ -256,7 +338,7 @@
 
 ---
 
-## 6. 源文件索引（便于 Code Owner）
+## 7. 源文件索引（便于 Code Owner）
 
 | 路径 | 说明 |
 |------|------|
@@ -278,9 +360,10 @@
 
 ---
 
-## 7. 文档维护
+## 8. 文档维护
 
 - **产品变更**（增删 Tab、改录音流程）：先改 PRD，再同步本文件第 3 节对应小节。  
+- **后端 / OpenClaw / 工厂**：契约或部署架构变更时，同步 **§4** 与 `DEVELOPMENT_PLAN.md`，避免前端联调假设漂移。  
 - **后端契约就绪**：在 DEVELOPMENT_PLAN 与任务单中标注 API 版本，前端删除对应 Mock。  
 - **版本信息**：可在文档顶部增加 `Last reviewed: YYYY-MM-DD` 字段，由 Owner 在每次大迭代后更新。
 
