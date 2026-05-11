@@ -317,7 +317,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
             }}
             className="mt-2 w-full rounded-xl border border-stone-200/90 bg-white py-2.5 text-[13px] font-medium text-zinc-600 hover:bg-stone-50"
           >
-            Open conversational Q&A (Clawbot)
+            Open conversational Q&A (Minder)
           </button>
         </div>
       </div>

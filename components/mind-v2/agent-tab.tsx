@@ -170,7 +170,7 @@ export function AgentTab({ onAgentChat, onOpenContentFactory }: AgentTabProps) {
 
       {/* Main surface */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-3">
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -181,20 +181,19 @@ export function AgentTab({ onAgentChat, onOpenContentFactory }: AgentTabProps) {
             <div className="h-0.5 w-5 rounded-full bg-zinc-500" />
           </button>
           <div className="text-right">
-            <div className="text-[16px] font-semibold tracking-tight text-zinc-900">Clawbot</div>
-            <div className="text-[12px] text-zinc-500">Your AI helper</div>
+            <div className="text-[16px] font-semibold tracking-tight text-zinc-900">Minder</div>
+            <div className="text-[12px] text-zinc-500">Libraries, agents & studio</div>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-0.5 pt-1 pb-2">
-          <p className="text-[13px] leading-relaxed text-zinc-500">
+        <div className="flex min-h-0 flex-1 flex-col items-stretch justify-center gap-4 py-2">
+          <p className="shrink-0 px-0.5 text-center text-[13px] leading-relaxed text-zinc-500">
             Link <span className="font-medium text-zinc-700">libraries</span> so results stay tied to your sources. Use{" "}
             <span className="font-medium text-zinc-700">agents</span> from the menu for focused workflows, or{" "}
-            <span className="font-medium text-zinc-700">Studio</span> below for narrated recaps, decks, and other outputs.
+            <span className="font-medium text-zinc-700">Studio</span> in the bar for narrated recaps, decks, and other outputs.
           </p>
-        </div>
 
-        <div className="mt-auto shrink-0 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
+          <div className="mx-auto w-full max-w-md shrink-0 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
           <input
             type="text"
             placeholder="Describe a topic, task, or instruction…"
@@ -261,6 +260,7 @@ export function AgentTab({ onAgentChat, onOpenContentFactory }: AgentTabProps) {
               <Send className="h-5 w-5" />
             </button>
           </div>
+        </div>
         </div>
       </div>
 
@@ -616,84 +616,94 @@ export function AgentChat({ agent, onBack }: AgentChatProps) {
     }, 1000)
   }
 
+  const composer = (
+    <div className="flex items-center gap-2">
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleSend()}
+        placeholder="Message…"
+        className="min-w-0 flex-1 px-4 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none"
+      />
+      <button type="button" className="p-2 hover:bg-gray-100 rounded-full" aria-label="Voice input">
+        <Mic className="w-5 h-5 text-gray-500" />
+      </button>
+      <button
+        type="button"
+        onClick={handleSend}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-600 hover:bg-zinc-700"
+        aria-label="Send"
+      >
+        <Send className="w-5 h-5 text-white" />
+      </button>
+    </div>
+  )
+
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex h-full flex-col bg-gray-50">
       {/* Header */}
-      <div className="bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
-          <ChevronRight className="w-6 h-6 text-gray-700 rotate-180" />
+      <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 bg-white px-4 py-3">
+        <button type="button" onClick={onBack} className="-ml-2 rounded-full p-2 hover:bg-gray-100">
+          <ChevronRight className="h-6 w-6 rotate-180 text-gray-700" />
         </button>
-        <div className={cn(
-          "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-xl",
-          agent.color
-        )}>
+        <div
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br text-xl",
+            agent.color
+          )}
+        >
           {showRemoteAvatar ? (
             <img src={avatar} alt="" className="h-full w-full rounded-xl object-cover" />
           ) : (
             avatar || "·"
           )}
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-gray-900">{agent.name}</h3>
           <p className="line-clamp-1 text-xs text-gray-500">{agent.description}</p>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center">
-            <div className={cn(
-              "w-20 h-20 rounded-2xl bg-gradient-to-br flex items-center justify-center text-4xl mb-4 overflow-hidden",
+      {messages.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5 py-6">
+          <div
+            className={cn(
+              "mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-4xl",
               agent.color
-            )}>
-              {showRemoteAvatar ? (
-                <img src={avatar} alt="" className="h-full w-full object-cover" />
-              ) : (
-                avatar || "·"
-              )}
-            </div>
-            <h3 className="mb-1 font-semibold text-gray-900">Hi, I&apos;m {agent.name}</h3>
-            <p className="text-sm text-gray-500">Send a message to start</p>
-          </div>
-        ) : (
-          messages.map((msg, i) => (
-            <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-              <div className={cn(
-                "max-w-[80%] px-4 py-3 rounded-2xl",
-                msg.role === "user" 
-                  ? "bg-zinc-600 text-white rounded-br-md" 
-                  : "bg-white text-gray-800 rounded-bl-md shadow-sm"
-              )}>
-                <p className="text-sm">{msg.content}</p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Composer */}
-      <div className="p-4 bg-white border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Message…"
-            className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none"
-          />
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Mic className="w-5 h-5 text-gray-500" />
-          </button>
-          <button 
-            onClick={handleSend}
-            className="w-10 h-10 bg-zinc-600 rounded-xl flex items-center justify-center"
+            )}
           >
-            <Send className="w-5 h-5 text-white" />
-          </button>
+            {showRemoteAvatar ? (
+              <img src={avatar} alt="" className="h-full w-full object-cover" />
+            ) : (
+              avatar || "·"
+            )}
+          </div>
+          <h3 className="mb-1 text-center font-semibold text-gray-900">Hi, I&apos;m {agent.name}</h3>
+          <p className="mb-8 max-w-[260px] text-center text-sm text-gray-500">Send a message to start</p>
+          <div className="w-full max-w-md rounded-2xl border border-gray-200/90 bg-white p-3 shadow-sm">{composer}</div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+            {messages.map((msg, i) => (
+              <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                <div
+                  className={cn(
+                    "max-w-[80%] rounded-2xl px-4 py-3",
+                    msg.role === "user"
+                      ? "rounded-br-md bg-zinc-600 text-white"
+                      : "rounded-bl-md bg-white text-gray-800 shadow-sm"
+                  )}
+                >
+                  <p className="text-sm">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="shrink-0 border-t border-gray-100 bg-white p-4">{composer}</div>
+        </>
+      )}
     </div>
   )
 }

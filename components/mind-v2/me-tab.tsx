@@ -138,7 +138,12 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
   const [appLock, setAppLock] = useState(false)
   const [helpImprove, setHelpImprove] = useState(true)
   const [lexiconDraft, setLexiconDraft] = useState("")
-  const [lexiconTags, setLexiconTags] = useState<string[]>(["CRISPR", "single-cell", "ATAC-seq", "spatial transcriptomics"])
+  const [lexiconTags, setLexiconTags] = useState<string[]>([
+    "CRISPR",
+    "single-cell",
+    "ATAC-seq",
+    "spatial transcriptomics",
+  ])
   const [offlineOnly, setOfflineOnly] = useState(false)
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
 
@@ -414,7 +419,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
       )}
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4">
-        {/* Device, lexicon, offline — one grouped card, settings-like */}
+        {/* Device, lexicon, offline */}
         <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white">
           <div className="flex items-center gap-3 px-4 py-3.5">
             <div
@@ -454,10 +459,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             {lexiconTags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {lexiconTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-zinc-600"
-                  >
+                  <span key={tag} className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-zinc-600">
                     {tag}
                   </span>
                 ))}

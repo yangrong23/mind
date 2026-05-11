@@ -11,11 +11,11 @@ interface BottomNavProps {
   onTabChange: (tab: TabType) => void
 }
 
-/** Spec tab labels: Memos / Notebooks / Clawbot / Me */
+/** Tab labels: Notes (captures + rich text, archivable) · Knowledge · Minder · Me */
 const tabs = [
-  { id: "notes" as TabType, label: "Memos", icon: FileText },
-  { id: "knowledge" as TabType, label: "Notebooks", icon: Layers },
-  { id: "agent" as TabType, label: "Clawbot", icon: Sparkles },
+  { id: "notes" as TabType, label: "Notes", icon: FileText },
+  { id: "knowledge" as TabType, label: "Knowledge", icon: Layers },
+  { id: "agent" as TabType, label: "Minder", icon: Sparkles },
   { id: "me" as TabType, label: "Me", icon: User },
 ]
 

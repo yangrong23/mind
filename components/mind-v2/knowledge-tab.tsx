@@ -56,7 +56,7 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
     <div className="relative flex flex-col h-full bg-gray-50">
       <div className="bg-white border-b border-gray-100">
         <div className="flex items-center justify-between px-5 py-3">
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Notebooks</h1>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Knowledge</h1>
           <button 
             onClick={() => setShowDiscover(true)}
             className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl"

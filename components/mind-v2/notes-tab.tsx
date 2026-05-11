@@ -9,15 +9,19 @@ import {
   Bluetooth, X,
   Battery, HardDrive, RefreshCw, Wifi, Smartphone,
   Library, Trash2,
+  FileText,
 } from "lucide-react"
+import { TextNoteEditor } from "@/components/mind-v2/text-note-editor"
 
 export interface Note {
   id: number
   title: string
-  type: "hardware" | "phone"
+  type: "hardware" | "phone" | "text"
   date: string
   duration?: string
   preview: string
+  /** Rich HTML body for `type: "text"`; list row uses plain `preview` */
+  bodyHtml?: string
   status: "pending" | "analyzed" | "transferred"
   source?: string
   /** Multimodal badge, e.g. highlight count */
@@ -92,7 +96,7 @@ function NoteCardSkeleton() {
         <div className="h-3 w-full rounded bg-gray-100" />
         <div className="h-3 w-4/5 rounded bg-gray-100" />
       </div>
-      <p className="text-[11px] text-gray-400">Claw is still polishing this one—almost there.</p>
+      <p className="text-[11px] text-gray-400">Minder is still polishing this one—almost there.</p>
     </div>
   )
 }
@@ -188,6 +192,8 @@ function SwipeableMemoCard({ note, onOpen, onArchive, onDelete }: SwipeableMemoC
             <span className="ml-auto flex items-center gap-1">
               {note.type === "hardware" ? (
                 <Mic className="h-3.5 w-3.5 text-gray-400" />
+              ) : note.type === "text" ? (
+                <FileText className="h-3.5 w-3.5 text-gray-400" />
               ) : (
                 <Smartphone className="h-3.5 w-3.5 text-gray-400" />
               )}
@@ -205,15 +211,28 @@ interface NotesTabProps {
   onStartRecording: () => void
 }
 
+function stripHtmlPreview(html: string) {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: NotesTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
-  const [filterType, setFilterType] = useState<"all" | "hardware" | "phone">("all")
+  const [filterType, setFilterType] = useState<"all" | "hardware" | "phone" | "text">("all")
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [notes, setNotes] = useState(mockNotes)
+  const [textEditor, setTextEditor] = useState<null | "new" | Note>(null)
 
-  const filteredNotes = filterType === "all" ? notes : notes.filter((n) => n.type === filterType)
+  const filteredNotes =
+    filterType === "all"
+      ? notes
+      : filterType === "text"
+        ? notes.filter((n) => n.type === "text")
+        : notes.filter((n) => n.type === filterType)
 
   return (
     <div className="relative flex h-full flex-col bg-[#f5f5f4]">
@@ -267,7 +286,7 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
 
       <div className="px-5 pb-2 pt-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-[28px] font-bold tracking-tight text-gray-900">Memos</h1>
+          <h1 className="text-[28px] font-bold tracking-tight text-gray-900">Notes</h1>
           <button
             type="button"
             onClick={() => setShowFilterMenu(!showFilterMenu)}
@@ -279,10 +298,28 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
               <line x1="4" y1="18" x2="12" y2="18" />
             </svg>
             {filterType !== "all" && (
-              <span className="font-medium text-gray-900">{filterType === "hardware" ? "Hardware" : "Phone"}</span>
+              <span className="font-medium text-gray-900">
+                {filterType === "hardware" ? "Hardware" : filterType === "phone" ? "Phone" : "Text"}
+              </span>
             )}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setTextEditor("new")}
+          className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-dashed border-stone-300/90 bg-white/90 px-4 py-3.5 text-left shadow-sm transition-colors hover:border-stone-400 hover:bg-white"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-zinc-100 to-stone-200/90 ring-1 ring-stone-200/60">
+            <FileText className="h-5 w-5 text-zinc-600" strokeWidth={1.75} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold text-gray-900">New rich note</p>
+            <p className="mt-0.5 text-[13px] leading-snug text-gray-500">
+              Bold, lists, and more—then add to Knowledge when you are ready.
+            </p>
+          </div>
+        </button>
 
         {showFilterMenu && (
           <>
@@ -292,6 +329,7 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
                 { id: "all", label: "All" },
                 { id: "hardware", label: "Hardware" },
                 { id: "phone", label: "Phone" },
+                { id: "text", label: "Text" },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -341,7 +379,10 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
                 <SwipeableMemoCard
                   key={note.id}
                   note={note}
-                  onOpen={() => onNoteClick(note)}
+                  onOpen={() => {
+                    if (note.type === "text") setTextEditor(note)
+                    else onNoteClick(note)
+                  }}
                   onArchive={() => {}}
                   onDelete={() => setNotes((prev) => prev.filter((n) => n.id !== note.id))}
                 />
@@ -362,6 +403,51 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
         </div>
       </button>
 
+      {textEditor !== null && (
+        <div className="absolute inset-0 z-[45] bg-white">
+          <TextNoteEditor
+            key={textEditor === "new" ? "text-new" : `text-${textEditor.id}`}
+            note={
+              textEditor === "new"
+                ? undefined
+                : {
+                    id: textEditor.id,
+                    title: textEditor.title,
+                    html: textEditor.bodyHtml ?? textEditor.preview,
+                  }
+            }
+            onBack={() => setTextEditor(null)}
+            onSave={({ title, html }) => {
+              const preview = stripHtmlPreview(html) || "Empty note"
+              if (textEditor === "new") {
+                setNotes((prev) => [
+                  {
+                    id: Date.now(),
+                    title: title.trim() || "Untitled",
+                    type: "text",
+                    date: "Just now",
+                    preview,
+                    bodyHtml: html,
+                    status: "analyzed",
+                    source: "Rich text",
+                  },
+                  ...prev,
+                ])
+              } else {
+                setNotes((prev) =>
+                  prev.map((n) =>
+                    n.id === textEditor.id
+                      ? { ...n, title: title.trim() || "Untitled", preview, bodyHtml: html }
+                      : n
+                  )
+                )
+              }
+              setTextEditor(null)
+            }}
+          />
+        </div>
+      )}
+
       {showDeviceSheet && (
         <div className="absolute inset-0 z-50">
           <div className="absolute inset-0 bg-zinc-900/25" onClick={() => setShowDeviceSheet(false)} />
@@ -371,7 +457,11 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
             </div>
             <div className="flex items-center justify-between px-5 pb-4">
               <h3 className="text-lg font-semibold text-gray-900">Devices</h3>
-              <button type="button" onClick={() => setShowDeviceSheet(false)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowDeviceSheet(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+              >
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
@@ -380,7 +470,9 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
               <div
                 className={cn(
                   "rounded-2xl border-2 p-4 transition-all",
-                  isDeviceConnected ? "border-stone-300/80 bg-gradient-to-br from-stone-100 to-stone-50" : "border-gray-200 bg-gray-50"
+                  isDeviceConnected
+                    ? "border-stone-300/80 bg-gradient-to-br from-stone-100 to-stone-50"
+                    : "border-gray-200 bg-gray-50"
                 )}
               >
                 <div className="mb-4 flex items-center gap-4">
@@ -433,16 +525,27 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
             <div className="space-y-2 px-5 pb-6">
               {isDeviceConnected ? (
                 <>
-                  <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600"
+                  >
                     <RefreshCw className="h-5 w-5" />
                     Sync now
                   </button>
-                  <button type="button" onClick={() => setIsDeviceConnected(false)} className="w-full rounded-xl bg-gray-100 py-3 font-medium text-gray-600 hover:bg-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsDeviceConnected(false)}
+                    className="w-full rounded-xl bg-gray-100 py-3 font-medium text-gray-600 hover:bg-gray-200"
+                  >
                     Disconnect
                   </button>
                 </>
               ) : (
-                <button type="button" onClick={() => setIsDeviceConnected(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600">
+                <button
+                  type="button"
+                  onClick={() => setIsDeviceConnected(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600"
+                >
                   <Bluetooth className="h-5 w-5" />
                   Search & connect
                 </button>
