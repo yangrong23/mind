@@ -4,10 +4,27 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
-import { 
-  ChevronLeft, Search, MoreHorizontal, Plus,
-  Camera, Image, Mic, FolderOpen, Link2,
-  FileText, Database, FolderPlus, Sparkles, ChevronRight, Play, GripHorizontal
+import {
+  ChevronLeft,
+  Search,
+  MoreHorizontal,
+  Plus,
+  Camera,
+  Image,
+  Mic,
+  FolderOpen,
+  Link2,
+  FileText,
+  FolderPlus,
+  Sparkles,
+  ChevronRight,
+  ChevronDown,
+  Play,
+  GripHorizontal,
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  Youtube,
 } from "lucide-react"
 
 type ShareTarget =
@@ -99,10 +116,16 @@ function bodyForContent(id: number, title: string, excerpt: string): string[] {
   return common
 }
 
+/** NotebookLM-style grounded summary (mock copy). */
+function notebookSummaryForLibrary(name: string, sourceCount: number): string {
+  return `This library "${name}" auto-generates a summary from ${sourceCount} uploaded sources. It weaves transcripts, web clips, and document highlights into one readable thread: first the core takeaway from each source, then where they complement, repeat, or conflict—so you can build context before asking questions. The summary favors retrieval and stable citations—follow up on specific passages in chat for answers with source references.`
+}
+
 type CitationKind = "recording" | "pdf"
 
 export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialView = "content" }: KnowledgeDetailProps) {
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const [showNotebookAsk, setShowNotebookAsk] = useState(false)
   const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
   const [showContentDetail, setShowContentDetail] = useState<typeof mockContents[0] | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
@@ -111,6 +134,8 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
   const dragStartY = useRef(0)
   const sheetDragYRef = useRef(0)
   const sourceCount = mockContents.length
+  const kbDisplayName = knowledgeBase?.name || "Notebook"
+  const notebookSummaryBody = notebookSummaryForLibrary(kbDisplayName, sourceCount)
 
   const closeCitation = useCallback(() => {
     setCitation(null)
@@ -136,7 +161,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
     { icon: FolderOpen, label: "Local file" },
     { icon: Link2, label: "Link" },
     { icon: FileText, label: "Note", hasArrow: true },
-    { icon: Database, label: "Personal library" },
+    { icon: Youtube, label: "YouTube" },
     { icon: FolderPlus, label: "New folder" },
   ]
 
@@ -185,6 +210,120 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
     </div>
   )
 
+  if (showNotebookAsk) {
+    return (
+      <div className="relative flex h-full flex-col bg-[#faf7f6]">
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-200/80 bg-[#faf7f6]/95 px-3 py-2.5 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setShowNotebookAsk(false)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-stone-200/60"
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-6 w-6 text-zinc-800" />
+          </button>
+          <h1 className="min-w-0 flex-1 px-2 text-center text-[15px] font-semibold tracking-tight text-zinc-900 truncate">
+            {kbDisplayName}
+          </h1>
+          <button
+            type="button"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-stone-200/60"
+            aria-label="More"
+          >
+            <MoreHorizontal className="h-5 w-5 text-zinc-600" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4">
+          <h2 className="text-[20px] font-bold leading-snug tracking-tight text-zinc-900">
+            {kbDisplayName} — library summary
+          </h2>
+          <p className="mt-2 text-[13px] text-zinc-500">{sourceCount} sources</p>
+
+          <p className="mt-5 text-[15px] leading-[1.75] text-justify text-zinc-800">{notebookSummaryBody}</p>
+
+          <div className="mt-5 flex items-center gap-1">
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
+              aria-label="Copy summary"
+            >
+              <Copy className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
+              aria-label="Good summary"
+            >
+              <ThumbsUp className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
+              aria-label="Bad summary"
+            >
+              <ThumbsDown className="h-5 w-5" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-full border border-stone-200/90 bg-white py-3 text-[15px] font-medium text-zinc-800 shadow-sm shadow-stone-900/5 transition-colors hover:bg-stone-50"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100" aria-hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-violet-600">
+                <path
+                  d="M4 12h2l1.5-4 2 8 1.5-6H12l1 3 1-3h2l1.5 5 1.5-5H22"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            Audio overview
+          </button>
+        </div>
+
+        <div className="shrink-0 border-t border-stone-200/80 bg-[#faf7f6]/95 px-3 pb-3 pt-2 backdrop-blur-sm">
+          <p className="mb-2 px-0.5 text-center text-[11px] leading-snug text-zinc-500">
+            Mind may be wrong—verify important details.
+          </p>
+          <div className="flex items-end gap-2">
+            <label className="sr-only" htmlFor="notebook-ask-sources">
+              Ask sources
+            </label>
+            <input
+              id="notebook-ask-sources"
+              type="text"
+              placeholder={`Ask ${sourceCount} sources…`}
+              className="min-h-[44px] min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-200/60"
+            />
+            <button
+              type="button"
+              className="flex shrink-0 items-center gap-1 rounded-xl border border-stone-200 bg-white px-2.5 py-2 text-[13px] font-medium text-zinc-700 shadow-sm"
+              aria-label="Sources"
+            >
+              <FileText className="h-4 w-4 text-zinc-500" />
+              <span>{sourceCount}</span>
+              <ChevronDown className="h-4 w-4 text-zinc-400" />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowNotebookAsk(false)
+              onAgentChat?.({ kbName: kbDisplayName })
+            }}
+            className="mt-2 w-full rounded-xl border border-stone-200/90 bg-white py-2.5 text-[13px] font-medium text-zinc-600 hover:bg-stone-50"
+          >
+            Open conversational Q&A (Clawbot)
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (showContentDetail) {
     return (
       <div className="relative flex flex-col h-full bg-white">
@@ -198,7 +337,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                 kbName: knowledgeBase?.name || "Medrix Mind", 
                 contentTitle: showContentDetail.title 
               })}
-              className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-full text-xs font-medium"
+              className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-zinc-500 to-stone-500 text-white rounded-full text-xs font-medium"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Mind Agent
@@ -294,7 +433,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         <div
           className={cn(
             "w-11 h-11 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0",
-            knowledgeBase?.color || "from-teal-400 to-cyan-600"
+            knowledgeBase?.color || "from-zinc-400 to-stone-600"
           )}
         >
           <KbHeaderIcon className="w-6 h-6 text-white" strokeWidth={1.75} aria-hidden />
@@ -309,8 +448,8 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         </div>
         <button
           type="button"
-          onClick={() => onAgentChat?.({ kbName: knowledgeBase?.name || "Medrix Mind" })}
-          className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-teal-500 text-white text-[11px] font-semibold"
+          onClick={() => setShowNotebookAsk(true)}
+          className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-zinc-500 text-white text-[11px] font-semibold hover:bg-zinc-600"
         >
           <Sparkles className="w-3.5 h-3.5" />
           Ask
@@ -344,127 +483,92 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
       <div className={cn("flex-1 flex flex-col min-h-0", activeView === "content" ? "overflow-hidden" : "overflow-y-auto")}>
         {activeView === "content" && (
           <div className="flex min-h-0 flex-1 flex-col bg-stone-50/80">
-            {/* Quick strip: thumbnails + import (short; full list below) */}
-            <div className="shrink-0 border-b border-stone-100 bg-white px-4 py-2.5">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                Quick open
-              </p>
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="px-4 pb-2 pt-3">
+              <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+                All documents
+              </h2>
+              <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white">
                 {mockContents.map((content) => (
                   <button
                     key={content.id}
                     type="button"
                     onClick={() => setShowContentDetail(content)}
-                    className="flex w-[64px] shrink-0 flex-col gap-1 text-left"
+                    className="flex w-full items-start gap-3 border-b border-stone-100 p-4 text-left last:border-b-0 hover:bg-stone-50/80"
                   >
-                    <div className="aspect-square w-full overflow-hidden rounded-lg bg-stone-100 ring-1 ring-stone-200/80">
-                      <img src={content.image} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={content.image}
+                      alt=""
+                      className="h-16 w-16 shrink-0 rounded-lg bg-stone-100 object-cover"
+                    />
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <h3 className="text-[15px] font-medium leading-snug text-zinc-900">
+                        {content.title}
+                      </h3>
+                      <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-zinc-600">
+                        {content.excerpt}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] text-zinc-400">
+                        <span className="text-zinc-600">{content.source}</span>
+                        <span>|</span>
+                        <span>{content.author}</span>
+                        <span>|</span>
+                        <span>{content.date}</span>
+                      </div>
                     </div>
-                    <span className="line-clamp-2 text-[9px] leading-tight text-zinc-500">
-                      {content.title}
-                    </span>
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setShowAddMenu(true)}
-                  className="flex h-[64px] w-[64px] shrink-0 flex-col items-center justify-center rounded-lg border border-dashed border-stone-300 bg-stone-50 text-zinc-500 hover:bg-stone-100/90"
-                  aria-label="Import source"
-                >
-                  <Plus className="h-5 w-5" strokeWidth={1.5} />
-                  <span className="mt-0.5 text-[9px] font-medium">Import</span>
-                </button>
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="px-4 pb-2 pt-3">
-                  <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                    All documents
-                  </h2>
-                  <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white">
-                    {mockContents.map((content) => (
-                      <button
-                        key={content.id}
-                        type="button"
-                        onClick={() => setShowContentDetail(content)}
-                        className="flex w-full items-start gap-3 border-b border-stone-100 p-4 text-left last:border-b-0 hover:bg-stone-50/80"
-                      >
-                        <img
-                          src={content.image}
-                          alt=""
-                          className="h-16 w-16 shrink-0 rounded-lg bg-stone-100 object-cover"
-                        />
-                        <div className="min-w-0 flex-1 pt-0.5">
-                          <h3 className="text-[15px] font-medium leading-snug text-zinc-900">
-                            {content.title}
-                          </h3>
-                          <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-zinc-600">
-                            {content.excerpt}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] text-zinc-400">
-                            <span className="text-emerald-600">{content.source}</span>
-                            <span>|</span>
-                            <span>{content.author}</span>
-                            <span>|</span>
-                            <span>{content.date}</span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+            <div className="space-y-4 px-4 pb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+                Chat
+              </p>
+              <div className="flex justify-end">
+                <div className="max-w-[88%] rounded-2xl rounded-br-md bg-zinc-600 px-3.5 py-2.5 text-[15px] leading-relaxed text-white">
+                  How should we think about vector stores for this library?
                 </div>
-
-                <div className="space-y-4 px-4 pb-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                    Chat
+              </div>
+              <div className="flex justify-start">
+                <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-white px-3.5 py-2.5 text-[15px] leading-[1.65] text-zinc-800 shadow-sm ring-1 ring-stone-200/60">
+                  <p>
+                    Treat them as the retrieval layer: chunk sources, embed, and ground answers on citations. Your recordings already imply time-aligned snippets—mirror that for PDFs
+                    <button
+                      type="button"
+                      onClick={() => setCitation("recording")}
+                      className="mx-0.5 align-super text-[11px] font-semibold text-blue-600 hover:underline"
+                    >
+                      [1]
+                    </button>
+                    . For long docs, bias toward section boundaries.
                   </p>
-                  <div className="flex justify-end">
-                    <div className="max-w-[88%] rounded-2xl rounded-br-md bg-teal-600 px-3.5 py-2.5 text-[15px] leading-relaxed text-white">
-                      How should we think about vector stores for this library?
-                    </div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-white px-3.5 py-2.5 text-[15px] leading-[1.65] text-zinc-800 shadow-sm ring-1 ring-stone-200/60">
-                      <p>
-                        Treat them as the retrieval layer: chunk sources, embed, and ground answers on citations. Your recordings already imply time-aligned snippets—mirror that for PDFs
-                        <button
-                          type="button"
-                          onClick={() => setCitation("recording")}
-                          className="mx-0.5 align-super text-[11px] font-semibold text-blue-600 hover:underline"
-                        >
-                          [1]
-                        </button>
-                        . For long docs, bias toward section boundaries.
-                      </p>
-                      <p className="mt-3 text-zinc-700">
-                        If you need layout fidelity, keep a parallel “highlight pass” for PDFs
-                        <button
-                          type="button"
-                          onClick={() => setCitation("pdf")}
-                          className="mx-0.5 align-super text-[11px] font-semibold text-blue-600 hover:underline"
-                        >
-                          [2]
-                        </button>
-                        .
-                      </p>
-                    </div>
-                  </div>
+                  <p className="mt-3 text-zinc-700">
+                    If you need layout fidelity, keep a parallel “highlight pass” for PDFs
+                    <button
+                      type="button"
+                      onClick={() => setCitation("pdf")}
+                      className="mx-0.5 align-super text-[11px] font-semibold text-blue-600 hover:underline"
+                    >
+                      [2]
+                    </button>
+                    .
+                  </p>
                 </div>
               </div>
+            </div>
+            </div>
 
-              <div className="shrink-0 border-t border-stone-200/80 bg-white p-3">
-                <label className="sr-only" htmlFor="notebook-ask">
-                  Ask this notebook
-                </label>
-                <input
-                  id="notebook-ask"
-                  type="text"
-                  placeholder={`基于本库的 ${sourceCount} 个信源向我提问…`}
-                  className="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400/30"
-                />
-              </div>
+            <div className="shrink-0 border-t border-stone-200/80 bg-white p-3">
+              <label className="sr-only" htmlFor="notebook-ask">
+                Ask this notebook
+              </label>
+              <input
+                id="notebook-ask"
+                type="text"
+                placeholder={`Ask using ${sourceCount} sources in this library…`}
+                className="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400/30"
+              />
             </div>
           </div>
         )}
@@ -472,16 +576,16 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         {activeView === "graph" && (
           <div className="h-full flex flex-col items-center justify-center px-5 py-8">
             <div className="relative w-64 h-64 mb-6">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-teal-500 flex items-center justify-center text-white font-medium text-sm shadow-lg">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-zinc-500 flex items-center justify-center text-white font-medium text-sm shadow-lg">
                 Core
               </div>
               {[
-                { x: 0, y: -80, label: "Concept A", color: "bg-teal-400" },
-                { x: 70, y: -40, label: "Project B", color: "bg-teal-600" },
-                { x: 70, y: 40, label: "Person C", color: "bg-cyan-500" },
-                { x: 0, y: 80, label: "Doc D", color: "bg-cyan-600" },
-                { x: -70, y: 40, label: "Idea E", color: "bg-teal-500" },
-                { x: -70, y: -40, label: "Asset F", color: "bg-cyan-400" },
+                { x: 0, y: -80, label: "Concept A", color: "bg-zinc-400" },
+                { x: 70, y: -40, label: "Project B", color: "bg-zinc-600" },
+                { x: 70, y: 40, label: "Person C", color: "bg-stone-500" },
+                { x: 0, y: 80, label: "Doc D", color: "bg-stone-600" },
+                { x: -70, y: 40, label: "Idea E", color: "bg-zinc-500" },
+                { x: -70, y: -40, label: "Asset F", color: "bg-stone-400" },
               ].map((node, i) => (
                 <div
                   key={i}
@@ -522,7 +626,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
             <p className="text-sm text-gray-500 text-center mb-4">
               Visualize how ideas connect across your library.
             </p>
-            <button className="px-6 py-2.5 bg-teal-500 text-white rounded-xl text-sm font-medium hover:bg-teal-600">
+            <button className="px-6 py-2.5 bg-zinc-500 text-white rounded-xl text-sm font-medium hover:bg-zinc-600">
               Open full graph
             </button>
           </div>
@@ -533,10 +637,10 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
             <h3 className="font-medium text-gray-700 mb-4">Generate</h3>
             
             <div className="space-y-3">
-              <button className="w-full flex items-center justify-between p-4 bg-teal-50/80 rounded-2xl hover:bg-teal-100/60 transition-colors">
+              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M2 10v3a1 1 0 001 1h3l4 4V3L6 7H3a1 1 0 00-1 1z" />
                       <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
                     </svg>
@@ -546,10 +650,10 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-teal-50/80 rounded-2xl hover:bg-teal-100/60 transition-colors">
+              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="4" width="20" height="16" rx="2" />
                       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" />
                     </svg>
@@ -559,10 +663,10 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-teal-50/80 rounded-2xl hover:bg-teal-100/60 transition-colors">
+              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="6" width="16" height="12" rx="2" />
                       <path d="M22 10v8a2 2 0 01-2 2H8" />
                       <path d="M8 10l3 3-3 3" />
@@ -573,10 +677,10 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-teal-50/80 rounded-2xl hover:bg-teal-100/60 transition-colors">
+              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="3" width="18" height="18" rx="2" />
                       <path d="M9 9h.01M12 12a3 3 0 100-6 3 3 0 000 6zM9 15h6" />
                     </svg>
@@ -586,10 +690,10 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-teal-50/80 rounded-2xl hover:bg-teal-100/60 transition-colors">
+              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="18" y1="20" x2="18" y2="10" />
                       <line x1="12" y1="20" x2="12" y2="4" />
                       <line x1="6" y1="20" x2="6" y2="14" />
@@ -600,10 +704,10 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-teal-50/80 rounded-2xl hover:bg-teal-100/60 transition-colors">
+              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-teal-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="3" width="20" height="14" rx="2" />
                       <line x1="8" y1="21" x2="16" y2="21" />
                       <line x1="12" y1="17" x2="12" y2="21" />
@@ -674,7 +778,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                           key={i}
                           className={cn(
                             "w-[2px] rounded-full",
-                            i < 18 ? "bg-teal-500/50" : "bg-stone-300"
+                            i < 18 ? "bg-zinc-500/50" : "bg-stone-300"
                           )}
                           style={{ height: `${h * 100}%`, minHeight: 3 }}
                         />
@@ -686,7 +790,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                   </p>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-full bg-teal-500 px-4 py-2.5 text-sm font-semibold text-white"
+                    className="inline-flex items-center gap-2 rounded-full bg-zinc-500 px-4 py-2.5 text-sm font-semibold text-white"
                   >
                     <Play className="h-4 w-4 fill-current" />
                     Play excerpt

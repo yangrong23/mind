@@ -23,7 +23,7 @@ interface KnowledgeBase {
 }
 
 const mockKBs: KnowledgeBase[] = [
-  { id: 1, name: "Product library", description: "Specs and PRDs", category: "mine", count: 156, lastUpdate: "Just now", color: "from-teal-400 to-cyan-600" },
+  { id: 1, name: "Product library", description: "Specs and PRDs", category: "mine", count: 156, lastUpdate: "Just now", color: "from-zinc-400 to-stone-600" },
   { id: 2, name: "Study notes", description: "Personal learning log", category: "mine", count: 89, lastUpdate: "1h ago", color: "from-stone-500 to-zinc-700" },
   { id: 3, name: "Reading list", description: "Book notes and quotes", category: "mine", count: 45, lastUpdate: "Yesterday", color: "from-zinc-500 to-stone-600" },
   { id: 4, name: "Engineering docs", description: "Team playbooks and ADRs", category: "team", count: 234, lastUpdate: "2h ago", color: "from-zinc-500 to-zinc-700" },
@@ -219,7 +219,7 @@ function DiscoverPage({ onBack }: { onBack: () => void }) {
                 key={cat}
                 className={cn(
                   "px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-                  i === 0 ? "bg-teal-500 text-white" : "bg-gray-100 text-gray-600"
+                  i === 0 ? "bg-zinc-500 text-white" : "bg-gray-100 text-gray-600"
                 )}
               >
                 {cat}

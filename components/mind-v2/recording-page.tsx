@@ -44,7 +44,7 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-teal-950 via-teal-900 to-teal-950">
+    <div className="flex flex-col h-full bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950">
       <div className="flex items-center justify-between px-5 py-4">
         <button 
           onClick={onClose}
@@ -53,9 +53,9 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
           <X className="w-5 h-5 text-white" />
         </button>
         
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-teal-500/25 rounded-full border border-teal-400/30">
-          <div className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-          <span className="text-teal-100 text-sm font-medium">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-500/25 rounded-full border border-zinc-400/30">
+          <div className="w-2 h-2 rounded-full bg-zinc-400 animate-pulse" />
+          <span className="text-zinc-100 text-sm font-medium">
             {isPaused ? "Paused" : "Recording"}
           </span>
         </div>
@@ -66,19 +66,19 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
       <div className="px-5 mb-4">
         <div className={cn(
           "flex items-center justify-between p-3 rounded-xl",
-          isDeviceConnected ? "bg-teal-500/15 border border-teal-400/20" : "bg-white/5"
+          isDeviceConnected ? "bg-zinc-500/15 border border-zinc-400/20" : "bg-white/5"
         )}>
           <div className="flex items-center gap-2">
             <div className={cn(
               "w-8 h-8 rounded-lg flex items-center justify-center",
-              isDeviceConnected ? "bg-teal-500" : "bg-zinc-600"
+              isDeviceConnected ? "bg-zinc-500" : "bg-zinc-600"
             )}>
               <Bluetooth className="w-4 h-4 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium text-white">Mind Recorder</span>
-                <span className="px-1.5 py-0.5 bg-teal-500 text-[10px] text-white rounded">
+                <span className="px-1.5 py-0.5 bg-zinc-500 text-[10px] text-white rounded">
                   Connected
                 </span>
               </div>
@@ -93,7 +93,7 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
         <div className="text-6xl font-light text-white mb-2 font-mono tracking-wider">
           {formatTime(duration)}
         </div>
-        <div className="text-sm text-teal-200/70 mb-10">
+        <div className="text-sm text-zinc-200/70 mb-10">
           {isPaused ? "Tap the mic to resume" : "Recording in progress…"}
         </div>
 
@@ -116,9 +116,9 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
           })}
         </div>
 
-        <div className="w-full bg-white/5 backdrop-blur-sm rounded-2xl p-4 mb-4 min-h-[100px] border border-teal-500/15">
+        <div className="w-full bg-white/5 backdrop-blur-sm rounded-2xl p-4 mb-4 min-h-[100px] border border-zinc-500/15">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-stone-400 animate-pulse" />
             <span className="text-xs text-white/50">Live transcript</span>
           </div>
           <p className="text-white/80 text-sm leading-relaxed">
@@ -130,14 +130,14 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
           </p>
           {duration >= 10 && (
             <div className="flex flex-wrap gap-2 mt-3">
-              <span className="px-2 py-1 bg-teal-500/25 text-teal-100 text-xs rounded-full border border-teal-400/25">
+              <span className="px-2 py-1 bg-zinc-500/25 text-zinc-100 text-xs rounded-full border border-zinc-400/25">
                 Knowledge graph
               </span>
-              <span className="px-2 py-1 bg-cyan-500/20 text-cyan-100 text-xs rounded-full border border-cyan-400/25">
+              <span className="px-2 py-1 bg-stone-500/20 text-stone-100 text-xs rounded-full border border-stone-400/25">
                 Product scope
               </span>
               {duration >= 20 && (
-                <span className="px-2 py-1 bg-teal-400/20 text-teal-50 text-xs rounded-full border border-teal-300/25">
+                <span className="px-2 py-1 bg-zinc-400/20 text-zinc-50 text-xs rounded-full border border-zinc-300/25">
                   Node types
                 </span>
               )}
@@ -152,7 +152,7 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
               {bookmarks.map((time, i) => (
                 <span 
                   key={i} 
-                  className="px-3 py-1.5 bg-teal-500/20 text-teal-100 text-sm rounded-full border border-teal-400/30"
+                  className="px-3 py-1.5 bg-zinc-500/20 text-zinc-100 text-sm rounded-full border border-zinc-400/30"
                 >
                   {formatTime(time)}
                 </span>
@@ -185,13 +185,13 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
             <div className={cn(
               "w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg",
               isPaused 
-                ? "bg-gradient-to-br from-teal-500 to-cyan-500 shadow-teal-500/35" 
+                ? "bg-gradient-to-br from-zinc-500 to-stone-500 shadow-zinc-500/35" 
                 : "bg-white"
             )}>
               {isPaused ? (
                 <Mic className="w-8 h-8 text-white" />
               ) : (
-                <Pause className="w-8 h-8 text-teal-900" fill="currentColor" />
+                <Pause className="w-8 h-8 text-zinc-900" fill="currentColor" />
               )}
             </div>
             <span className="text-xs text-white/50">
@@ -203,8 +203,8 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
             onClick={onStop}
             className="flex flex-col items-center gap-1"
           >
-            <div className="w-14 h-14 rounded-full bg-teal-950 border-2 border-teal-400/60 flex items-center justify-center hover:bg-teal-900 transition-colors shadow-lg shadow-black/20">
-              <Square className="w-5 h-5 text-teal-100" fill="currentColor" />
+            <div className="w-14 h-14 rounded-full bg-zinc-950 border-2 border-zinc-400/60 flex items-center justify-center hover:bg-zinc-900 transition-colors shadow-lg shadow-black/20">
+              <Square className="w-5 h-5 text-zinc-100" fill="currentColor" />
             </div>
             <span className="text-xs text-white/50">Stop</span>
           </button>

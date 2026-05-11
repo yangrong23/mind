@@ -1,10 +1,5 @@
 /**
- * Medrix Mind App V1.0 UI/UX — Tailwind tokens.
- *
- * **Color system (主题色衍生)**  
- * 一切有色相的 UI 色均从 **Medrix 标志青绿** 衍生：仅使用 **teal / cyan** 阶（邻近色，色相差距小），
- * 搭配 **无彩或极低彩** 的 stone / zinc / slate 中性色。  
- * 不使用粉、紫、橙、正红、正蓝等与主色相距远的纯色（特殊系统状态可用深 teal 表达「警示」）。
+ * Medrix Mind — mostly neutral with restrained sky / emerald / indigo accents.
  */
 
 import { cn } from "@/lib/utils"
@@ -12,84 +7,97 @@ import { cn } from "@/lib/utils"
 export const mx = {
   pageBg: "bg-stone-50",
 
-  /** Profile / hero: airy light wash — not a dark slab */
-  brandHero:
-    "bg-gradient-to-b from-white via-teal-50/70 to-cyan-50/50",
-  brandHeroBorder: "border-b border-teal-100/90",
+  brandHero: "bg-gradient-to-b from-sky-50/80 via-white to-teal-50/40",
+  brandHeroBorder: "border-b border-sky-100/85",
 
-  brandOnHero: "text-zinc-800",
+  brandOnHero: "text-zinc-900",
   brandOnHeroMuted: "text-zinc-500",
-  /** Credits line: vivid brand hue on light ground */
-  brandAccentOnHero: "text-teal-600",
+  brandAccentOnHero: "text-sky-700",
 
-  brandAvatarBg: "bg-gradient-to-br from-teal-100 to-cyan-100",
-  brandHeroHover: "hover:bg-teal-50/80",
+  brandAvatarBg: "bg-gradient-to-br from-stone-200 to-stone-300",
+  brandHeroHover: "hover:bg-sky-50/90",
 
-  /** Saturated accent for icons & inline emphasis */
-  brandAccent: "text-teal-500",
-  brandAccentHover: "hover:text-teal-600",
-  brandAccentMuted: "text-teal-500/85",
-  brandMutedBg: "bg-teal-50",
-  brandMutedBgHover: "hover:bg-teal-100/90",
-  brandSubtleBorder: "border-teal-200",
+  /** Links & lightweight emphasis (keeps chroma low) */
+  accentBlue: "text-sky-600",
+  accentBlueHover: "hover:text-sky-700",
+  accentBlueMuted: "text-sky-600/90",
+  accentBlueBg: "bg-sky-600",
+  accentBlueSoft: "bg-sky-50",
 
-  /** Primary CTA — brighter teal (higher saturation than teal-600) */
+  accentPersonalAvatar: "bg-emerald-500 text-white",
+  accentPersonalSoft: "bg-emerald-50",
+  accentPersonalRing: "ring-2 ring-emerald-200/80",
+
+  accentWorkSoft: "bg-indigo-50",
+  accentWorkIcon: "text-indigo-600",
+
+  brandAccent: "text-sky-700",
+  brandAccentHover: "hover:text-sky-800",
+  brandAccentMuted: "text-sky-700/90",
+  brandMutedBg: "bg-stone-100",
+  brandMutedBgHover: "hover:bg-stone-200/85",
+  brandSubtleBorder: "border-stone-200",
+
   brandCta:
-    "bg-teal-500 text-white hover:bg-teal-600 active:bg-teal-700 shadow-sm shadow-teal-500/25 border border-teal-400/50",
+    "bg-sky-600 text-white hover:bg-sky-700 active:bg-sky-800 shadow-sm shadow-sky-600/20 border border-sky-700/40",
   brandCtaSoft:
-    "bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100/95",
+    "bg-sky-50 text-sky-900 border border-sky-100 hover:bg-sky-100/90",
 
-  brandFocusRing: "focus-visible:ring-2 focus-visible:ring-teal-400/50 focus-visible:ring-offset-2",
+  brandFocusRing: "focus-visible:ring-2 focus-visible:ring-sky-400/40 focus-visible:ring-offset-2",
 
   settingsOnHero:
-    "bg-teal-100/90 hover:bg-teal-200/80 border border-teal-200/60",
+    "bg-white/70 hover:bg-white border border-sky-100/90 shadow-sm shadow-sky-900/5",
 
-  citationLink: "text-slate-600 hover:text-slate-900",
-  citationMuted: "text-slate-500",
-  citationSubtleBg: "bg-slate-50",
-  citationBorder: "border border-slate-200/90",
+  citationLink: "text-sky-700 hover:text-sky-800",
+  citationMuted: "text-zinc-500",
+  citationSubtleBg: "bg-stone-50",
+  citationBorder: "border border-stone-200/90",
 
   libraryCta:
-    "bg-teal-500 text-white hover:bg-teal-600 border border-teal-400/45 shadow-sm shadow-teal-500/20",
-  libraryCtaSoft: "bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100/80",
+    "bg-sky-600 text-white hover:bg-sky-700 border border-sky-700/50 shadow-sm shadow-sky-600/15",
+  libraryCtaSoft: "bg-sky-50 text-sky-900 border border-sky-100 hover:bg-sky-100/85",
 
-  /** 警示仍在主色族内：深青强调，而非橙/红 */
-  warningDot: "bg-teal-700",
-  warningText: "text-teal-900",
+  warningDot: "bg-zinc-600",
+  warningText: "text-zinc-900",
 
-  commercePopularBadge: "text-slate-600 bg-slate-100",
-  commercePopularRing: "border-teal-200 ring-1 ring-teal-300/25",
-  commercePrimaryCta: "bg-teal-500 text-white hover:bg-teal-600",
-  commerceSecondaryCta: "bg-cyan-500 text-white hover:bg-cyan-600",
+  commercePopularBadge: "text-zinc-600 bg-stone-100",
+  commercePopularRing: "border-stone-200 ring-1 ring-stone-300/25",
+  commercePrimaryCta: "bg-zinc-900 text-white hover:bg-zinc-800",
+  commerceSecondaryCta: "bg-zinc-800 text-white hover:bg-zinc-900",
 
-  creditsCard: "bg-white border border-stone-200/90 border-l-[3px] border-l-teal-500",
+  creditsCard: "bg-white border border-stone-200/90 border-l-[3px] border-l-sky-600",
   creditsProgressTrack: "bg-stone-200",
-  creditsProgressFill: "bg-teal-500",
+  creditsProgressFill: "bg-sky-600",
 
   navIconNotes: "text-zinc-600",
-  navIconLibrary: "text-teal-500",
-  navIconInsight: "text-cyan-600",
+  navIconLibrary: "text-zinc-700",
+  navIconInsight: "text-zinc-600",
+
+  /** Bottom tab: active pill */
+  navActiveWell: "bg-sky-100/95",
+  navActiveIcon: "text-sky-800",
+  navActiveLabel: "text-sky-900",
 } as const
 
-/** Heatmap: teal-500 at opacity — reads greener/clearer than grayed teal-800 */
+/** Heatmap: slight cool tint at higher activity */
 export function mxHeatmapCell(value: number) {
   return cn(
-    "w-full aspect-square rounded-sm min-h-[10px] min-w-0 focus:outline-none focus:ring-2 focus:ring-teal-400/45 focus:ring-offset-1",
+    "w-full aspect-square rounded-sm min-h-[10px] min-w-0 focus:outline-none focus:ring-2 focus:ring-sky-400/35 focus:ring-offset-1",
     value === 0 && "bg-stone-100 hover:bg-stone-200/80",
-    value === 1 && "bg-teal-500/[0.14] hover:bg-teal-500/[0.22]",
-    value === 2 && "bg-teal-500/[0.28] hover:bg-teal-500/[0.36]",
-    value === 3 && "bg-teal-500/[0.42] hover:bg-teal-500/[0.52]",
-    value >= 4 && "bg-teal-500/[0.58] hover:bg-teal-500/[0.68]"
+    value === 1 && "bg-sky-700/[0.10] hover:bg-sky-700/[0.16]",
+    value === 2 && "bg-sky-700/[0.22] hover:bg-sky-700/[0.30]",
+    value === 3 && "bg-sky-700/[0.34] hover:bg-sky-700/[0.42]",
+    value >= 4 && "bg-sky-800/[0.48] hover:bg-sky-800/[0.56]"
   )
 }
 
 export function mxHeatmapCellTiny(value: number) {
   return cn(
-    "rounded-[1px] min-w-[8px] p-0 border-0 focus:outline-none focus:ring-1 focus:ring-teal-400/50",
+    "rounded-[1px] min-w-[8px] p-0 border-0 focus:outline-none focus:ring-1 focus:ring-sky-400/40",
     value === 0 && "bg-stone-100 hover:bg-stone-200",
-    value === 1 && "bg-teal-500/18 hover:bg-teal-500/28",
-    value === 2 && "bg-teal-500/32 hover:bg-teal-500/42",
-    value === 3 && "bg-teal-500/46 hover:bg-teal-500/56",
-    value >= 4 && "bg-teal-500/60 hover:bg-teal-500/70"
+    value === 1 && "bg-sky-700/14 hover:bg-sky-700/22",
+    value === 2 && "bg-sky-700/26 hover:bg-sky-700/36",
+    value === 3 && "bg-sky-800/40 hover:bg-sky-800/48",
+    value >= 4 && "bg-sky-800/54 hover:bg-sky-800/62"
   )
 }

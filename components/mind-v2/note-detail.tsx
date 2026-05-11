@@ -4,24 +4,46 @@ import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
-import { 
-  ChevronLeft, Share2, MoreHorizontal, Play, Pause,
-  ChevronRight, X,
-  Check, Clock, Sparkles, FileText, 
-  MessageSquare, Plus,
-  Library, Link2, Copy, Flag, Mic, Search, RefreshCw, User, Trash2,
+import {
+  ChevronLeft,
+  Share2,
+  MoreHorizontal,
+  Play,
+  Pause,
+  ChevronRight,
+  X,
+  Check,
+  Clock,
+  Sparkles,
+  FileText,
+  MessageSquare,
+  Plus,
+  Library,
+  Link2,
+  Copy,
+  Flag,
+  Mic,
+  RefreshCw,
+  User,
+  Trash2,
+  FolderInput,
+  FileSearch,
+  Pencil,
+  ImageIcon,
+  Languages,
+  Cpu,
 } from "lucide-react"
 
 const knowledgeBases = [
-  { id: 1, name: "Product library", category: "Personal", count: 156, recent: true, color: "from-teal-400 to-cyan-600", description: "Specs and PRDs" },
-  { id: 2, name: "Tech docs", category: "Team", count: 89, recent: true, color: "from-teal-500 to-cyan-600", description: "Playbooks and internal docs" },
+  { id: 1, name: "Product library", category: "Personal", count: 156, recent: true, color: "from-zinc-400 to-stone-600", description: "Specs and PRDs" },
+  { id: 2, name: "Tech docs", category: "Team", count: 89, recent: true, color: "from-zinc-500 to-stone-600", description: "Playbooks and internal docs" },
   { id: 3, name: "Meeting notes", category: "Personal", count: 234, recent: false, color: "from-stone-500 to-stone-700", description: "Calls and standups" },
   { id: 4, name: "User research", category: "Team", count: 67, recent: false, color: "from-zinc-500 to-zinc-600", description: "Interviews and insights" },
 ]
 
 const recommendedKBs = [
-  { id: 1, name: "Product library", category: "Personal", count: 156, match: 95, reason: "Matches product requirements discussion", description: "Specs and PRDs", color: "from-teal-400 to-cyan-600" },
-  { id: 2, name: "Tech docs", category: "Team", count: 89, match: 72, reason: "Contains implementation notes", description: "Playbooks and internal docs", color: "from-teal-500 to-cyan-600" },
+  { id: 1, name: "Product library", category: "Personal", count: 156, match: 95, reason: "Matches product requirements discussion", description: "Specs and PRDs", color: "from-zinc-400 to-stone-600" },
+  { id: 2, name: "Tech docs", category: "Team", count: 89, match: 72, reason: "Contains implementation notes", description: "Playbooks and internal docs", color: "from-zinc-500 to-stone-600" },
 ]
 
 export type MovedLibraryMeta = { name: string; color: string; description?: string }
@@ -46,7 +68,19 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadPct, setPlayheadPct] = useState(0.32)
   const [showKBSheet, setShowKBSheet] = useState(false)
-  const [showMoreSheet, setShowMoreSheet] = useState(false)
+  /** Share icon: export / copy / share link */
+  const [showShareOptions, setShowShareOptions] = useState(false)
+  /** More menu: note utilities */
+  const [showToolsMenu, setShowToolsMenu] = useState(false)
+  const [showCreateTemplateSheet, setShowCreateTemplateSheet] = useState(false)
+  const [showTemplateConfirm, setShowTemplateConfirm] = useState(false)
+  const [templateDraftName, setTemplateDraftName] = useState("")
+  const [templateDraftPrompt, setTemplateDraftPrompt] = useState("")
+  const [customTemplates, setCustomTemplates] = useState<{ id: string; name: string; desc: string; prompt: string }[]>(
+    []
+  )
+  const [templateLanguage, setTemplateLanguage] = useState("Auto")
+  const [templateModel, setTemplateModel] = useState("Auto")
   const [selectedKB, setSelectedKB] = useState<number | null>(null)
   const [isTransferring, setIsTransferring] = useState(false)
   const [transferComplete, setTransferComplete] = useState(false)
@@ -55,8 +89,16 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
   const [templateTab, setTemplateTab] = useState<"mine" | "recommend" | "explore">("mine")
 
   const openMoveToLibrary = () => {
-    setShowMoreSheet(false)
+    setShowToolsMenu(false)
+    setShowShareOptions(false)
     setShowKBSheet(true)
+  }
+
+  const closeAllOverlays = () => {
+    setShowShareOptions(false)
+    setShowToolsMenu(false)
+    setShowCreateTemplateSheet(false)
+    setShowTemplateConfirm(false)
   }
 
   const handleTransfer = () => {
@@ -104,7 +146,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
 
   return (
     <div className="flex flex-col h-full bg-white relative">
-      {/* 顶部导航 */}
+      {/* Top bar */}
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100">
         <button type="button" onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full shrink-0">
           <ChevronLeft className="w-6 h-6 text-gray-700" />
@@ -125,19 +167,21 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
           </button>
           <button
             type="button"
-            onClick={() => setShowTemplatePage(true)}
-            className="p-2 hover:bg-gray-100 rounded-full shrink-0 text-teal-600"
-            aria-label="Processing templates"
-            title="Templates"
+            onClick={() => {
+              setShowToolsMenu(false)
+              setShowShareOptions(true)
+            }}
+            className="p-2 hover:bg-gray-100 rounded-full shrink-0"
+            aria-label="Share"
           >
-            <Plus className="w-5 h-5" strokeWidth={1.75} />
-          </button>
-          <button type="button" className="p-2 hover:bg-gray-100 rounded-full shrink-0" aria-label="Share">
             <Share2 className="w-5 h-5 text-zinc-600" strokeWidth={1.75} />
           </button>
           <button
             type="button"
-            onClick={() => setShowMoreSheet(true)}
+            onClick={() => {
+              setShowShareOptions(false)
+              setShowToolsMenu((v) => !v)
+            }}
             className="p-2 hover:bg-gray-100 rounded-full shrink-0"
             aria-label="More options"
           >
@@ -146,7 +190,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
         </div>
       </div>
 
-      {/* 音频播放器 */}
+      {/* Audio player */}
       <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-b from-stone-50/80 to-white">
         {/* Minimal waveform + brand playhead */}
         <div className="relative h-12 mb-3 flex items-end justify-center gap-[2px] px-1">
@@ -159,7 +203,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                 key={i}
                 className={cn(
                   "w-[2px] rounded-full transition-colors duration-150",
-                  played ? "bg-teal-500/35" : "bg-stone-200"
+                  played ? "bg-zinc-500/35" : "bg-stone-200"
                 )}
                 style={{
                   height: `${Math.min(1, h) * 100}%`,
@@ -169,13 +213,13 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
             )
           })}
           <div
-            className="absolute bottom-0 top-0 w-0.5 rounded-full bg-teal-500 shadow-[0_0_12px_rgba(20,184,166,0.45)] pointer-events-none"
+            className="absolute bottom-0 top-0 w-0.5 rounded-full bg-zinc-500 shadow-[0_0_12px_rgba(63,63,70,0.4)] pointer-events-none"
             style={{ left: `calc(${playheadPct * 100}% - 1px)` }}
             aria-hidden
           />
         </div>
         
-        {/* 时间和控制 */}
+        {/* Time & controls */}
         <div className="flex items-center justify-between text-sm mb-4">
           <span className="text-zinc-700 font-medium">07:23</span>
           <span className="text-gray-400">23:45</span>
@@ -188,7 +232,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
           <button 
             type="button"
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-16 h-16 bg-teal-500 rounded-full flex items-center justify-center hover:bg-teal-600 transition-colors shadow-lg shadow-teal-500/35"
+            className="w-16 h-16 bg-zinc-500 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors shadow-lg shadow-zinc-500/35"
           >
             {isPlaying ? (
               <Pause className="w-7 h-7 text-white" fill="white" />
@@ -205,33 +249,109 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
         </div>
       </div>
 
-      {/* Summary · Transcript */}
-      <div className="flex items-stretch border-b border-stone-100 px-5 gap-8">
-        {(
-          [
-            { id: "summary" as const, label: "Summary" },
-            { id: "transcript" as const, label: "Transcript" },
-          ]
-        ).map((tab) => (
+      {/* Summary / Transcript + template (+) */}
+      <div className="flex items-stretch justify-between gap-3 border-b border-stone-100 px-5">
+        <div className="flex gap-8">
+          {(
+            [
+              { id: "summary" as const, label: "Summary" },
+              { id: "transcript" as const, label: "Transcript" },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "py-3.5 text-[15px] font-medium tracking-tight border-b-[2.5px] transition-colors -mb-px",
+                activeTab === tab.id
+                  ? "text-zinc-900 border-zinc-500"
+                  : "text-zinc-400 border-transparent hover:text-zinc-600"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex shrink-0 items-center pb-px">
           <button
-            key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "py-3.5 text-[15px] font-medium tracking-tight border-b-[2.5px] transition-colors -mb-px",
-              activeTab === tab.id
-                ? "text-zinc-900 border-teal-500"
-                : "text-zinc-400 border-transparent hover:text-zinc-600"
-            )}
+            onClick={() => {
+              closeAllOverlays()
+              setShowTemplatePage(true)
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:bg-stone-100"
+            aria-label="Choose template"
+            title="Templates"
           >
-            {tab.label}
+            <Plus className="h-5 w-5" strokeWidth={1.75} />
           </button>
-        ))}
+        </div>
       </div>
 
-      {/* 内容区域 */}
+      {/* More (…) dropdown */}
+      {showToolsMenu && (
+        <div className="absolute inset-0 z-[46]">
+          <button
+            type="button"
+            className="absolute inset-0 min-h-[120px] bg-transparent"
+            aria-label="Close menu"
+            onClick={() => setShowToolsMenu(false)}
+          />
+          <div
+            role="menu"
+            className="absolute right-3 top-[50px] z-[47] w-[min(280px,calc(100%-24px))] overflow-hidden rounded-xl border border-stone-200/95 bg-white py-1 shadow-xl shadow-stone-900/12"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={openMoveToLibrary}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
+            >
+              <FolderInput className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
+              Move to folder
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => setShowToolsMenu(false)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
+            >
+              <FileSearch className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
+              Find and replace
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => setShowToolsMenu(false)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
+            >
+              <RefreshCw className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
+              Re-transcribe
+            </button>
+            <div
+              className="flex w-full cursor-not-allowed items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-400"
+              aria-disabled
+            >
+              <User className="h-5 w-5 shrink-0 text-zinc-300" strokeWidth={1.5} />
+              Name speakers
+            </div>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => setShowToolsMenu(false)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] font-medium text-red-600 hover:bg-red-50/80"
+            >
+              <Trash2 className="h-5 w-5 shrink-0 text-red-500" strokeWidth={1.5} />
+              Move to trash
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Body */}
       <div className="flex-1 overflow-hidden">
-        {/* 转录视图 */}
+        {/* Transcript */}
         {activeTab === "transcript" && (
           <div className="h-full overflow-y-auto">
             <div className="px-5 py-5 max-w-prose mx-auto">
@@ -257,7 +377,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
           </div>
         )}
 
-        {/* 总结视图 */}
+        {/* Summary */}
         {activeTab === "summary" && (
           <div className="p-5 pb-8 space-y-10 overflow-y-auto max-w-prose mx-auto">
             <p className="text-center text-[12px] text-zinc-400 leading-relaxed">
@@ -334,13 +454,16 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
         )}
       </div>
 
-      {/* 底部操作栏 */}
+      {/* Bottom bar */}
       <div className="p-4 border-t border-gray-100 space-y-3">
         <div className="relative">
+          <span className="absolute left-3 top-0 z-10 -translate-y-1/2 rounded bg-sky-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-800">
+            Beta
+          </span>
           <input
             type="text"
             placeholder="Ask about this note…"
-            className="w-full px-4 py-3 pr-12 rounded-xl border border-stone-200 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/25 focus:outline-none text-sm"
+            className="w-full rounded-xl border border-sky-200/90 bg-white px-4 py-3 pr-12 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
           />
           <button className="absolute right-3 top-1/2 -translate-y-1/2">
             <MessageSquare className="w-5 h-5 text-gray-400" />
@@ -348,34 +471,43 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
         </div>
       </div>
 
-      {/* 全屏模版选择页面 */}
+      {/* Template picker (fullscreen) */}
       {showTemplatePage && (
-        <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
-          {/* 顶部导航 */}
-          <div className="bg-white flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <button onClick={() => setShowTemplatePage(false)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
-              <ChevronLeft className="w-6 h-6 text-gray-700" />
+        <div className="absolute inset-0 z-50 flex flex-col bg-[#f7f7f8] animate-in slide-in-from-right duration-200">
+          {/* Top bar */}
+          <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateTemplateSheet(false)
+                setShowTemplateConfirm(false)
+                setShowTemplatePage(false)
+              }}
+              className="-ml-2 rounded-full p-2 hover:bg-gray-100"
+            >
+              <ChevronLeft className="h-6 w-6 text-gray-700" />
             </button>
             <h1 className="text-lg font-semibold text-gray-900">Choose template</h1>
             <div className="w-10" />
           </div>
 
-          {/* Tab切换 */}
-          <div className="bg-white px-5 py-3 border-b border-gray-100">
+          {/* Tabs */}
+          <div className="border-b border-gray-100 bg-white px-5 py-3">
             <div className="flex gap-6">
               {[
-                { id: "mine", label: "Mine" },
-                { id: "recommend", label: "For you" },
-                { id: "explore", label: "Explore" },
+                { id: "mine" as const, label: "Mine" },
+                { id: "recommend" as const, label: "For you" },
+                { id: "explore" as const, label: "Explore" },
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setTemplateTab(tab.id as typeof templateTab)}
+                  type="button"
+                  onClick={() => setTemplateTab(tab.id)}
                   className={cn(
-                    "text-[15px] font-medium pb-1 border-b-2 transition-colors",
+                    "border-b-2 pb-1 text-[15px] font-medium transition-colors",
                     templateTab === tab.id
-                      ? "text-gray-900 border-gray-900"
-                      : "text-gray-400 border-transparent"
+                      ? "border-zinc-800 text-zinc-900"
+                      : "border-transparent text-gray-400"
                   )}
                 >
                   {tab.label}
@@ -384,55 +516,122 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
             </div>
           </div>
 
-          {/* 内容区域 */}
+          {/* Body */}
           <div className="flex-1 overflow-y-auto">
-            {/* 我的空间 */}
+            {/* Mine */}
             {templateTab === "mine" && (
-              <div className="p-5">
-                {/* 最近使用 */}
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Recent</h2>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+              <div className="p-5 pb-28">
+                <div className="mb-4 flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-900">Recently used</h2>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
                 </div>
                 <div className="mb-8">
                   <button
-                    onClick={() => {
-                      setSelectedTemplate({ id: "smart-summary", name: "Smart summary", desc: "Adaptive summaries across contexts" })
-                    }}
+                    type="button"
+                    onClick={() =>
+                      setSelectedTemplate({
+                        id: "smart-summary",
+                        name: "Smart summary",
+                        desc: "Adaptive summaries across contexts",
+                      })
+                    }
                     className={cn(
-                      "relative w-full max-w-[200px] p-4 rounded-xl border bg-white text-left",
-                      selectedTemplate?.id === "smart-summary" ? "border-teal-500" : "border-gray-200"
+                      "relative w-full max-w-[220px] rounded-xl border bg-white p-4 text-left shadow-sm",
+                      selectedTemplate?.id === "smart-summary" ? "border-zinc-600 ring-1 ring-zinc-200" : "border-gray-200"
                     )}
                   >
-                    <span className="absolute top-3 right-3 px-2 py-0.5 bg-teal-100 text-teal-800 text-[10px] rounded">Last used</span>
-                    <svg className="w-6 h-6 text-teal-500 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" />
-                    </svg>
-                    <div className="font-semibold text-gray-900 mb-1">Smart summary</div>
-                    <div className="text-xs text-gray-500 leading-relaxed">Adaptive summaries across contexts</div>
-                    <div className="text-xs text-gray-400 mt-4">Plaud</div>
+                    <span className="absolute right-2 top-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                      Last used
+                    </span>
+                    <div className="mb-2 flex items-start justify-between gap-2 pr-16">
+                      <span className="text-violet-500" aria-hidden>
+                        ✦✦
+                      </span>
+                      <span className="text-gray-400" aria-hidden>
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                        </svg>
+                      </span>
+                    </div>
+                    <div className="mb-1 font-semibold text-gray-900">Smart summary</div>
+                    <div className="text-xs leading-relaxed text-gray-500">Adaptive summaries across contexts</div>
+                    <div className="mt-4 text-xs text-gray-400">Plaud</div>
                   </button>
                 </div>
 
-                {/* 我的模板 */}
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">My templates</h2>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                <div className="mb-4 flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-900">My templates</h2>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
                 </div>
-                <button className="w-full max-w-[200px] aspect-[4/5] rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 hover:border-gray-400 transition-colors">
-                  <svg className="w-8 h-8 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                  <span className="text-sm text-gray-500">New template</span>
-                </button>
+                <div className="mb-6 flex flex-wrap gap-3">
+                  {customTemplates.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })
+                      }
+                      className={cn(
+                        "w-full max-w-[200px] rounded-xl border bg-white p-4 text-left shadow-sm",
+                        selectedTemplate?.id === t.id ? "border-zinc-600 ring-1 ring-zinc-200" : "border-gray-200"
+                      )}
+                    >
+                      <div className="mb-2 flex items-center gap-2 text-violet-500">
+                        <Pencil className="h-4 w-4" />
+                      </div>
+                      <div className="mb-1 font-semibold text-gray-900">{t.name}</div>
+                      <div className="line-clamp-2 text-xs text-gray-500">{t.desc}</div>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateTemplateSheet(true)}
+                    className="flex aspect-[4/5] w-full max-w-[200px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-white transition-colors hover:border-gray-400"
+                  >
+                    <Pencil className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
+                    <span className="text-sm text-gray-500">New template</span>
+                  </button>
+                </div>
+
+                <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTemplateLanguage((v) => (v === "Auto" ? "English" : v === "English" ? "Spanish" : "Auto"))
+                    }
+                    className="flex w-full items-center justify-between border-b border-gray-100 px-4 py-3.5 text-left"
+                  >
+                    <span className="flex items-center gap-2 text-[15px] text-gray-900">
+                      <Languages className="h-5 w-5 text-gray-400" />
+                      Language
+                    </span>
+                    <span className="flex items-center gap-1 text-[15px] text-gray-500">
+                      {templateLanguage}
+                      <ChevronRight className="h-4 w-4 text-gray-300" />
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTemplateModel((v) => (v === "Auto" ? "GPT-4o" : v === "GPT-4o" ? "Claude" : "Auto"))}
+                    className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+                  >
+                    <span className="flex items-center gap-2 text-[15px] text-gray-900">
+                      <Cpu className="h-5 w-5 text-gray-400" />
+                      AI model
+                    </span>
+                    <span className="flex items-center gap-1 text-[15px] text-gray-500">
+                      {templateModel}
+                      <ChevronRight className="h-4 w-4 text-gray-300" />
+                    </span>
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* 推荐 */}
+            {/* Recommend */}
             {templateTab === "recommend" && (
               <div className="p-5">
-                {/* 他人常用 */}
+                {/* Popular */}
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-xl font-bold text-gray-900">Popular</h2>
                   <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -447,22 +646,22 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-teal-500" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500" : "border-gray-200"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center mb-3",
-                        t.icon === "orange" ? "bg-teal-100" : "bg-cyan-100"
+                        t.icon === "orange" ? "bg-zinc-100" : "bg-stone-100"
                       )}>
                         {t.icon === "orange" ? (
-                          <svg className="w-5 h-5 text-teal-600" viewBox="0 0 24 24" fill="currentColor">
+                          <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="currentColor">
                             <rect x="3" y="3" width="7" height="7" rx="1" />
                             <rect x="14" y="3" width="7" height="7" rx="1" />
                             <rect x="3" y="14" width="7" height="7" rx="1" />
                             <rect x="14" y="14" width="7" height="7" rx="1" />
                           </svg>
                         ) : (
-                          <svg className="w-5 h-5 text-cyan-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="w-5 h-5 text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="3" y="4" width="18" height="18" rx="2" />
                             <line x1="16" y1="2" x2="16" y2="6" />
                             <line x1="8" y1="2" x2="8" y2="6" />
@@ -484,7 +683,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                   ))}
                 </div>
 
-                {/* 灵感推荐 */}
+                {/* Inspiration */}
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-xl font-bold text-gray-900">Inspiration</h2>
                   <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -499,22 +698,22 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-teal-500" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500" : "border-gray-200"
                       )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center mb-3",
-                        t.icon === "purple" ? "bg-teal-100" : "bg-cyan-100"
+                        t.icon === "purple" ? "bg-zinc-100" : "bg-stone-100"
                       )}>
                         {t.icon === "purple" ? (
-                          <svg className="w-5 h-5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="3" y="3" width="18" height="18" rx="2" />
                             <line x1="9" y1="9" x2="15" y2="9" />
                             <line x1="9" y1="13" x2="15" y2="13" />
                             <line x1="9" y1="17" x2="13" y2="17" />
                           </svg>
                         ) : (
-                          <span className="text-teal-600 font-bold text-lg">99</span>
+                          <span className="text-zinc-600 font-bold text-lg">99</span>
                         )}
                       </div>
                       <div className="font-semibold text-gray-900 text-sm mb-1">{t.name}</div>
@@ -526,10 +725,10 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
               </div>
             )}
 
-            {/* 探索 */}
+            {/* Explore */}
             {templateTab === "explore" && (
               <div className="p-5">
-                {/* 通用 */}
+                {/* General */}
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-xl font-bold text-gray-900">General</h2>
                   <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -544,17 +743,17 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-teal-500" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500" : "border-gray-200"
                       )}
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center">
                           {t.icon === "purple-star" ? (
-                            <svg className="w-5 h-5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" />
                             </svg>
                           ) : (
-                            <svg className="w-5 h-5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <circle cx="6" cy="6" r="3" />
                               <circle cx="18" cy="6" r="3" />
                               <circle cx="6" cy="18" r="3" />
@@ -577,7 +776,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                   ))}
                 </div>
 
-                {/* 会议 */}
+                {/* Meetings */}
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-xl font-bold text-gray-900">Meetings</h2>
                   <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -592,20 +791,20 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-teal-500" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500" : "border-gray-200"
                       )}
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center">
                           {t.icon === "orange-doc" ? (
-                            <svg className="w-5 h-5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <rect x="3" y="3" width="18" height="18" rx="2" />
                               <line x1="9" y1="9" x2="15" y2="9" />
                               <line x1="9" y1="13" x2="15" y2="13" />
                               <line x1="9" y1="17" x2="13" y2="17" />
                             </svg>
                           ) : (
-                            <svg className="w-5 h-5 text-cyan-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg className="w-5 h-5 text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                               <circle cx="9" cy="7" r="4" />
                               <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -627,46 +826,198 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
             )}
           </div>
 
-          {/* 底部按钮 */}
-          <div className="p-5 bg-white border-t border-gray-100">
+          <div className="border-t border-gray-100 bg-white p-5">
+            {templateTab === "mine" && (
+              <p className="mb-3 flex items-center justify-center gap-1.5 text-center text-[12px] text-gray-500">
+                <Languages className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                Translated. View original
+              </p>
+            )}
             <button
+              type="button"
               onClick={() => {
                 if (selectedTemplate) {
+                  setShowCreateTemplateSheet(false)
+                  setShowTemplateConfirm(false)
                   setShowTemplatePage(false)
                 }
               }}
               disabled={!selectedTemplate}
               className={cn(
-                "w-full py-4 rounded-xl font-medium text-base transition-colors",
+                "w-full rounded-xl py-4 text-base font-medium transition-colors",
                 selectedTemplate
-                  ? "bg-teal-500 text-white hover:bg-teal-600"
+                  ? "bg-zinc-900 text-white hover:bg-zinc-800"
                   : "bg-gray-200 text-gray-400"
               )}
             >
               Generate note
             </button>
           </div>
+
+          {/* Create template sheet */}
+          {showCreateTemplateSheet && (
+            <div className="absolute inset-0 z-[60] flex flex-col justify-end">
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/40"
+                aria-label="Close"
+                onClick={() => setShowCreateTemplateSheet(false)}
+              />
+              <div className="relative max-h-[55%] rounded-t-[1.25rem] bg-white px-4 pb-6 pt-3 shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom duration-300">
+                <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-3">
+                  <span className="text-base font-semibold text-zinc-900">Create template</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateTemplateSheet(false)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
+                    aria-label="Close"
+                  >
+                    <X className="h-5 w-5 text-gray-500" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateTemplateSheet(false)
+                    setTemplateDraftName("Photo template")
+                    setTemplateDraftPrompt(
+                      "After you upload a photo of a paper document, AI extracts structure and key points into a reusable prompt (demo)."
+                    )
+                    setShowTemplateConfirm(true)
+                  }}
+                  className="flex w-full items-center gap-3 border-b border-gray-100 py-4 text-left"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-violet-500 text-white shadow-sm">
+                    <ImageIcon className="h-5 w-5" strokeWidth={1.75} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="bg-gradient-to-r from-teal-600 to-emerald-600 bg-clip-text text-[16px] font-semibold text-transparent">
+                      Photo to template
+                    </div>
+                    <p className="mt-0.5 text-[13px] leading-snug text-gray-500">
+                      Take or upload a photo; AI builds a template for you
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-300" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateTemplateSheet(false)
+                    setTemplateDraftName("")
+                    setTemplateDraftPrompt("")
+                    setShowTemplateConfirm(true)
+                  }}
+                  className="flex w-full items-center gap-3 py-4 text-left"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white">
+                    <Pencil className="h-5 w-5 text-zinc-700" strokeWidth={1.75} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[16px] font-semibold text-zinc-900">Write template prompt</div>
+                    <p className="mt-0.5 text-[13px] leading-snug text-gray-500">Define your own template in your words</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-300" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Confirm template */}
+          {showTemplateConfirm && (
+            <div className="absolute inset-0 z-[61] flex items-end justify-center bg-black/45 sm:items-center">
+              <button
+                type="button"
+                className="absolute inset-0"
+                aria-label="Close"
+                onClick={() => setShowTemplateConfirm(false)}
+              />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tpl-confirm-title"
+                className="relative z-[62] m-4 w-full max-w-[360px] rounded-2xl bg-white p-5 shadow-xl"
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 id="tpl-confirm-title" className="text-lg font-semibold text-zinc-900">
+                    Confirm template
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplateConfirm(false)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
+                    aria-label="Close"
+                  >
+                    <X className="h-5 w-5 text-gray-500" />
+                  </button>
+                </div>
+                <label className="mb-1.5 block text-[15px] font-semibold text-zinc-900">Template name</label>
+                <input
+                  value={templateDraftName}
+                  onChange={(e) => setTemplateDraftName(e.target.value)}
+                  placeholder="Enter a template name"
+                  className="mb-4 w-full rounded-xl border border-gray-200 px-3 py-3 text-[15px] text-zinc-900 placeholder:text-gray-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100"
+                />
+                <label className="mb-1.5 block text-[15px] font-semibold text-zinc-900">Prompt</label>
+                <div className="relative mb-5">
+                  <textarea
+                    value={templateDraftPrompt}
+                    onChange={(e) => setTemplateDraftPrompt(e.target.value)}
+                    placeholder="How should recordings be summarized?"
+                    rows={5}
+                    className="w-full resize-y rounded-xl border border-gray-200 px-3 py-3 pr-8 text-[15px] text-zinc-900 placeholder:text-gray-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100"
+                  />
+                  <span
+                    className="pointer-events-none absolute bottom-2 right-2 text-gray-300"
+                    aria-hidden
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const name = templateDraftName.trim()
+                    if (!name) return
+                    const prompt = templateDraftPrompt.trim() || "(No description)"
+                    const id = `custom-${Date.now()}`
+                    const descShort = prompt.length > 72 ? `${prompt.slice(0, 72)}…` : prompt
+                    setCustomTemplates((prev) => [...prev, { id, name, desc: descShort, prompt }])
+                    setShowTemplateConfirm(false)
+                    setTemplateDraftName("")
+                    setTemplateDraftPrompt("")
+                    setSelectedTemplate({ id, name, desc: descShort })
+                  }}
+                  className="w-full rounded-xl bg-zinc-900 py-3.5 text-[15px] font-semibold text-white hover:bg-zinc-800"
+                >
+                  Save to my templates
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* 更多选项 — 分组样式参考设计稿（分享 / 复制 / 导出 + 编辑与删除） */}
-      {showMoreSheet && (
+      {/* Share & export sheet */}
+      {showShareOptions && (
         <div className="absolute inset-0 z-[45]">
           <button
             type="button"
             className="absolute inset-0 bg-zinc-900/25 backdrop-blur-[2px]"
             aria-label="Close menu"
-            onClick={() => setShowMoreSheet(false)}
+            onClick={() => setShowShareOptions(false)}
           />
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[1.25rem] max-h-[88vh] flex flex-col shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.15)] animate-in slide-in-from-bottom duration-300">
             <div className="flex justify-center pt-3 pb-2">
               <div className="w-10 h-1 rounded-full bg-zinc-200" />
             </div>
             <div className="px-5 pb-1 flex items-center justify-between border-b border-zinc-100">
-              <span className="text-base font-semibold text-zinc-900">Options</span>
+              <span className="text-base font-semibold text-zinc-900">Share & export</span>
               <button
                 type="button"
-                onClick={() => setShowMoreSheet(false)}
+                onClick={() => setShowShareOptions(false)}
                 className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 text-zinc-500"
                 aria-label="Close"
               >
@@ -680,7 +1031,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
+                    onClick={() => setShowShareOptions(false)}
                   >
                     <Link2 className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
                     <span className="flex-1 text-[15px] text-zinc-900">Share link</span>
@@ -695,7 +1046,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
+                    onClick={() => setShowShareOptions(false)}
                   >
                     <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
                     <span className="flex-1 text-[15px] text-zinc-900">Transcript</span>
@@ -704,7 +1055,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
+                    onClick={() => setShowShareOptions(false)}
                   >
                     <Flag className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
                     <span className="flex-1 text-[15px] text-zinc-900">Marks</span>
@@ -713,7 +1064,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
+                    onClick={() => setShowShareOptions(false)}
                   >
                     <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
                     <span className="flex-1 text-[15px] text-zinc-900">Note</span>
@@ -722,13 +1073,13 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                 </div>
               </div>
 
-              <div className="mb-5">
+              <div className="mb-2">
                 <h3 className="text-[13px] font-semibold text-zinc-900 mb-2">Export file</h3>
                 <div className="rounded-xl border border-zinc-200/90 divide-y divide-zinc-100 overflow-hidden bg-white">
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
+                    onClick={() => setShowShareOptions(false)}
                   >
                     <Mic className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
                     <span className="flex-1 text-[15px] text-zinc-900">Recording</span>
@@ -737,7 +1088,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
+                    onClick={() => setShowShareOptions(false)}
                   >
                     <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
                     <span className="flex-1 text-[15px] text-zinc-900">Transcript</span>
@@ -746,47 +1097,11 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
+                    onClick={() => setShowShareOptions(false)}
                   >
                     <Flag className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
                     <span className="flex-1 text-[15px] text-zinc-900">Marks</span>
                     <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-2">
-                <div className="rounded-xl border border-zinc-200/90 divide-y divide-zinc-100 overflow-hidden bg-white">
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
-                  >
-                    <Search className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Find and replace</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
-                  >
-                    <RefreshCw className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Re-transcribe</span>
-                  </button>
-                  <div
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left opacity-40 pointer-events-none select-none"
-                    aria-disabled
-                  >
-                    <User className="w-5 h-5 text-zinc-400 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-500">Name speaker</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-teal-50 active:bg-teal-100/60 transition-colors"
-                    onClick={() => setShowMoreSheet(false)}
-                  >
-                    <Trash2 className="w-5 h-5 text-teal-800 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] font-medium text-teal-900">Move to trash</span>
                   </button>
                 </div>
               </div>
@@ -795,7 +1110,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
         </div>
       )}
 
-      {/* 知识库选择 Bottom Sheet */}
+      {/* Library picker */}
       {showKBSheet && (
         <div className="absolute inset-0 z-50">
           <div 
@@ -819,7 +1134,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
             </div>
             
             <div className="flex-1 overflow-y-auto px-5 py-4">
-              {/* 推荐移入 */}
+              {/* Suggested */}
               <div className="flex items-center gap-2 text-sm mb-3">
                 <Sparkles className="w-4 h-4 text-zinc-500" />
                 <span className="text-gray-900 font-medium">Suggested</span>
@@ -835,8 +1150,8 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                     className={cn(
                       "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
                       selectedKB === kb.id
-                        ? "border-teal-500 bg-teal-50/60"
-                        : "border-stone-200 bg-stone-50/80 hover:border-teal-200/80"
+                        ? "border-zinc-500 bg-zinc-50/60"
+                        : "border-stone-200 bg-stone-50/80 hover:border-zinc-200/80"
                     )}
                   >
                     <div className={cn(
@@ -853,7 +1168,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                       <div className="text-xs text-gray-500">{kb.reason}</div>
                     </div>
                     {selectedKB === kb.id && (
-                      <div className="w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
                         <Check className="w-4 h-4 text-white" />
                       </div>
                     )}
@@ -862,7 +1177,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                 })}
               </div>
 
-              {/* 最近使用 */}
+              {/* Recent */}
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
                 <Clock className="w-4 h-4" />
                 <span>Recent</span>
@@ -877,8 +1192,8 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                     className={cn(
                       "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
                       selectedKB === kb.id
-                        ? "border-teal-500 bg-teal-50/40"
-                        : "border-gray-100 hover:border-teal-200/60"
+                        ? "border-zinc-500 bg-zinc-50/40"
+                        : "border-gray-100 hover:border-zinc-200/60"
                     )}
                   >
                     <div className={cn(
@@ -892,7 +1207,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                       <div className="text-xs text-gray-500">{kb.category} · {kb.count} items</div>
                     </div>
                     {selectedKB === kb.id && (
-                      <div className="w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
                         <Check className="w-4 h-4 text-white" />
                       </div>
                     )}
@@ -912,8 +1227,8 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                     className={cn(
                       "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
                       selectedKB === kb.id
-                        ? "border-teal-500 bg-teal-50/40"
-                        : "border-gray-100 hover:border-teal-200/60"
+                        ? "border-zinc-500 bg-zinc-50/40"
+                        : "border-gray-100 hover:border-zinc-200/60"
                     )}
                   >
                     <div className={cn(
@@ -927,7 +1242,7 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                       <div className="text-xs text-gray-500">{kb.category} · {kb.count} items</div>
                     </div>
                     {selectedKB === kb.id && (
-                      <div className="w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
                         <Check className="w-4 h-4 text-white" />
                       </div>
                     )}
@@ -951,9 +1266,9 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
                 className={cn(
                   "flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2",
                   selectedKB && !transferComplete
-                    ? "bg-teal-500 text-white hover:bg-teal-600"
+                    ? "bg-zinc-500 text-white hover:bg-zinc-600"
                     : transferComplete
-                    ? "bg-teal-600 text-white"
+                    ? "bg-zinc-600 text-white"
                     : "bg-gray-200 text-gray-400"
                 )}
               >

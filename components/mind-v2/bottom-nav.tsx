@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import { FileText, Layers, Sparkles, User } from "lucide-react"
 
 export type TabType = "notes" | "knowledge" | "agent" | "me"
@@ -10,7 +11,7 @@ interface BottomNavProps {
   onTabChange: (tab: TabType) => void
 }
 
-/** 设计稿 Tab 命名：Memos / Notebooks / Clawbot / Me */
+/** Spec tab labels: Memos / Notebooks / Clawbot / Me */
 const tabs = [
   { id: "notes" as TabType, label: "Memos", icon: FileText },
   { id: "knowledge" as TabType, label: "Notebooks", icon: Layers },
@@ -34,20 +35,20 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             <div
               className={cn(
                 "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
-                isActive ? "bg-teal-100" : "bg-transparent"
+                isActive ? mx.navActiveWell : "bg-transparent"
               )}
             >
               <Icon
                 className={cn(
                   "w-[20px] h-[20px] transition-all",
-                  isActive ? "text-teal-500" : "text-gray-400"
+                  isActive ? mx.navActiveIcon : "text-gray-400"
                 )}
               />
             </div>
             <span
               className={cn(
                 "text-[10px] transition-all max-w-[4.5rem] truncate",
-                isActive ? "text-teal-600 font-semibold" : "text-gray-400 font-medium"
+                isActive ? cn(mx.navActiveLabel, "font-semibold") : "text-gray-400 font-medium"
               )}
             >
               {tab.label}

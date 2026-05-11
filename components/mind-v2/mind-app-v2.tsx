@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import type { MindAccountId } from "@/lib/mind-accounts"
 import { BottomNav, type TabType } from "./bottom-nav"
 import { NotesTab, type Note } from "./notes-tab"
 import { NoteDetail } from "./note-detail"
@@ -16,24 +17,31 @@ type View =
   | { type: "recording" }
   | { type: "kb-detail"; kb?: { name: string; color: string; description?: string }; initialView?: "content" | "graph" | "factory" }
   | { type: "agent-chat"; agent: { id: number; name: string; description: string; avatar: string; color: string } }
-  | { type: "kb-agent-chat"; context: { kbName: string; contentTitle?: string } }
+  | {
+      type: "kb-agent-chat"
+      context: { kbName: string; contentTitle?: string }
+      /** Preserve notebook when returning from Mind Agent chat */
+      kb?: { name: string; color: string; description?: string }
+      initialView?: "content" | "graph" | "factory"
+    }
 
 export function MindAppV2() {
   const [activeTab, setActiveTab] = useState<TabType>("notes")
   const [currentView, setCurrentView] = useState<View>({ type: "tabs" })
+  const [activeAccountId, setActiveAccountId] = useState<MindAccountId>("work")
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-100 via-teal-50/40 to-slate-200 p-4">
-      {/* 手机框架 */}
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-sky-50/80 via-stone-50 to-teal-50/50 p-4">
+      {/* Phone chrome */}
       <div className="relative w-[390px] h-[844px] bg-white rounded-[3rem] shadow-2xl overflow-hidden border-[14px] border-zinc-700">
-        {/* 刘海 */}
+        {/* Notch */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[35px] bg-zinc-700 rounded-b-3xl z-50" />
         
-        {/* 状态栏 */}
+        {/* Status bar */}
         <div className="absolute top-0 left-0 right-0 h-[50px] bg-transparent z-40 flex items-end justify-between px-8 pb-1">
           <span className="text-[13px] font-semibold text-gray-900">9:41</span>
           <div className="flex items-center gap-1.5">
-            {/* 信号 */}
+            {/* Cellular */}
             <svg className="w-[18px] h-[12px] text-zinc-800" viewBox="0 0 18 12" fill="currentColor">
               <rect x="0" y="8" width="3" height="4" rx="0.5"/>
               <rect x="5" y="5" width="3" height="7" rx="0.5"/>
@@ -44,7 +52,7 @@ export function MindAppV2() {
             <svg className="w-[16px] h-[12px] text-zinc-800" viewBox="0 0 16 12" fill="currentColor">
               <path d="M8 2.4c2.5 0 4.8 1 6.5 2.6l-1.3 1.4c-1.4-1.3-3.2-2-5.2-2s-3.8.7-5.2 2L1.5 5c1.7-1.6 4-2.6 6.5-2.6zm0 4c1.5 0 2.8.6 3.9 1.5L10.6 9.3c-.7-.7-1.6-1-2.6-1s-1.9.4-2.6 1L4.1 7.9c1.1-1 2.4-1.5 3.9-1.5zM8 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
             </svg>
-            {/* 电池 */}
+            {/* Battery */}
             <div className="flex items-center gap-0.5">
               <div className="w-[25px] h-[12px] border-[1.5px] border-zinc-700 rounded-[3px] relative p-[1.5px]">
                 <div className="h-full bg-zinc-700 rounded-[1px]" style={{ width: '85%' }} />
@@ -54,14 +62,15 @@ export function MindAppV2() {
           </div>
         </div>
 
-        {/* 主内容区域 */}
+        {/* Main content */}
         <div className="absolute inset-0 pt-[50px] pb-0 flex flex-col">
           <div className="flex-1 overflow-hidden relative">
-            {/* Tab 视图 */}
+            {/* Tab root */}
             {currentView.type === "tabs" && (
               <>
                 {activeTab === "notes" && (
                   <NotesTab
+                    activeAccountId={activeAccountId}
                     onNoteClick={(note) => setCurrentView({ type: "note-detail", note })}
                     onStartRecording={() => setCurrentView({ type: "recording" })}
                   />
@@ -86,7 +95,7 @@ export function MindAppV2() {
                         type: "kb-detail",
                         kb: {
                           name: "Product library",
-                          color: "from-teal-400 to-cyan-600",
+                          color: "from-stone-500 to-zinc-700",
                           description: "Specs and PRDs",
                         },
                         initialView: "factory",
@@ -95,12 +104,15 @@ export function MindAppV2() {
                   />
                 )}
                 {activeTab === "me" && (
-                  <MeTab />
+                  <MeTab
+                    activeAccountId={activeAccountId}
+                    onActiveAccountChange={setActiveAccountId}
+                  />
                 )}
               </>
             )}
 
-            {/* 笔记详情 - 录音/导入类型 */}
+            {/* Note detail (recording/import) */}
             {currentView.type === "note-detail" && (
               <NoteDetail
                 onBack={() => setCurrentView({ type: "tabs" })}
@@ -111,7 +123,7 @@ export function MindAppV2() {
               />
             )}
 
-            {/* 录音页面 */}
+            {/* Recording */}
             {currentView.type === "recording" && (
               <RecordingPage
                 onStop={() => setCurrentView({ type: "note-detail" })}
@@ -119,17 +131,24 @@ export function MindAppV2() {
               />
             )}
 
-            {/* 知识库详情 */}
+            {/* Library detail */}
             {currentView.type === "kb-detail" && (
               <KnowledgeDetail
                 onBack={() => setCurrentView({ type: "tabs" })}
                 knowledgeBase={currentView.kb}
                 initialView={currentView.initialView}
-                onAgentChat={(context) => setCurrentView({ type: "kb-agent-chat", context })}
+                onAgentChat={(context) =>
+                  setCurrentView({
+                    type: "kb-agent-chat",
+                    context,
+                    kb: currentView.kb,
+                    initialView: currentView.initialView,
+                  })
+                }
               />
             )}
 
-            {/* 智能体对话 */}
+            {/* Agent chat */}
             {currentView.type === "agent-chat" && (
               <AgentChat
                 agent={currentView.agent}
@@ -137,7 +156,7 @@ export function MindAppV2() {
               />
             )}
 
-            {/* 知识库Agent对话 */}
+            {/* Library-grounded agent chat */}
             {currentView.type === "kb-agent-chat" && (
               <AgentChat
                 agent={{
@@ -147,14 +166,20 @@ export function MindAppV2() {
                     ? `Q&A grounded in “${currentView.context.contentTitle}”`
                     : `Q&A grounded in the “${currentView.context.kbName}” library`,
                   avatar: "🧠",
-                  color: "from-teal-500 to-cyan-600",
+                  color: "from-stone-500 to-zinc-700",
                 }}
-                onBack={() => setCurrentView({ type: "kb-detail" })}
+                onBack={() =>
+                  setCurrentView({
+                    type: "kb-detail",
+                    kb: currentView.kb,
+                    initialView: currentView.initialView,
+                  })
+                }
               />
             )}
           </div>
 
-          {/* 底部导航 - 仅在 tabs 视图显示 */}
+          {/* Bottom nav (tabs only) */}
           {currentView.type === "tabs" && (
             <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
           )}

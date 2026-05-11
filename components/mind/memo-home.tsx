@@ -47,7 +47,7 @@ function MemoCard({ type, title, time, duration, tags, preview, onClick }: MemoC
         </button>
       </div>
       
-      {/* 波形预览 */}
+      {/* Waveform preview */}
       {type === "recording" && (
         <div className="h-12 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-xl mb-3 flex items-center px-3 overflow-hidden">
           <div className="flex items-center gap-[2px] h-full py-3">
@@ -65,24 +65,24 @@ function MemoCard({ type, title, time, duration, tags, preview, onClick }: MemoC
         </div>
       )}
       
-      {/* 图片预览 */}
+      {/* Image preview */}
       {type === "photo" && (
         <div className="h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl mb-3 overflow-hidden relative">
           <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-xs">
-            白板内容预览
+            Whiteboard preview
           </div>
           <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur px-2 py-1 rounded-md">
-            <span className="text-white text-[10px]">已识别 3 处文字</span>
+            <span className="text-white text-[10px]">3 text regions detected</span>
           </div>
         </div>
       )}
       
-      {/* 文字预览 */}
+      {/* Text preview */}
       {type === "voice" && preview && (
         <p className="text-sm text-gray-600 mb-3 line-clamp-2">{preview}</p>
       )}
       
-      {/* 标签 */}
+      {/* Tags */}
       <div className="flex items-center gap-2">
         {tags.map((tag, i) => (
           <span 
@@ -109,7 +109,7 @@ export function MemoHome({ onStartRecording, onCardClick, onProfileClick }: Memo
   
   return (
     <div className="h-full flex flex-col bg-[#f8f9fb]">
-      {/* 顶部导航 */}
+      {/* Top bar */}
       <div className="pt-14 px-5 pb-4 bg-white/80 backdrop-blur-xl">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900">Mind</h1>
@@ -117,7 +117,7 @@ export function MemoHome({ onStartRecording, onCardClick, onProfileClick }: Memo
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 rounded-full">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
               <Bluetooth className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="text-xs font-medium text-emerald-700">已连接</span>
+              <span className="text-xs font-medium text-emerald-700">Connected</span>
             </div>
             <button 
               onClick={onProfileClick}
@@ -128,13 +128,13 @@ export function MemoHome({ onStartRecording, onCardClick, onProfileClick }: Memo
           </div>
         </div>
         
-        {/* 筛选标签 */}
+        {/* Filter chips */}
         <div className="flex gap-2">
           {[
-            { id: "all", label: "全部" },
-            { id: "recording", label: "录音" },
-            { id: "photo", label: "拍照" },
-            { id: "voice", label: "语音" },
+            { id: "all", label: "All" },
+            { id: "recording", label: "Recording" },
+            { id: "photo", label: "Photo" },
+            { id: "voice", label: "Voice" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -152,50 +152,50 @@ export function MemoHome({ onStartRecording, onCardClick, onProfileClick }: Memo
         </div>
       </div>
       
-      {/* 卡片列表 */}
+      {/* Card list */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         <MemoCard
           type="recording"
-          title="产品需求评审会议"
-          time="今天 14:30"
+          title="PRD review"
+          time="Today 2:30 PM"
           duration="45:23"
-          tags={["#产品", "#需求"]}
+          tags={["#product", "#requirements"]}
           onClick={onCardClick}
         />
         <MemoCard
           type="photo"
-          title="系统架构白板"
-          time="今天 11:20"
-          tags={["#架构", "#技术"]}
+          title="Architecture whiteboard"
+          time="Today 11:20 AM"
+          tags={["#architecture", "#tech"]}
           onClick={onCardClick}
         />
         <MemoCard
           type="voice"
-          title="灵感备忘"
-          time="昨天 22:15"
-          tags={["#灵感"]}
-          preview="关于 CASK 基因的研究方向，可以考虑结合 trio-WES 分析方法..."
+          title="Ideas scratchpad"
+          time="Yesterday 10:15 PM"
+          tags={["#ideas"]}
+          preview="Research directions on CASK could combine with trio-WES analysis…"
           onClick={onCardClick}
         />
         <MemoCard
           type="recording"
-          title="临床病例讨论"
-          time="昨天 09:00"
+          title="Clinical case discussion"
+          time="Yesterday 9:00 AM"
           duration="1:23:45"
-          tags={["#医学", "#临床"]}
+          tags={["#medicine", "#clinical"]}
           onClick={onCardClick}
         />
       </div>
       
-      {/* 底部录音按钮 */}
+      {/* Bottom record controls */}
       <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center">
         <div className="relative">
-          {/* 左侧��捷 - 相机 */}
+          {/* Left shortcut — camera */}
           <button className="absolute left-[-70px] top-1/2 -translate-y-1/2 w-12 h-12 bg-white shadow-lg rounded-full flex items-center justify-center border border-gray-100 hover:scale-110 transition-transform">
             <Camera className="w-5 h-5 text-gray-600" />
           </button>
           
-          {/* 主录音按钮 */}
+          {/* Primary record */}
           <button 
             onClick={onStartRecording}
             className="w-[72px] h-[72px] bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-xl shadow-blue-500/30 hover:scale-105 transition-transform active:scale-95"
@@ -203,7 +203,7 @@ export function MemoHome({ onStartRecording, onCardClick, onProfileClick }: Memo
             <Mic className="w-8 h-8 text-white" />
           </button>
           
-          {/* 右侧快捷 - 文字 */}
+          {/* Right shortcut — text */}
           <button className="absolute right-[-70px] top-1/2 -translate-y-1/2 w-12 h-12 bg-white shadow-lg rounded-full flex items-center justify-center border border-gray-100 hover:scale-110 transition-transform">
             <Type className="w-5 h-5 text-gray-600" />
           </button>

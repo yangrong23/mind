@@ -5,15 +5,15 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const projects = [
-  { id: 1, name: "新对话", active: true },
-  { id: 2, name: "新对话", active: false },
-  { id: 3, name: "新对话", active: false },
-  { id: 4, name: "新对话", active: false },
-  { id: 5, name: "新对话", active: false },
-  { id: 6, name: "新对话", active: false },
-  { id: 7, name: "新对话", active: false },
-  { id: 8, name: "新对话", active: false },
-  { id: 9, name: "新对话", active: false },
+  { id: 1, name: "New chat", active: true },
+  { id: 2, name: "New chat", active: false },
+  { id: 3, name: "New chat", active: false },
+  { id: 4, name: "New chat", active: false },
+  { id: 5, name: "New chat", active: false },
+  { id: 6, name: "New chat", active: false },
+  { id: 7, name: "New chat", active: false },
+  { id: 8, name: "New chat", active: false },
+  { id: 9, name: "New chat", active: false },
 ]
 
 export function Sidebar() {

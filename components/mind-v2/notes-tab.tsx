@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { getMindAccount, accountSpaceLabel, type MindAccountId } from "@/lib/mind-accounts"
+import { mx } from "@/lib/medrix-design-tokens"
 import {
   Search, Mic,
   Bluetooth, X,
@@ -18,7 +20,7 @@ export interface Note {
   preview: string
   status: "pending" | "analyzed" | "transferred"
   source?: string
-  /** 多模态徽章：如高亮条数 */
+  /** Multimodal badge, e.g. highlight count */
   highlightCount?: number
 }
 
@@ -131,14 +133,14 @@ function SwipeableMemoCard({ note, onOpen, onArchive, onDelete }: SwipeableMemoC
 
   return (
     <div className="relative overflow-hidden rounded-2xl">
-      {/* 向右滑：归入知识库（绿） */}
+      {/* Swipe right: add to library */}
       <div
-        className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-teal-600 text-white rounded-l-2xl"
+        className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-zinc-600 text-white rounded-l-2xl"
         style={{ opacity: dx > 0 ? Math.min(1, dx / 72) : 0 }}
       >
         <Library className="w-6 h-6" strokeWidth={1.75} />
       </div>
-      {/* 向左滑：删除（红，设计稿要求） */}
+      {/* Swipe left: delete */}
       <div
         className="absolute inset-y-0 right-0 flex w-24 items-center justify-center bg-red-600 text-white rounded-r-2xl"
         style={{ opacity: dx < 0 ? Math.min(1, -dx / 72) : 0 }}
@@ -198,11 +200,13 @@ function SwipeableMemoCard({ note, onOpen, onArchive, onDelete }: SwipeableMemoC
 }
 
 interface NotesTabProps {
+  activeAccountId: MindAccountId
   onNoteClick: (note: Note) => void
   onStartRecording: () => void
 }
 
-export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
+export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: NotesTabProps) {
+  const activeAccount = getMindAccount(activeAccountId)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
   const [filterType, setFilterType] = useState<"all" | "hardware" | "phone">("all")
@@ -219,18 +223,36 @@ export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
             <div
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg",
-                isDeviceConnected ? "bg-zinc-700" : "bg-gray-300"
+                isDeviceConnected
+                  ? activeAccount.kind === "work"
+                    ? "bg-indigo-600"
+                    : "bg-emerald-600"
+                  : "bg-gray-300"
               )}
             >
               <Bluetooth className="h-4 w-4 text-white" />
             </div>
             <div className="text-left">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium text-gray-900">Mind</span>
+                <span
+                  className={cn(
+                    "rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-tight",
+                    activeAccount.kind === "work"
+                      ? cn(mx.accentWorkSoft, mx.accentWorkIcon)
+                      : cn(mx.accentPersonalSoft, "text-emerald-800")
+                  )}
+                >
+                  {accountSpaceLabel(activeAccount.kind)}
+                </span>
                 <div
                   className={cn(
                     "h-1.5 w-1.5 rounded-full",
-                    isDeviceConnected ? "bg-teal-500" : "bg-gray-300"
+                    isDeviceConnected
+                      ? activeAccount.kind === "work"
+                        ? "bg-indigo-400"
+                        : "bg-emerald-400"
+                      : "bg-gray-300"
                   )}
                 />
               </div>
@@ -305,7 +327,7 @@ export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
             <button
               type="button"
               onClick={onStartRecording}
-              className="mt-6 rounded-full bg-teal-600 px-6 py-3 text-[15px] font-medium text-white hover:bg-teal-700"
+              className="mt-6 rounded-full bg-zinc-600 px-6 py-3 text-[15px] font-medium text-white hover:bg-zinc-700"
             >
               Start recording
             </button>
@@ -335,7 +357,7 @@ export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
         className="absolute bottom-7 right-6 z-30 flex items-center justify-center"
         aria-label="Start recording"
       >
-        <div className="flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full bg-gradient-to-br from-teal-400 via-teal-500 to-cyan-600 text-white shadow-[0_10px_28px_-6px_rgba(20,184,166,0.5)] ring-[3px] ring-white/95 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-95">
+        <div className="flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full bg-gradient-to-br from-zinc-400 via-zinc-500 to-stone-600 text-white shadow-[0_10px_28px_-6px_rgba(63,63,70,0.35)] ring-[3px] ring-white/95 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-95">
           <Mic className="h-7 w-7" strokeWidth={2.25} />
         </div>
       </button>
@@ -365,7 +387,7 @@ export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
                   <div
                     className={cn(
                       "flex h-14 w-14 items-center justify-center rounded-2xl",
-                      isDeviceConnected ? "bg-gradient-to-br from-teal-500 to-cyan-600" : "bg-gray-300"
+                      isDeviceConnected ? "bg-gradient-to-br from-zinc-500 to-stone-600" : "bg-gray-300"
                     )}
                   >
                     <Bluetooth className="h-7 w-7 text-white" />
@@ -376,7 +398,7 @@ export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-xs font-medium",
-                          isDeviceConnected ? "bg-teal-700 text-white" : "bg-gray-200 text-gray-500"
+                          isDeviceConnected ? "bg-zinc-700 text-white" : "bg-gray-200 text-gray-500"
                         )}
                       >
                         {isDeviceConnected ? "Connected" : "Disconnected"}
@@ -389,7 +411,7 @@ export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
                 {isDeviceConnected && (
                   <div className="grid grid-cols-3 gap-3">
                     <div className="rounded-xl bg-white/80 p-3 text-center">
-                      <Battery className="mx-auto mb-1 h-5 w-5 text-teal-600/70" />
+                      <Battery className="mx-auto mb-1 h-5 w-5 text-zinc-600/70" />
                       <div className="text-lg font-semibold text-gray-900">85%</div>
                       <div className="text-xs text-gray-500">Battery</div>
                     </div>
@@ -411,7 +433,7 @@ export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
             <div className="space-y-2 px-5 pb-6">
               {isDeviceConnected ? (
                 <>
-                  <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-500 py-3 font-medium text-white hover:bg-teal-600">
+                  <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600">
                     <RefreshCw className="h-5 w-5" />
                     Sync now
                   </button>
@@ -420,7 +442,7 @@ export function NotesTab({ onNoteClick, onStartRecording }: NotesTabProps) {
                   </button>
                 </>
               ) : (
-                <button type="button" onClick={() => setIsDeviceConnected(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-500 py-3 font-medium text-white hover:bg-teal-600">
+                <button type="button" onClick={() => setIsDeviceConnected(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600">
                   <Bluetooth className="h-5 w-5" />
                   Search & connect
                 </button>

@@ -9,17 +9,17 @@ interface RecordingViewProps {
   onClose: () => void
 }
 
-// 模拟实时转录文本
+// Mock live transcript segments
 const transcriptSegments = [
-  { text: "好的，我们今天来讨论一下", highlight: false },
-  { text: "CASK", highlight: true, tooltip: "CASK基因：钙/钙调蛋白依赖性丝氨酸蛋白激酶" },
-  { text: "基因相关的临床表现。", highlight: false },
-  { text: "首先，我们需要进行", highlight: false },
-  { text: "trio-WES", highlight: true, tooltip: "全外显子组测序：一种对家系三人进行的基因检测方法" },
-  { text: "分析来确认变异位点。", highlight: false },
-  { text: "然后可以考虑使用", highlight: false },
-  { text: "API", highlight: true, tooltip: "应用程序编程接口" },
-  { text: "接口对接到我们的分析流程中...", highlight: false },
+  { text: "Okay, today we are going to discuss ", highlight: false },
+  { text: "CASK", highlight: true, tooltip: "CASK: calcium/calmodulin-dependent serine protein kinase" },
+  { text: " and its clinical phenotypes. ", highlight: false },
+  { text: "First we need ", highlight: false },
+  { text: "trio-WES", highlight: true, tooltip: "Trio whole-exome sequencing: WES on proband and both parents" },
+  { text: " to confirm candidate variants. ", highlight: false },
+  { text: "Then we can use an ", highlight: false },
+  { text: "API", highlight: true, tooltip: "Application programming interface" },
+  { text: " to plug into our analysis pipeline…", highlight: false },
 ]
 
 export function RecordingView({ onStop, onClose }: RecordingViewProps) {
@@ -30,7 +30,7 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
   const [showTooltip, setShowTooltip] = useState<string | null>(null)
   const [waveHeights, setWaveHeights] = useState<number[]>(Array(60).fill(20))
   
-  // 计时器
+  // Elapsed timer
   useEffect(() => {
     if (isPaused) return
     const timer = setInterval(() => {
@@ -39,7 +39,7 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
     return () => clearInterval(timer)
   }, [isPaused])
   
-  // 模拟实时转录
+  // Simulate streaming transcript
   useEffect(() => {
     if (isPaused) return
     const timer = setInterval(() => {
@@ -48,7 +48,7 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
     return () => clearInterval(timer)
   }, [isPaused])
   
-  // 声纹动画
+  // Waveform animation
   useEffect(() => {
     if (isPaused) return
     const timer = setInterval(() => {
@@ -69,7 +69,7 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
   
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-[#1a1a2e] to-[#16213e]">
-      {/* 顶部 */}
+      {/* Header */}
       <div className="pt-14 px-5 pb-4 flex items-center justify-between">
         <button 
           onClick={onClose}
@@ -79,23 +79,23 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
         </button>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-          <span className="text-white font-medium">录制中</span>
+          <span className="text-white font-medium">Recording</span>
         </div>
         <div className="w-10" />
       </div>
       
-      {/* 时间显示 */}
+      {/* Timer */}
       <div className="text-center py-6">
         <div className="text-5xl font-light text-white tracking-wider font-mono">
           {formatTime(time)}
         </div>
-        <p className="text-white/50 text-sm mt-2">会议录音</p>
+        <p className="text-white/50 text-sm mt-2">Meeting capture</p>
       </div>
       
-      {/* 声纹可视化 */}
+      {/* Waveform */}
       <div className="px-6 py-8">
         <div className="h-24 bg-white/5 rounded-2xl flex items-center justify-center px-4 overflow-hidden relative">
-          {/* 书签标记 */}
+          {/* Bookmarks */}
           {bookmarks.map((bm, i) => (
             <div 
               key={i}
@@ -125,11 +125,11 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
         </div>
       </div>
       
-      {/* 实时转录 */}
+      {/* Live transcript */}
       <div className="flex-1 mx-4 mb-4 bg-white/5 backdrop-blur rounded-2xl p-4 overflow-y-auto">
         <div className="flex items-center gap-2 mb-3">
           <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-          <span className="text-emerald-400 text-xs font-medium">AI 实时识别中</span>
+          <span className="text-emerald-400 text-xs font-medium">AI transcribing live</span>
         </div>
         
         <div className="text-white/90 text-[15px] leading-relaxed">
@@ -159,7 +159,7 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
         </div>
       </div>
       
-      {/* 底部控制 */}
+      {/* Bottom controls */}
       <div className="px-6 pb-10 flex items-center justify-center gap-6">
         <button 
           onClick={addBookmark}
