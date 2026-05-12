@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
+import { ContentFactoryModals, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
 import {
   ChevronLeft,
@@ -125,6 +126,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
   const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
   const [showContentDetail, setShowContentDetail] = useState<typeof mockContents[0] | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
+  const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
   const sourceCount = mockContents.length
   const kbDisplayName = knowledgeBase?.name || "Notebook"
   const notebookSummaryBody = notebookSummaryForLibrary(kbDisplayName, sourceCount)
@@ -568,36 +570,66 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
             <h3 className="font-medium text-gray-700 mb-4">Generate</h3>
             
             <div className="space-y-3">
-              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
+              <button
+                type="button"
+                onClick={() => setFactoryModal("report")}
+                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 2v6h6" />
+                      <path d="M12 18v-6M9 15h6" />
+                    </svg>
+                  </div>
+                  <span className="font-medium text-gray-900">Report</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFactoryModal("audio")}
+                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M2 10v3a1 1 0 001 1h3l4 4V3L6 7H3a1 1 0 00-1 1z" />
                       <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
                     </svg>
                   </div>
                   <span className="font-medium text-gray-900">Audio brief</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
+              <button
+                type="button"
+                onClick={() => setFactoryModal("video")}
+                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="4" width="20" height="16" rx="2" />
                       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" />
                     </svg>
                   </div>
                   <span className="font-medium text-gray-900">Video brief</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
+              <button
+                type="button"
+                onClick={() => setFactoryModal("flashcards")}
+                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="6" width="16" height="12" rx="2" />
                       <path d="M22 10v8a2 2 0 01-2 2H8" />
                       <path d="M8 10l3 3-3 3" />
@@ -605,26 +637,34 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                   </div>
                   <span className="font-medium text-gray-900">Flashcards</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
+              <button
+                type="button"
+                onClick={() => setFactoryModal("quiz")}
+                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="3" width="18" height="18" rx="2" />
                       <path d="M9 9h.01M12 12a3 3 0 100-6 3 3 0 000 6zM9 15h6" />
                     </svg>
                   </div>
                   <span className="font-medium text-gray-900">Quiz</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
+              <button
+                type="button"
+                onClick={() => setFactoryModal("infographic")}
+                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="18" y1="20" x2="18" y2="10" />
                       <line x1="12" y1="20" x2="12" y2="4" />
                       <line x1="6" y1="20" x2="6" y2="14" />
@@ -632,13 +672,17 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                   </div>
                   <span className="font-medium text-gray-900">Infographic</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 text-gray-400" />
               </button>
 
-              <button className="w-full flex items-center justify-between p-4 bg-zinc-50/80 rounded-2xl hover:bg-zinc-100/60 transition-colors">
+              <button
+                type="button"
+                onClick={() => setFactoryModal("slides")}
+                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="3" width="20" height="14" rx="2" />
                       <line x1="8" y1="21" x2="16" y2="21" />
                       <line x1="12" y1="17" x2="12" y2="21" />
@@ -646,7 +690,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
                   </div>
                   <span className="font-medium text-gray-900">Slides</span>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 text-gray-400" />
               </button>
             </div>
 
@@ -661,6 +705,12 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
       </div>
 
       {shareSheet}
+
+      <ContentFactoryModals
+        open={factoryModal}
+        onClose={() => setFactoryModal(null)}
+        libraryName={kbDisplayName}
+      />
     </div>
   )
 }
