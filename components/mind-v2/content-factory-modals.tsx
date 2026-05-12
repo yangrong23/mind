@@ -15,18 +15,29 @@ import {
   BarChart3,
   Presentation,
   Volume2,
-  Video,
+  GitBranch,
   ChevronDown,
 } from "lucide-react"
 
 export type FactoryModalKind =
   | "report"
   | "audio"
-  | "video"
+  | "mindmap"
   | "flashcards"
   | "quiz"
   | "infographic"
   | "slides"
+
+/** Numeric knobs chosen in Studio modals; passed through to generation / job meta. */
+export type FactoryGenerationSettings = Partial<{
+  audioTargetMinutes: number
+  mindmapBranchCount: number
+  slidesPageCount: number
+  quizQuestionCount: number
+  flashcardCount: number
+  infographicPanelCount: number
+  reportTargetPages: number
+}>
 
 interface ContentFactoryModalsProps {
   open: FactoryModalKind | null
@@ -34,7 +45,7 @@ interface ContentFactoryModalsProps {
   /** Shown in copy where library context matters */
   libraryName?: string
   /** Fired when the user taps Generate; the modal closes immediately after. */
-  onGenerateSubmit?: (kind: FactoryModalKind) => void
+  onGenerateSubmit?: (kind: FactoryModalKind, settings?: FactoryGenerationSettings) => void
 }
 
 function ModalFrame({
@@ -112,6 +123,59 @@ function GenerateFooter({ onGenerate, onClose }: { onGenerate?: () => void; onCl
   )
 }
 
+function SliderRow({
+  tone,
+  label,
+  hint,
+  min,
+  max,
+  step = 1,
+  value,
+  onChange,
+  valueSuffix,
+}: {
+  tone: FactoryModalKind
+  label: string
+  hint?: string
+  min: number
+  max: number
+  step?: number
+  value: number
+  onChange: (n: number) => void
+  valueSuffix: string
+}) {
+  const tc = mx.factoryTone[tone]
+  return (
+    <div className="mb-4">
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <p className="text-[13px] text-zinc-500">{label}</p>
+        <span className={cn("tabular-nums text-[13px] font-semibold", tc.check)}>
+          {value}
+          {valueSuffix ? ` ${valueSuffix}` : ""}
+        </span>
+      </div>
+      {hint ? <p className="mb-2 text-[11px] leading-snug text-zinc-400">{hint}</p> : null}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-zinc-700"
+      />
+      <div className="mt-1 flex justify-between text-[10px] text-zinc-400">
+        <span>
+          {min} {valueSuffix}
+        </span>
+        <span>
+          {max} {valueSuffix}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function PillRow({
   tone,
   label,
@@ -153,7 +217,14 @@ function PillRow({
 }
 
 /** Create report — formats + suggested formats */
-function ReportModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?: () => void }) {
+function ReportModal({
+  onClose,
+  onSubmitFactory,
+}: {
+  onClose: () => void
+  onSubmitFactory?: (settings: FactoryGenerationSettings) => void
+}) {
+  const [reportPages, setReportPages] = useState(12)
   const tc = mx.factoryTone.report
   const formatCards = [
     { title: "Custom format", desc: "Structure, tone, and style your report the way you want." },
@@ -188,8 +259,23 @@ function ReportModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?
       title="Create report"
       icon={<FilePlus2 className="h-5 w-5" />}
       onClose={onClose}
-      footer={<GenerateFooter onGenerate={onGenerate} onClose={onClose} />}
+      footer={
+        <GenerateFooter
+          onGenerate={() => onSubmitFactory?.({ reportTargetPages: reportPages })}
+          onClose={onClose}
+        />
+      }
     >
+      <SliderRow
+        tone="report"
+        label="Target length"
+        hint="Approximate page count for the written report."
+        min={5}
+        max={40}
+        value={reportPages}
+        onChange={setReportPages}
+        valueSuffix="pages"
+      />
       <section className="mb-6">
         <h3 className="mb-3 text-[15px] font-semibold text-zinc-900">Formats</h3>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
@@ -214,8 +300,14 @@ function ReportModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?
 }
 
 /** Flashcards — count, difficulty, topic */
-function FlashcardsModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?: () => void }) {
-  const [qty, setQty] = useState("standard")
+function FlashcardsModal({
+  onClose,
+  onSubmitFactory,
+}: {
+  onClose: () => void
+  onSubmitFactory?: (settings: FactoryGenerationSettings) => void
+}) {
+  const [cardCount, setCardCount] = useState(24)
   const [diff, setDiff] = useState("medium")
   const [topic, setTopic] = useState("")
   const tc = mx.factoryTone.flashcards
@@ -225,18 +317,22 @@ function FlashcardsModal({ onClose, onGenerate }: { onClose: () => void; onGener
       title="Custom flashcards"
       icon={<Layers className="h-5 w-5" />}
       onClose={onClose}
-      footer={<GenerateFooter onGenerate={onGenerate} onClose={onClose} />}
+      footer={
+        <GenerateFooter
+          onGenerate={() => onSubmitFactory?.({ flashcardCount: cardCount })}
+          onClose={onClose}
+        />
+      }
     >
-      <PillRow
+      <SliderRow
         tone="flashcards"
         label="Number of cards"
-        value={qty}
-        onChange={setQty}
-        options={[
-          { id: "few", label: "Fewer" },
-          { id: "standard", label: "Standard (default)" },
-          { id: "more", label: "More" },
-        ]}
+        hint="How many flashcards to generate from your sources."
+        min={8}
+        max={100}
+        value={cardCount}
+        onChange={setCardCount}
+        valueSuffix="cards"
       />
       <PillRow
         tone="flashcards"
@@ -266,8 +362,14 @@ function FlashcardsModal({ onClose, onGenerate }: { onClose: () => void; onGener
   )
 }
 
-function QuizModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?: () => void }) {
-  const [qty, setQty] = useState("standard")
+function QuizModal({
+  onClose,
+  onSubmitFactory,
+}: {
+  onClose: () => void
+  onSubmitFactory?: (settings: FactoryGenerationSettings) => void
+}) {
+  const [questionCount, setQuestionCount] = useState(15)
   const [diff, setDiff] = useState("medium")
   const [topic, setTopic] = useState("")
   const tc = mx.factoryTone.quiz
@@ -277,18 +379,22 @@ function QuizModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?: 
       title="Custom quiz"
       icon={<HelpCircle className="h-5 w-5" />}
       onClose={onClose}
-      footer={<GenerateFooter onGenerate={onGenerate} onClose={onClose} />}
+      footer={
+        <GenerateFooter
+          onGenerate={() => onSubmitFactory?.({ quizQuestionCount: questionCount })}
+          onClose={onClose}
+        />
+      }
     >
-      <PillRow
+      <SliderRow
         tone="quiz"
         label="Number of questions"
-        value={qty}
-        onChange={setQty}
-        options={[
-          { id: "few", label: "Fewer" },
-          { id: "standard", label: "Standard (default)" },
-          { id: "more", label: "More" },
-        ]}
+        hint="Multiple-choice and short-answer style questions."
+        min={5}
+        max={50}
+        value={questionCount}
+        onChange={setQuestionCount}
+        valueSuffix="questions"
       />
       <PillRow
         tone="quiz"
@@ -327,11 +433,18 @@ const infographicStyles = [
   { id: "editorial", label: "Editorial", emoji: "📰" },
 ]
 
-function InfographicModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?: () => void }) {
+function InfographicModal({
+  onClose,
+  onSubmitFactory,
+}: {
+  onClose: () => void
+  onSubmitFactory?: (settings: FactoryGenerationSettings) => void
+}) {
   const [lang, setLang] = useState("English")
   const [orient, setOrient] = useState("landscape")
   const [style, setStyle] = useState("auto")
   const [detail, setDetail] = useState("standard")
+  const [panelCount, setPanelCount] = useState(8)
   const [desc, setDesc] = useState("")
   const tc = mx.factoryTone.infographic
   return (
@@ -340,7 +453,12 @@ function InfographicModal({ onClose, onGenerate }: { onClose: () => void; onGene
       title="Custom infographic"
       icon={<BarChart3 className="h-5 w-5" />}
       onClose={onClose}
-      footer={<GenerateFooter onGenerate={onGenerate} onClose={onClose} />}
+      footer={
+        <GenerateFooter
+          onGenerate={() => onSubmitFactory?.({ infographicPanelCount: panelCount })}
+          onClose={onClose}
+        />
+      }
     >
       <div className="mb-4">
         <p className="mb-1.5 text-[13px] text-zinc-500">Language</p>
@@ -402,6 +520,16 @@ function InfographicModal({ onClose, onGenerate }: { onClose: () => void; onGene
           ))}
         </div>
       </div>
+      <SliderRow
+        tone="infographic"
+        label="Panels / key points"
+        hint="How many visual sections or headline stats to cover."
+        min={4}
+        max={16}
+        value={panelCount}
+        onChange={setPanelCount}
+        valueSuffix="panels"
+      />
       <PillRow
         tone="infographic"
         label="Level of detail"
@@ -433,15 +561,15 @@ function InfographicModal({ onClose, onGenerate }: { onClose: () => void; onGene
 function AudioModal({
   onClose,
   libraryName,
-  onGenerate,
+  onSubmitFactory,
 }: {
   onClose: () => void
   libraryName?: string
-  onGenerate?: () => void
+  onSubmitFactory?: (settings: FactoryGenerationSettings) => void
 }) {
   const [format, setFormat] = useState("deep")
   const [lang, setLang] = useState("English")
-  const [duration, setDuration] = useState("default")
+  const [audioMinutes, setAudioMinutes] = useState(8)
   const [focus, setFocus] = useState(
     "From an enterprise knowledge platform angle, explain how RAG improves on classic search.\n- Summarize ingestion vs retrieval in the architecture."
   )
@@ -459,7 +587,12 @@ function AudioModal({
       title="Custom audio overview"
       icon={<Volume2 className="h-5 w-5" />}
       onClose={onClose}
-      footer={<GenerateFooter onGenerate={onGenerate} onClose={onClose} />}
+      footer={
+        <GenerateFooter
+          onGenerate={() => onSubmitFactory?.({ audioTargetMinutes: audioMinutes })}
+          onClose={onClose}
+        />
+      }
     >
       <p className="mb-2 text-[13px] font-semibold text-zinc-900">Format</p>
       <div className="mb-4 grid grid-cols-2 gap-2">
@@ -483,45 +616,30 @@ function AudioModal({
           </button>
         ))}
       </div>
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <div>
-          <p className="mb-1 text-[13px] text-zinc-500">Language</p>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            className={cn(
-              "w-full rounded-xl border border-stone-200 py-2 pl-2 pr-2 text-[13px]",
-              tc.fieldFocus
-            )}
-          >
-            <option>English</option>
-            <option>Chinese</option>
-          </select>
-        </div>
-        <div>
-          <p className="mb-2 text-[13px] text-zinc-500">Length</p>
-          <div className="flex flex-wrap gap-1">
-            {[
-              { id: "short", label: "Short" },
-              { id: "default", label: "Default" },
-              { id: "long", label: "Long" },
-            ].map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setDuration(o.id)}
-                className={cn(
-                  "rounded-full border px-2.5 py-1.5 text-[12px] font-medium",
-                  duration === o.id ? tc.pillOn : "border-stone-200 bg-white"
-                )}
-              >
-                {duration === o.id && <Check className={cn("mr-0.5 inline h-3 w-3", tc.check)} strokeWidth={3} />}
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="mb-4">
+        <p className="mb-1 text-[13px] text-zinc-500">Language</p>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          className={cn(
+            "w-full rounded-xl border border-stone-200 py-2 pl-2 pr-2 text-[13px]",
+            tc.fieldFocus
+          )}
+        >
+          <option>English</option>
+          <option>Chinese</option>
+        </select>
       </div>
+      <SliderRow
+        tone="audio"
+        label="Target episode length"
+        hint="Approximate finished audio duration."
+        min={3}
+        max={30}
+        value={audioMinutes}
+        onChange={setAudioMinutes}
+        valueSuffix="min"
+      />
       <div>
         <p className="mb-2 text-[13px] text-zinc-500">What should the hosts emphasize this episode?</p>
         <textarea
@@ -551,10 +669,16 @@ function AudioModal({
   )
 }
 
-function SlidesModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?: () => void }) {
+function SlidesModal({
+  onClose,
+  onSubmitFactory,
+}: {
+  onClose: () => void
+  onSubmitFactory?: (settings: FactoryGenerationSettings) => void
+}) {
   const [mode, setMode] = useState("detailed")
   const [lang, setLang] = useState("English")
-  const [duration, setDuration] = useState("default")
+  const [slidePages, setSlidePages] = useState(14)
   const [desc, setDesc] = useState("")
   const tc = mx.factoryTone.slides
   return (
@@ -563,7 +687,12 @@ function SlidesModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?
       title="Custom presentation"
       icon={<Presentation className="h-5 w-5" />}
       onClose={onClose}
-      footer={<GenerateFooter onGenerate={onGenerate} onClose={onClose} />}
+      footer={
+        <GenerateFooter
+          onGenerate={() => onSubmitFactory?.({ slidesPageCount: slidePages })}
+          onClose={onClose}
+        />
+      }
     >
       <p className="mb-2 text-[13px] font-semibold text-zinc-900">Format</p>
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -600,41 +729,27 @@ function SlidesModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?
           </span>
         </button>
       </div>
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <div>
-          <p className="mb-1 text-[13px] text-zinc-500">Language</p>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            className={cn("w-full rounded-xl border border-stone-200 py-2 text-[13px]", tc.fieldFocus)}
-          >
-            <option>English</option>
-            <option>Chinese</option>
-          </select>
-        </div>
-        <div>
-          <p className="mb-2 text-[13px] text-zinc-500">Length</p>
-          <div className="flex gap-2">
-            {[
-              { id: "short", label: "Short" },
-              { id: "default", label: "Default" },
-            ].map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setDuration(o.id)}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-[12px] font-medium",
-                  duration === o.id ? tc.pillOn : "border-stone-200 bg-white"
-                )}
-              >
-                {duration === o.id && <Check className={cn("mr-0.5 inline h-3 w-3", tc.check)} strokeWidth={3} />}
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="mb-4">
+        <p className="mb-1 text-[13px] text-zinc-500">Language</p>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          className={cn("w-full rounded-xl border border-stone-200 py-2 text-[13px]", tc.fieldFocus)}
+        >
+          <option>English</option>
+          <option>Chinese</option>
+        </select>
       </div>
+      <SliderRow
+        tone="slides"
+        label="Slide count"
+        hint="Approximate number of slides in the deck."
+        min={5}
+        max={40}
+        value={slidePages}
+        onChange={setSlidePages}
+        valueSuffix="slides"
+      />
       <div>
         <p className="mb-2 text-[13px] text-zinc-500">Describe the presentation</p>
         <textarea
@@ -652,90 +767,73 @@ function SlidesModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?
   )
 }
 
-/** Video brief — same shape as audio for future templates */
-function VideoModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?: () => void }) {
-  const [format, setFormat] = useState("story")
+/** Mind map — layout + branch count + brief */
+function MindMapModal({
+  onClose,
+  onSubmitFactory,
+}: {
+  onClose: () => void
+  onSubmitFactory?: (settings: FactoryGenerationSettings) => void
+}) {
+  const [layout, setLayout] = useState("hierarchy")
   const [lang, setLang] = useState("English")
-  const [duration, setDuration] = useState("default")
+  const [branchCount, setBranchCount] = useState(12)
   const [desc, setDesc] = useState("")
-  const formats = [
-    { id: "story", title: "Story cut", desc: "Timeline of highlights—good for recap and sharing." },
-    { id: "explainer", title: "Explainer", desc: "Voiceover on core ideas with data and conclusions." },
-    { id: "interview", title: "Interview guide", desc: "Q&A structure to frame the topic." },
-    { id: "trailer", title: "Trailer", desc: "Short, dense opener for a series." },
-  ]
-  const tc = mx.factoryTone.video
+  const tc = mx.factoryTone.mindmap
   return (
     <ModalFrame
-      tone="video"
-      title="Custom video brief"
-      icon={<Video className="h-5 w-5" />}
+      tone="mindmap"
+      title="Custom mind map"
+      icon={<GitBranch className="h-5 w-5" />}
       onClose={onClose}
-      footer={<GenerateFooter onGenerate={onGenerate} onClose={onClose} />}
+      footer={
+        <GenerateFooter
+          onGenerate={() => onSubmitFactory?.({ mindmapBranchCount: branchCount })}
+          onClose={onClose}
+        />
+      }
     >
-      <p className="mb-2 text-[13px] font-semibold text-zinc-900">Format</p>
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        {formats.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setFormat(f.id)}
-            className={cn(
-              "relative flex flex-col rounded-xl border p-3 text-left text-[12px] leading-snug",
-              format === f.id ? tc.cardOn : "border-stone-200 bg-[#faf8f5]"
-            )}
-          >
-            {format === f.id && <Check className={cn("absolute right-2 top-2 h-4 w-4", tc.check)} strokeWidth={3} />}
-            <span className="pr-6 text-[13px] font-semibold text-zinc-900">{f.title}</span>
-            <span className="mt-1 text-zinc-600">{f.desc}</span>
-          </button>
-        ))}
+      <PillRow
+        tone="mindmap"
+        label="Layout"
+        value={layout}
+        onChange={setLayout}
+        options={[
+          { id: "hierarchy", label: "Hierarchy" },
+          { id: "radial", label: "Radial" },
+          { id: "timeline", label: "Timeline" },
+        ]}
+      />
+      <div className="mb-4">
+        <p className="mb-1 text-[13px] text-zinc-500">Language</p>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          className={cn("w-full rounded-xl border border-stone-200 py-2 text-[13px]", tc.fieldFocus)}
+        >
+          <option>English</option>
+          <option>Chinese</option>
+        </select>
       </div>
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <div>
-          <p className="mb-1 text-[13px] text-zinc-500">Language</p>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            className={cn("w-full rounded-xl border border-stone-200 py-2 text-[13px]", tc.fieldFocus)}
-          >
-            <option>English</option>
-            <option>Chinese</option>
-          </select>
-        </div>
-        <div>
-          <p className="mb-2 text-[13px] text-zinc-500">Length</p>
-          <div className="flex flex-wrap gap-1">
-            {[
-              { id: "short", label: "Short" },
-              { id: "default", label: "Default" },
-              { id: "long", label: "Long" },
-            ].map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setDuration(o.id)}
-                className={cn(
-                  "rounded-full border px-2.5 py-1.5 text-[12px] font-medium",
-                  duration === o.id ? tc.pillOn : "border-stone-200 bg-white"
-                )}
-              >
-                {duration === o.id && <Check className={cn("mr-0.5 inline h-3 w-3", tc.check)} strokeWidth={3} />}
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <SliderRow
+        tone="mindmap"
+        label="Primary branches"
+        hint="How many first-level branches to extract from your sources."
+        min={5}
+        max={28}
+        value={branchCount}
+        onChange={setBranchCount}
+        valueSuffix="branches"
+      />
       <div>
-        <p className="mb-2 text-[13px] text-zinc-500">What should the video emphasize?</p>
+        <p className="mb-2 text-[13px] text-zinc-500">Central topic & emphasis</p>
         <textarea
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
           rows={4}
-          placeholder='e.g. Three product takeaways; 10s brand sting; strong CTA at the end.'
+          placeholder='e.g. Center on "product roadmap" and highlight milestones, risks, and dependencies.'
           className={cn(
-            "w-full resize-none rounded-xl border border-stone-200 px-3 py-2 text-[14px]",
+            "w-full resize-none rounded-xl border border-stone-200 px-3 py-2 text-[14px] text-zinc-800 placeholder:text-zinc-400",
             tc.fieldFocus
           )}
         />
@@ -746,22 +844,24 @@ function VideoModal({ onClose, onGenerate }: { onClose: () => void; onGenerate?:
 
 export function ContentFactoryModals({ open, onClose, libraryName, onGenerateSubmit }: ContentFactoryModalsProps) {
   if (!open) return null
-  const gen = (kind: FactoryModalKind) => () => onGenerateSubmit?.(kind)
+  const submit =
+    (kind: FactoryModalKind) => (settings: FactoryGenerationSettings) =>
+      onGenerateSubmit?.(kind, settings)
   switch (open) {
     case "report":
-      return <ReportModal onClose={onClose} onGenerate={gen("report")} />
+      return <ReportModal onClose={onClose} onSubmitFactory={submit("report")} />
     case "audio":
-      return <AudioModal onClose={onClose} libraryName={libraryName} onGenerate={gen("audio")} />
-    case "video":
-      return <VideoModal onClose={onClose} onGenerate={gen("video")} />
+      return <AudioModal onClose={onClose} libraryName={libraryName} onSubmitFactory={submit("audio")} />
+    case "mindmap":
+      return <MindMapModal onClose={onClose} onSubmitFactory={submit("mindmap")} />
     case "flashcards":
-      return <FlashcardsModal onClose={onClose} onGenerate={gen("flashcards")} />
+      return <FlashcardsModal onClose={onClose} onSubmitFactory={submit("flashcards")} />
     case "quiz":
-      return <QuizModal onClose={onClose} onGenerate={gen("quiz")} />
+      return <QuizModal onClose={onClose} onSubmitFactory={submit("quiz")} />
     case "infographic":
-      return <InfographicModal onClose={onClose} onGenerate={gen("infographic")} />
+      return <InfographicModal onClose={onClose} onSubmitFactory={submit("infographic")} />
     case "slides":
-      return <SlidesModal onClose={onClose} onGenerate={gen("slides")} />
+      return <SlidesModal onClose={onClose} onSubmitFactory={submit("slides")} />
     default:
       return null
   }

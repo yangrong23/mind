@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { mx, mxHeatmapCell, mxHeatmapCellTiny } from "@/lib/medrix-design-tokens"
 import {
@@ -23,7 +24,6 @@ import {
   Globe,
   Smartphone,
   Award,
-  TrendingUp,
   Clock,
   Mic,
   Brain,
@@ -153,7 +153,6 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
   const [showProfile, setShowProfile] = useState(false)
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false)
   const [showCreditsPlans, setShowCreditsPlans] = useState(false)
-  const [showInsights, setShowInsights] = useState(false)
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false)
   const [wifiOnlySync, setWifiOnlySync] = useState(false)
   const [useMemory, setUseMemory] = useState(false)
@@ -173,6 +172,10 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
+  const [settingsExtra, setSettingsExtra] = useState<null | "notifications" | "privacy" | "help">(null)
+  const [notifCaptureReady, setNotifCaptureReady] = useState(true)
+  const [notifDigest, setNotifDigest] = useState(false)
+  const [privacyCrashReports, setPrivacyCrashReports] = useState(true)
 
   const stats = {
     totalNotes: 156,
@@ -215,10 +218,10 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
   const settingsMenuItems = [
     { icon: User, label: "Personalization", desc: "Preferences and custom instructions", action: () => { setShowSettingsHub(false); setShowPersonalization(true) } },
     { icon: Cloud, label: "Cloud sync", desc: "Private cloud backup and storage", action: () => { setShowSettingsHub(false); setShowCloudSync(true) } },
-    { icon: Bell, label: "Notifications", desc: "Push and reminders", action: () => setShowSettingsHub(false) },
+    { icon: Bell, label: "Notifications", desc: "Push and reminders", action: () => { setShowSettingsHub(false); setSettingsExtra("notifications") } },
     { icon: Smartphone, label: "Devices", desc: "Recorder, pairing, lexicon, offline", action: () => { setShowSettingsHub(false); setShowDeviceSheet(true) } },
-    { icon: Shield, label: "Privacy & security", desc: "Data protection", action: () => setShowSettingsHub(false) },
-    { icon: HelpCircle, label: "Help & feedback", desc: "Guides and support", action: () => setShowSettingsHub(false) },
+    { icon: Shield, label: "Privacy & security", desc: "Data protection", action: () => { setShowSettingsHub(false); setSettingsExtra("privacy") } },
+    { icon: HelpCircle, label: "Help & feedback", desc: "Guides and support", action: () => { setShowSettingsHub(false); setSettingsExtra("help") } },
   ]
 
   return (
@@ -367,18 +370,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             </button>
             <button
               type="button"
-              onClick={() => setShowInsights(true)}
+              onClick={() => toast.message("知识图谱", { description: "该功能即将推出，敬请期待。" })}
               className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
             >
-              <TrendingUp className="h-4 w-4 shrink-0 text-emerald-800 opacity-90" />
-              <span>Insights workspace</span>
-              <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
-            </button>
-            <div className="flex items-center gap-2 rounded-lg py-2 text-[13px] text-zinc-500">
               <Map className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
               <span>Knowledge map</span>
               <span className="ml-auto text-[10px] font-medium text-zinc-400">Soon</span>
-            </div>
+            </button>
             <button
               type="button"
               onClick={() => setShowDeviceSheet(true)}
@@ -503,7 +501,10 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   mx.accentBlue,
                   mx.accentBlueHover
                 )}
-                onClick={() => setShowAccountSwitcher(false)}
+                onClick={() => {
+                  toast.message("添加账号", { description: "将打开系统账号流程（演示）。" })
+                  setShowAccountSwitcher(false)
+                }}
               >
                 Add account…
               </button>
@@ -514,7 +515,10 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   mx.accentBlue,
                   mx.accentBlueHover
                 )}
-                onClick={() => setShowAccountSwitcher(false)}
+                onClick={() => {
+                  toast.success("已退出当前账号", { description: "演示环境不会清除本地数据。" })
+                  setShowAccountSwitcher(false)
+                }}
               >
                 <LogOut className="h-4 w-4" aria-hidden />
                 Sign out
@@ -600,34 +604,50 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             {/* Share actions */}
             <div className="w-full max-w-[340px] bg-white rounded-2xl p-4">
               <div className="grid grid-cols-4 gap-4 mb-4">
-                <button className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-zinc-500 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <button
+                  type="button"
+                  onClick={() => toast.success("已唤起分享", { description: "微信（演示）" })}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-500">
+                    <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M8.5 14.5c0 1.93 1.57 3.5 3.5 3.5 1.93 0 3.5-1.57 3.5-3.5M12 9c-1.93 0-3.5 1.57-3.5 3.5h7c0-1.93-1.57-3.5-3.5-3.5zM3 12a9 9 0 1118 0 9 9 0 01-18 0z"/>
                     </svg>
                   </div>
                   <span className="text-xs text-gray-600">WeChat</span>
                 </button>
-                <button className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-slate-600 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <button
+                  type="button"
+                  onClick={() => toast.success("已唤起分享", { description: "朋友圈（演示）" })}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-600">
+                    <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="12" cy="12" r="3"/>
                       <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/>
                     </svg>
                   </div>
                   <span className="text-xs text-gray-600">Moments</span>
                 </button>
-                <button className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <button
+                  type="button"
+                  onClick={() => toast.success("已保存到相册", { description: "分享卡片已写入（演示）。" })}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                    <svg className="h-6 w-6 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                     </svg>
                   </div>
                   <span className="text-xs text-gray-600">Save image</span>
                 </button>
-                <button className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-gray-600" viewBox="0 0 24 24" fill="currentColor">
+                <button
+                  type="button"
+                  onClick={() => toast.message("更多分享方式", { description: "系统分享面板（演示）。" })}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                    <svg className="h-6 w-6 text-gray-600" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="5" cy="12" r="2"/>
                       <circle cx="12" cy="12" r="2"/>
                       <circle cx="19" cy="12" r="2"/>
@@ -728,6 +748,151 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
         </div>
       )}
 
+      {settingsExtra && (
+        <div className="absolute inset-0 z-[51] flex flex-col bg-gray-50 animate-in slide-in-from-right duration-200">
+          <div className="flex shrink-0 items-center gap-2 border-b border-gray-100 bg-white px-4 py-3">
+            <button
+              type="button"
+              onClick={() => {
+                setSettingsExtra(null)
+                setShowSettingsHub(true)
+              }}
+              className="rounded-full p-1 hover:bg-gray-100"
+              aria-label="Back to settings"
+            >
+              <ChevronRight className="h-6 w-6 rotate-180 text-gray-600" />
+            </button>
+            <h1 className="text-lg font-semibold text-gray-900">
+              {settingsExtra === "notifications" && "Notifications"}
+              {settingsExtra === "privacy" && "Privacy & security"}
+              {settingsExtra === "help" && "Help & feedback"}
+            </h1>
+          </div>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+            {settingsExtra === "notifications" && (
+              <>
+                <p className="text-sm text-gray-500">以下为演示开关；打开或关闭时会给出提示。</p>
+                <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+                  <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                    <div>
+                      <div className="text-[15px] text-gray-900">Recording ready</div>
+                      <div className="mt-1 text-xs text-gray-400">Notify when a capture finishes processing</div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={notifCaptureReady}
+                      onClick={() => {
+                        setNotifCaptureReady((v) => !v)
+                        toast.success("已保存")
+                      }}
+                      className={cn(
+                        "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
+                        notifCaptureReady ? "bg-zinc-500" : "bg-gray-200"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
+                          notifCaptureReady ? "translate-x-5" : "translate-x-0"
+                        )}
+                      />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-4">
+                    <div>
+                      <div className="text-[15px] text-gray-900">Weekly digest</div>
+                      <div className="mt-1 text-xs text-gray-400">Summary of your capture activity</div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={notifDigest}
+                      onClick={() => {
+                        setNotifDigest((v) => !v)
+                        toast.success("已保存")
+                      }}
+                      className={cn(
+                        "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
+                        notifDigest ? "bg-zinc-500" : "bg-gray-200"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
+                          notifDigest ? "translate-x-5" : "translate-x-0"
+                        )}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+            {settingsExtra === "privacy" && (
+              <>
+                <p className="text-sm text-gray-500">管理与本演示应用相关的隐私选项。</p>
+                <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+                  <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                    <div>
+                      <div className="text-[15px] text-gray-900">Share crash reports</div>
+                      <div className="mt-1 text-xs text-gray-400">Helps fix bugs faster (no raw audio)</div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={privacyCrashReports}
+                      onClick={() => {
+                        setPrivacyCrashReports((v) => !v)
+                        toast.success("已保存")
+                      }}
+                      className={cn(
+                        "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
+                        privacyCrashReports ? "bg-zinc-500" : "bg-gray-200"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
+                          privacyCrashReports ? "translate-x-5" : "translate-x-0"
+                        )}
+                      />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toast.success("已加入导出队列", { description: "完成后将发送下载链接（演示）。" })}
+                    className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-gray-50"
+                  >
+                    <span className="text-[15px] text-gray-900">Export my data</span>
+                    <ChevronRight className="h-5 w-5 text-gray-300" />
+                  </button>
+                </div>
+              </>
+            )}
+            {settingsExtra === "help" && (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500">需要协助时，可从以下入口开始。</p>
+                {[
+                  { label: "User guide", hint: "快速上手与常见问题" },
+                  { label: "Contact support", hint: "邮件 / 工单（演示）" },
+                  { label: "Rate Mind", hint: "App Store 评分引导" },
+                ].map((row) => (
+                  <button
+                    key={row.label}
+                    type="button"
+                    onClick={() => toast.message(row.label, { description: row.hint })}
+                    className="flex w-full flex-col items-start rounded-xl border border-gray-100 bg-white px-4 py-3 text-left hover:bg-gray-50"
+                  >
+                    <span className="text-[15px] font-medium text-gray-900">{row.label}</span>
+                    <span className="mt-0.5 text-xs text-gray-500">{row.hint}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Preferences */}
       {showPreferences && (
         <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
@@ -746,29 +911,52 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               <div className="text-sm text-gray-400 mb-2">Transcription & summary</div>
             </div>
             <div className="mx-5 bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <button className="w-full flex items-center justify-between px-4 py-4 border-b border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setTranscribeLang((v) =>
+                    v === "Not set" ? "English" : v === "English" ? "简体中文" : "Not set"
+                  )
+                  toast.success("已更新默认转写语言")
+                }}
+                className="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 text-left hover:bg-gray-50"
+              >
                 <div>
-                  <div className="text-[15px] text-gray-900 text-left">Transcription language</div>
-                  <div className="text-xs text-gray-400 mt-1 text-left">Default language for overview, transcription, and summaries. You can override per recording.</div>
+                  <div className="text-left text-[15px] text-gray-900">Transcription language</div>
+                  <div className="mt-1 text-left text-xs text-gray-400">Default language for overview, transcription, and summaries. You can override per recording.</div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0 ml-4">
+                <div className="ml-4 flex shrink-0 items-center gap-1">
                   <span className="text-[15px] text-gray-400">{transcribeLang}</span>
-                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                  <ChevronRight className="h-5 w-5 text-gray-300" />
                 </div>
               </button>
-              <button className="w-full flex items-center justify-between px-4 py-4 border-b border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setAutoSpeaker((v) => !v)
+                  toast.success("已保存")
+                }}
+                className="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 text-left hover:bg-gray-50"
+              >
                 <span className="text-[15px] text-gray-900">Auto speaker labels</span>
                 <div className="flex items-center gap-1">
                   <span className="text-[15px] text-gray-400">{autoSpeaker ? "On" : "Off"}</span>
-                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                  <ChevronRight className="h-5 w-5 text-gray-300" />
                 </div>
               </button>
-              <button className="w-full flex items-center justify-between px-4 py-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomTerms((v) => !v)
+                  toast.success("已保存")
+                }}
+                className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-gray-50"
+              >
                 <span className="text-[15px] text-gray-900">Custom vocabulary</span>
                 <div className="flex items-center gap-1">
                   <span className="text-[15px] text-gray-400">{customTerms ? "On" : "Off"}</span>
-                  {!customTerms && <div className={cn("w-2 h-2 rounded-full shrink-0", mx.warningDot)} />}
-                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                  {!customTerms && <div className={cn("h-2 w-2 shrink-0 rounded-full", mx.warningDot)} />}
+                  <ChevronRight className="h-5 w-5 text-gray-300" />
                 </div>
               </button>
             </div>
@@ -778,9 +966,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               <div className="text-sm text-gray-400 mb-2">Notifications</div>
             </div>
             <div className="mx-5 bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <button className="w-full flex items-center justify-between px-4 py-4">
+              <button
+                type="button"
+                onClick={() => toast.message("消息与提醒", { description: "将打开通知分类设置（演示）。" })}
+                className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-gray-50"
+              >
                 <span className="text-[15px] text-gray-900">Messages & alerts</span>
-                <ChevronRight className="w-5 h-5 text-gray-300" />
+                <ChevronRight className="h-5 w-5 text-gray-300" />
               </button>
             </div>
 
@@ -788,25 +980,36 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             <div className="px-5 pt-6 pb-2">
               <div className="text-sm text-gray-400 mb-2">Security</div>
             </div>
-            <div className="mx-5 bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
-              <button className="w-full flex items-center justify-between px-4 py-4 border-b border-gray-100">
+            <div className="mx-5 mb-6 overflow-hidden rounded-xl border border-gray-100 bg-white">
+              <button
+                type="button"
+                onClick={() => {
+                  setAppLock((v) => !v)
+                  toast.success("已保存")
+                }}
+                className="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 text-left hover:bg-gray-50"
+              >
                 <div>
-                  <div className="text-[15px] text-gray-900 text-left">App lock</div>
-                  <div className="text-xs text-gray-400 mt-1 text-left">Unlock with Face ID, Touch ID, or device passcode</div>
+                  <div className="text-left text-[15px] text-gray-900">App lock</div>
+                  <div className="mt-1 text-left text-xs text-gray-400">Unlock with Face ID, Touch ID, or device passcode</div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0 ml-4">
+                <div className="ml-4 flex shrink-0 items-center gap-1">
                   <span className="text-[15px] text-gray-400">{appLock ? "On" : "Off"}</span>
-                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                  <ChevronRight className="h-5 w-5 text-gray-300" />
                 </div>
               </button>
-              <div className="w-full flex items-center justify-between px-4 py-4">
+              <div className="flex w-full items-center justify-between px-4 py-4">
                 <div className="flex-1">
-                  <div className="text-[15px] text-gray-900 text-left">Help improve AI</div>
-                  <div className="text-xs text-gray-400 mt-1 text-left">
+                  <div className="text-left text-[15px] text-gray-900">Help improve AI</div>
+                  <div className="mt-1 text-left text-xs text-gray-400">
                     Share limited diagnostics to improve transcription and summaries while protecting privacy.
-                    <span className={cn("underline underline-offset-2 decoration-slate-300", mx.citationLink)}>
+                    <button
+                      type="button"
+                      className={cn("ml-1 underline underline-offset-2 decoration-slate-300", mx.citationLink)}
+                      onClick={() => toast.message("数据说明", { description: "仅上传匿名诊断信息（演示）。" })}
+                    >
                       Learn more
-                    </span>
+                    </button>
                   </div>
                 </div>
                 <button
@@ -889,14 +1092,26 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               </div>
 
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                <button className="w-full flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => toast.message("存储管理", { description: "当前云端占用 16.62 MB（演示）。" })}
+                  className="flex w-full items-center justify-between px-4 py-4 border-b border-gray-100"
+                >
                   <span className="text-[15px] text-gray-900">Manage storage</span>
                   <div className="flex items-center gap-1">
                     <span className="text-[15px] text-gray-400">16.62 MB</span>
                     <ChevronRight className="w-5 h-5 text-gray-300" />
                   </div>
                 </button>
-                <button className="w-full flex items-center justify-between px-4 py-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast.warning("删除云端录音？", {
+                      description: "演示：未真正删除。正式版将二次确认。",
+                    })
+                  }
+                  className="flex w-full items-center justify-between px-4 py-4"
+                >
                   <span className="text-[15px] text-gray-900">Delete cloud recordings</span>
                   <ChevronRight className="w-5 h-5 text-gray-300" />
                 </button>
@@ -940,7 +1155,12 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               />
               <div className="flex flex-wrap gap-2">
                 {["Key takeaways", "Risks & open questions", "Actions & next steps"].map((tag) => (
-                  <button key={tag} className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-full">
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toast.success("已加入重点", { description: tag })}
+                    className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
+                  >
                     {tag}
                   </button>
                 ))}
@@ -957,7 +1177,12 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               />
               <div className="flex flex-wrap gap-2">
                 {["Concise", "Formal & professional", "Structured"].map((tag) => (
-                  <button key={tag} className="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-full">
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toast.success("已应用风格提示", { description: tag })}
+                    className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
+                  >
                     {tag}
                   </button>
                 ))}
@@ -1117,9 +1342,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             <div className="px-5 py-4 bg-white border-b border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[15px] text-gray-900">Profile</span>
-                <button className="flex items-center gap-1 text-gray-500">
+                <button
+                  type="button"
+                  onClick={() => toast.message("编辑资料", { description: "将打开资料表单（演示）。" })}
+                  className="flex items-center gap-1 text-gray-500"
+                >
                   <span className="text-sm">Edit</span>
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
               <p className="text-xs text-gray-400">Tap Edit to update your work context</p>
@@ -1154,154 +1383,6 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 className="w-full px-4 py-3 text-[15px] placeholder-gray-400 focus:outline-none resize-none"
               />
               <div className="px-4 pb-3 text-right text-xs text-gray-400">0/500</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Personal insights detail */}
-      {showInsights && (
-        <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white">
-            <button onClick={() => setShowInsights(false)} className="p-1">
-              <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
-            </button>
-            <h1 className="text-lg font-semibold text-gray-900">Insights</h1>
-            <button
-              type="button"
-              className="p-2 rounded-full hover:bg-gray-100"
-              aria-label="Share insights"
-              onClick={() =>
-                setInsightShareSheet({
-                  title: "Insights snapshot",
-                  preview:
-                    PERSONALIZED_AI_INSIGHTS_LATEST.slice(0, 180) +
-                    (PERSONALIZED_AI_INSIGHTS_LATEST.length > 180 ? "…" : ""),
-                })
-              }
-            >
-              <Share2 className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {/* Top stats */}
-            <div className="px-5 py-6 bg-white border-b border-gray-100">
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-gray-900">{stats.totalNotes}</div>
-                  <div className="text-sm text-gray-500">Notes</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-gray-900">12</div>
-                  <div className="text-sm text-gray-500">Tags</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-gray-900">{stats.totalDays}</div>
-                  <div className="text-sm text-gray-500">Days</div>
-                </div>
-              </div>
-
-              {/* Heatmap */}
-              <p className="text-xs text-gray-400 mb-2">Tap a day to expand that date</p>
-              <div className="grid grid-cols-13 gap-[3px]">
-                {heatmapData.slice(-91).map((day, i) => (
-                  <button
-                    key={`in-${day.date}-${i}`}
-                    type="button"
-                    onClick={() => setHeatmapDayDetail({ date: day.date, value: day.value })}
-                    title={formatHeatmapDayLabel(day.date)}
-                    className={mxHeatmapCell(day.value)}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
-                <span>Mar</span>
-                <span>Apr</span>
-                <span>May</span>
-              </div>
-            </div>
-
-            {/* Quick links */}
-            <div className="px-5 py-4">
-              <button className={cn("w-full flex items-center gap-3 py-3 px-4 rounded-xl mb-4", mx.libraryCta)}>
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="7" height="7" rx="1" />
-                </svg>
-                <span className="font-medium">All notes</span>
-                <ChevronRight className="w-5 h-5 ml-auto opacity-80" />
-              </button>
-
-              <div className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => setPersonalizedFeed({ type: "daily" })}
-                  className="w-full flex items-center gap-3 py-3 px-2"
-                >
-                  <Sparkles className="w-5 h-5 text-gray-500" />
-                  <span className="text-[15px] text-gray-700">Daily review</span>
-                  <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPersonalizedFeed({ type: "insights" })}
-                  className="w-full flex items-center gap-3 py-3 px-2"
-                >
-                  <Target className="w-5 h-5 text-gray-500" />
-                  <span className="text-[15px] text-gray-700">AI insights</span>
-                  <MoreHorizontal className="w-5 h-5 text-gray-400 ml-auto" />
-                </button>
-                <button className="w-full flex items-center gap-3 py-3 px-2">
-                  <Map className="w-5 h-5 text-gray-500" />
-                  <span className="text-[15px] text-gray-700">Knowledge map</span>
-                </button>
-              </div>
-
-              {/* Add widget */}
-              <button className="w-full flex items-center gap-3 py-3 px-4 bg-gray-100 rounded-xl mt-4">
-                <svg className="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="7" height="7" rx="1" />
-                </svg>
-                <span className="text-[15px] text-gray-600">Add widget</span>
-                <svg className="w-4 h-4 text-gray-400 ml-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-
-              {/* Tags */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-3">
-                  <span className={cn("text-sm font-medium", mx.citationMuted)}>All tags</span>
-                  <svg className="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
-                  </svg>
-                </div>
-                <button className="w-full flex items-center gap-3 py-3 px-2">
-                  <Hash className="w-5 h-5 text-gray-500" />
-                  <span className="text-[15px] text-gray-700">Getting started</span>
-                  <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
-                  <MoreHorizontal className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-
-              {/* Bottom actions */}
-              <div className="mt-6 space-y-1">
-                <button className="w-full flex items-center gap-3 py-3 px-2">
-                  <Trash2 className="w-5 h-5 text-gray-500" />
-                  <span className="text-[15px] text-gray-700">Trash</span>
-                </button>
-                <button className="w-full flex items-center gap-3 py-3 px-2">
-                  <HelpCircle className="w-5 h-5 text-gray-500" />
-                  <span className="text-[15px] text-gray-700">Help center</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -1433,7 +1514,12 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                             <li key={item.id}>
                               <button
                                 type="button"
-                                className="w-full rounded-xl bg-gray-50 hover:bg-gray-100/80 p-3 flex gap-3 text-left transition-colors"
+                                onClick={() =>
+                                  toast.message("打开录音", {
+                                    description: `${item.title} · ${item.time}`,
+                                  })
+                                }
+                                className="flex w-full gap-3 rounded-xl bg-gray-50 p-3 text-left transition-colors hover:bg-gray-100/80"
                               >
                                 <div
                                   className={cn(

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import { Providers } from './providers'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -33,8 +34,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-gradient-to-br from-stone-100 to-stone-200/90">
       <body className="font-sans antialiased min-h-screen">
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <Providers>
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </Providers>
       </body>
     </html>
   )

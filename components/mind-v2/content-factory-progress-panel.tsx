@@ -2,16 +2,18 @@
 
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
-import type { FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
+import type {
+  FactoryGenerationSettings,
+  FactoryModalKind,
+} from "@/components/mind-v2/content-factory-modals"
 import {
   FilePlus2,
   Volume2,
-  Video,
+  GitBranch,
   Layers,
   HelpCircle,
   BarChart3,
   Presentation,
-  Play,
 } from "lucide-react"
 
 export type FactoryJobStatus = "generating" | "complete" | "failed"
@@ -22,6 +24,34 @@ export interface FactoryJob {
   status: FactoryJobStatus
   title?: string
   meta?: string
+  /** Granular Studio controls chosen when the job was queued. */
+  settings?: FactoryGenerationSettings
+}
+
+/** First segment of job meta line from numeric Studio settings (e.g. "12 slides"). */
+export function factorySettingsLeadMeta(
+  kind: FactoryModalKind,
+  settings?: FactoryGenerationSettings
+): string | null {
+  if (!settings) return null
+  switch (kind) {
+    case "audio":
+      return settings.audioTargetMinutes != null ? `~${settings.audioTargetMinutes} min audio` : null
+    case "mindmap":
+      return settings.mindmapBranchCount != null ? `${settings.mindmapBranchCount} branches` : null
+    case "slides":
+      return settings.slidesPageCount != null ? `${settings.slidesPageCount} slides` : null
+    case "quiz":
+      return settings.quizQuestionCount != null ? `${settings.quizQuestionCount} questions` : null
+    case "flashcards":
+      return settings.flashcardCount != null ? `${settings.flashcardCount} cards` : null
+    case "infographic":
+      return settings.infographicPanelCount != null ? `${settings.infographicPanelCount} panels` : null
+    case "report":
+      return settings.reportTargetPages != null ? `${settings.reportTargetPages} pages` : null
+    default:
+      return null
+  }
 }
 
 const PASTEL_SHELLS = ["bg-[#fdece8]", "bg-[#fce8f4]", "bg-[#f3e8fc]"] as const
@@ -30,9 +60,9 @@ const PASTEL_SHELLS = ["bg-[#fdece8]", "bg-[#fce8f4]", "bg-[#f3e8fc]"] as const
 export const FACTORY_MEDIA_SEED: FactoryJob[] = [
   {
     id: "seed-1",
-    kind: "video",
+    kind: "mindmap",
     status: "complete",
-    title: "Digital degree: parsing a verification report",
+    title: "Mind map: key ideas from sources",
     meta: "3 sources · 3 days ago",
   },
   {
@@ -64,8 +94,8 @@ export function iconForFactoryKind(kind: FactoryModalKind) {
       return <FilePlus2 className="h-5 w-5" strokeWidth={1.75} />
     case "audio":
       return <Volume2 className="h-5 w-5" strokeWidth={1.75} />
-    case "video":
-      return <Video className="h-5 w-5" strokeWidth={1.75} />
+    case "mindmap":
+      return <GitBranch className="h-5 w-5" strokeWidth={1.75} />
     case "flashcards":
       return <Layers className="h-5 w-5" strokeWidth={1.75} />
     case "quiz":
@@ -85,8 +115,8 @@ export function mockTitleForFactoryKind(kind: FactoryModalKind): string {
       return "Library summary report"
     case "audio":
       return "Audio overview: key takeaways"
-    case "video":
-      return "Video brief: sources walkthrough"
+    case "mindmap":
+      return "Mind map draft"
     case "flashcards":
       return "Core concept flashcards"
     case "quiz":

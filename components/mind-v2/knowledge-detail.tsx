@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
@@ -260,9 +260,10 @@ function bodyForContent(id: number, title: string, excerpt: string): string[] {
   return common
 }
 
-/** NotebookLM-style grounded summary (mock copy). */
+/** Rolling summary from sources (mock copy, reads like editorial notes). */
 function notebookSummaryForLibrary(name: string, sourceCount: number): string {
-  return `This library "${name}" auto-generates a summary from ${sourceCount} uploaded sources. It weaves transcripts, web clips, and document highlights into one readable thread: first the core takeaway from each source, then where they complement, repeat, or conflict—so you can build context before asking questions. The summary favors retrieval and stable citations—follow up on specific passages in chat for answers with source references.`
+  const unit = sourceCount === 1 ? "file" : "files"
+  return `Across the ${sourceCount} ${unit} in “${name}”, we pull a single thread you can read in one pass: what each source contributes, where they reinforce each other, and where they diverge. Skim this first, then jump into chat when you want detail—replies stay tied to the passages they came from.`
 }
 
 export function KnowledgeDetail({
@@ -296,11 +297,16 @@ export function KnowledgeDetail({
   const [contents, setContents] = useState<LibraryDoc[]>(() => mockContents.map((c) => ({ ...c })))
   const sourceCount = contents.length
   const kbDisplayName = knowledgeBase?.name || "Notebook"
-  const kbIntroLead =
-    knowledgeBase?.description ||
-    "Grounded Q&A over your sources—summaries, citations, and chat stay tied to what you uploaded."
-  const kbIntroDetail = `This library currently has ${sourceCount} source${sourceCount === 1 ? "" : "s"}. Use Hub to browse, Graph to see connections, and Studio to generate new media from these materials.`
   const notebookSummaryBody = notebookSummaryForLibrary(kbDisplayName, sourceCount)
+
+  const kbOverviewNarrative = useMemo(() => {
+    const srcWord = sourceCount === 1 ? "source" : "sources"
+    const desc = knowledgeBase?.description?.trim()
+    if (desc) {
+      return `${desc} “${kbDisplayName}” is built from ${sourceCount} ${srcWord} right now. Hub is for reading and search, Graph for seeing how ideas connect, and Studio when you want something you can hand off—a recap, slides, or audio—without starting from a blank page.`
+    }
+    return `“${kbDisplayName}” gathers ${sourceCount} ${srcWord} you can trust as one place to think from. Browse in Hub, follow threads in Graph, then use Studio when it’s time to turn that depth into something finished.`
+  }, [knowledgeBase?.description, kbDisplayName, sourceCount])
 
   function scheduleFactoryJobFinish(
     jobId: string,
@@ -456,12 +462,15 @@ export function KnowledgeDetail({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4">
-          <h2 className="text-[20px] font-bold leading-snug tracking-tight text-zinc-900">
-            {kbDisplayName} — library summary
-          </h2>
-          <p className="mt-2 text-[13px] text-zinc-500">{sourceCount} sources</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-violet-600/90">Rolling summary</p>
+          <h2 className="mt-1.5 text-[19px] font-semibold leading-snug tracking-tight text-zinc-900">{kbDisplayName}</h2>
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-100/90 px-2.5 py-1 text-[12px] font-medium text-zinc-600">
+            <span className="tabular-nums">{sourceCount}</span>
+            <span className="text-zinc-400">·</span>
+            <span>from your sources</span>
+          </p>
 
-          <p className="mt-5 text-[15px] leading-[1.75] text-justify text-zinc-800">{notebookSummaryBody}</p>
+          <p className="mt-6 text-[15px] leading-[1.72] text-zinc-800">{notebookSummaryBody}</p>
 
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <div className="flex items-center gap-0.5">
@@ -715,8 +724,8 @@ export function KnowledgeDetail({
           <h1 className="text-[16px] font-semibold tracking-tight text-zinc-900 truncate">
             {knowledgeBase?.name || "Notebook"}
           </h1>
-          <p className="text-[12px] text-zinc-500 truncate">
-            {knowledgeBase?.description || "Grounded Q&A over your sources"}
+          <p className="text-[12px] leading-snug text-zinc-500 line-clamp-2 sm:line-clamp-1">
+            {knowledgeBase?.description || "Depth you can browse, connect, and turn into finished work"}
           </p>
         </div>
         <button
@@ -761,13 +770,20 @@ export function KnowledgeDetail({
           <div className="flex min-h-0 flex-1 flex-col bg-stone-50/80">
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="px-4 pb-2 pt-3">
-              <div className="mb-4 rounded-xl border border-stone-200/90 bg-white px-3.5 py-3 shadow-sm shadow-stone-900/[0.02]">
-                <h2 className="text-[13px] font-semibold text-zinc-900">About this library</h2>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-700">{kbIntroLead}</p>
-                <p className="mt-2 text-[12px] leading-relaxed text-zinc-500">{kbIntroDetail}</p>
+              <div className="mb-4 overflow-hidden rounded-2xl border border-stone-200/70 bg-gradient-to-br from-white via-white to-violet-50/[0.35] p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_24px_-12px_rgba(15,23,42,0.12)] ring-1 ring-stone-100/80">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700/80">Overview</p>
+                    <h2 className="mt-1 text-[15px] font-semibold tracking-tight text-zinc-900">How this library fits together</h2>
+                  </div>
+                  <div className="shrink-0 rounded-full border border-stone-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-zinc-600 shadow-sm">
+                    {sourceCount} {sourceCount === 1 ? "source" : "sources"}
+                  </div>
+                </div>
+                <p className="mt-3.5 text-[14px] leading-[1.65] text-zinc-700">{kbOverviewNarrative}</p>
               </div>
               <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                All documents
+                Documents
               </h2>
               <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white">
                 {contents.length === 0 ? (

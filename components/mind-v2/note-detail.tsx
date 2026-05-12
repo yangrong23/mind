@@ -11,6 +11,7 @@ import {
   Play,
   Pause,
   ChevronRight,
+  ChevronDown,
   X,
   Check,
   Clock,
@@ -31,10 +32,15 @@ import {
   ImageIcon,
   Languages,
   Cpu,
+  ThumbsUp,
+  ThumbsDown,
+  Maximize2,
 } from "lucide-react"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { CreateFolderSheet } from "./create-folder-sheet"
+import { SocialShareRow } from "./social-share-row"
 import type { Note } from "./notes-tab"
+import { toast } from "sonner"
 import type { NoteFolder } from "@/lib/note-folders"
 
 const knowledgeBases = [
@@ -55,8 +61,10 @@ interface NoteDetailProps {
   onBack: () => void
   /** After a successful move, opens the destination library for a continuous Notes → Library flow */
   onMovedToLibrary?: (kb: MovedLibraryMeta) => void
-  /** Create a new folder and assign the current note to it (Notes 首页展示颜色与名称) */
+  /** Create a new folder and assign the current note to it (folder color/name on Notes home) */
   onAssignNoteToNewFolder?: (noteId: number, folder: NoteFolder) => void
+  /** Move current note to trash and leave detail */
+  onTrashNote?: (noteId: number) => void
 }
 
 const TRANSCRIPT_BLOCKS = [
@@ -68,14 +76,51 @@ const TRANSCRIPT_BLOCKS = [
   { t: "00:10:15", text: "For implementation we’re weighing D3.js versus React Flow; next step is a performance and maintainability review." },
 ] as const
 
-export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFolder }: NoteDetailProps) {
-  const [activeTab, setActiveTab] = useState<"summary" | "transcript">("summary")
+/** AI timestamp marks — demo content aligned with transcript times */
+const RECORDING_MARKS = [
+  {
+    t: "00:00:35",
+    title: "Multimodal capture: voice, screen, and images",
+    body: "Discussed marking moments in one recording with both audio and visuals, then jumping back on the timeline.",
+  },
+  {
+    t: "00:02:15",
+    title: "Knowledge graph and visual decisions",
+    body: "Confirmed people–project–theme as core nodes, color by type, and room for automatic edge discovery later.",
+  },
+] as const
+
+const MIND_INSIGHT_CARDS = [
+  {
+    title: "Can Mind sync with your calendar or task apps?",
+    desc: "Based on this note, block time for a short review and sync next steps to your usual task list.",
+  },
+  {
+    title: "Follow-ups worth asking in the next recording",
+    desc: "Capture one competitor mind-map example and a one-line tradeoff (performance vs maintainability) for review.",
+  },
+] as const
+
+export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFolder, onTrashNote }: NoteDetailProps) {
+  /** Source = transcript / raw; Note = summary and marks */
+  const [segment, setSegment] = useState<"source" | "note">("note")
+  const [noteSub, setNoteSub] = useState<"marks" | "summary">("summary")
+  const [summaryFeedback, setSummaryFeedback] = useState<"up" | "down" | null>(null)
+  const [markExpand, setMarkExpand] = useState<Record<number, boolean>>({})
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadPct, setPlayheadPct] = useState(0.32)
   const [showKBSheet, setShowKBSheet] = useState(false)
   const [showCreateFolderSheet, setShowCreateFolderSheet] = useState(false)
   /** Share icon: export / copy / share link */
   const [showShareOptions, setShowShareOptions] = useState(false)
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false)
+  const [shareLinkStep, setShareLinkStep] = useState<"options" | "social">("options")
+  const [shareLinkPick, setShareLinkPick] = useState({
+    recording: false,
+    transcript: false,
+    marks: true,
+    summary: false,
+  })
   /** More menu: note utilities */
   const [showToolsMenu, setShowToolsMenu] = useState(false)
   const [showCreateTemplateSheet, setShowCreateTemplateSheet] = useState(false)
@@ -93,6 +138,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
   const [selectedTemplate, setSelectedTemplate] = useState<{id: string, name: string, desc: string} | null>(null)
   const [showTemplatePage, setShowTemplatePage] = useState(false)
   const [templateTab, setTemplateTab] = useState<"mine" | "recommend" | "explore">("mine")
+  const [askDraft, setAskDraft] = useState("")
 
   const openMoveToLibrary = () => {
     setShowToolsMenu(false)
@@ -106,8 +152,20 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
     setShowCreateFolderSheet(true)
   }
 
+  const submitAskAboutNote = () => {
+    const q = askDraft.trim()
+    if (!q) {
+      toast.error("Enter a question")
+      return
+    }
+    toast.success("Sent to AI", { description: q.length > 120 ? `${q.slice(0, 120)}…` : q })
+    setAskDraft("")
+  }
+
   const closeAllOverlays = () => {
     setShowShareOptions(false)
+    setShowShareLinkModal(false)
+    setShareLinkStep("options")
     setShowToolsMenu(false)
     setShowCreateTemplateSheet(false)
     setShowTemplateConfirm(false)
@@ -157,25 +215,50 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
   )
 
   return (
-    <div className="flex flex-col h-full bg-white relative">
-      {/* Top bar */}
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100">
-        <button type="button" onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full shrink-0">
-          <ChevronLeft className="w-6 h-6 text-gray-700" />
+    <div className="relative flex h-full min-w-0 flex-col overflow-x-hidden bg-white">
+      {/* Top bar: Source | Note + actions */}
+      <div className="flex items-center gap-1 border-b border-gray-100 px-2 py-2.5 sm:px-3">
+        <button type="button" onClick={onBack} className="shrink-0 rounded-full p-2 hover:bg-gray-100" aria-label="Back">
+          <ChevronLeft className="h-6 w-6 text-gray-700" />
         </button>
-        <div className="flex items-center justify-end gap-1 sm:gap-1.5 min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-6 sm:gap-10">
+          {(["source", "note"] as const).map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setSegment(id)}
+              className={cn(
+                "relative pb-1 text-[16px] font-medium tracking-tight transition-colors",
+                segment === id ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
+              )}
+            >
+              {id === "source" ? "Source" : "Note"}
+              {segment === id && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] rounded-full bg-zinc-800" aria-hidden />
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           <button
             type="button"
             onClick={openMoveToLibrary}
             className={cn(
-              "flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-xs font-semibold tracking-tight active:scale-[0.98] transition-transform shrink-0",
+              "hidden rounded-full px-2.5 py-1.5 text-[11px] font-semibold tracking-tight active:scale-[0.98] sm:flex sm:items-center sm:gap-1 sm:px-3",
               mx.brandCta
             )}
             aria-label="Move to library"
           >
-            <Library className="w-4 h-4 opacity-90" strokeWidth={2} />
-            <span className="sm:hidden">Library</span>
-            <span className="hidden sm:inline">Move to library</span>
+            <Library className="h-3.5 w-3.5 opacity-90" strokeWidth={2} />
+            <span>Library</span>
+          </button>
+          <button
+            type="button"
+            onClick={openMoveToLibrary}
+            className={cn("flex h-9 w-9 items-center justify-center rounded-full sm:hidden", mx.brandCta)}
+            aria-label="Move to library"
+          >
+            <Library className="h-4 w-4 text-white" strokeWidth={2} />
           </button>
           <button
             type="button"
@@ -183,10 +266,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               setShowToolsMenu(false)
               setShowShareOptions(true)
             }}
-            className="p-2 hover:bg-gray-100 rounded-full shrink-0"
+            className="rounded-full p-2 hover:bg-gray-100"
             aria-label="Share"
           >
-            <Share2 className="w-5 h-5 text-zinc-600" strokeWidth={1.75} />
+            <Share2 className="h-5 w-5 text-zinc-600" strokeWidth={1.75} />
           </button>
           <button
             type="button"
@@ -194,112 +277,337 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               setShowShareOptions(false)
               setShowToolsMenu((v) => !v)
             }}
-            className="p-2 hover:bg-gray-100 rounded-full shrink-0"
-            aria-label="More options"
+            className="rounded-full p-2 hover:bg-gray-100"
+            aria-label="More"
           >
-            <MoreHorizontal className="w-5 h-5 text-zinc-600" strokeWidth={1.75} />
+            <MoreHorizontal className="h-5 w-5 text-zinc-600" strokeWidth={1.75} />
           </button>
         </div>
       </div>
 
-      {/* Audio player */}
-      <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-b from-stone-50/80 to-white">
-        {/* Minimal waveform + brand playhead */}
-        <div className="relative h-12 mb-3 flex items-end justify-center gap-[2px] px-1">
-          {Array.from({ length: 72 }).map((_, i) => {
-            const h = 0.28 + Math.sin(i * 0.35) * 0.22 + ((i * 17) % 9) * 0.02
-            const barPos = i / 71
-            const played = barPos <= playheadPct
-            return (
+      {/* Source: transcript only */}
+      {segment === "source" && (
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full min-w-0 max-w-prose px-5 py-5">
+            <p className="mb-6 text-center text-[12px] leading-relaxed text-zinc-400">
+              Transcript synced with playback (demo)
+            </p>
+            <div className="space-y-6">
+              {TRANSCRIPT_BLOCKS.map((block, i) => (
+                <div key={i} className="space-y-1.5">
+                  <span className="font-mono text-[12px] tabular-nums text-zinc-400">{block.t}</span>
+                  <p
+                    className={cn(
+                      "break-words text-[17px] leading-[1.65] tracking-[-0.01em] transition-colors duration-200",
+                      i === activeTranscriptIdx ? "font-normal text-zinc-900" : "text-zinc-500"
+                    )}
+                  >
+                    {block.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Note: player + Marks / Summary */}
+      {segment === "note" && (
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="border-b border-gray-100 bg-gradient-to-b from-stone-50/80 to-white px-5 py-4">
+            <div className="relative mb-3 flex h-12 items-end justify-center gap-[2px] px-1">
+              {Array.from({ length: 72 }).map((_, i) => {
+                const h = 0.28 + Math.sin(i * 0.35) * 0.22 + ((i * 17) % 9) * 0.02
+                const barPos = i / 71
+                const played = barPos <= playheadPct
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "w-[2px] rounded-full transition-colors duration-150",
+                      played ? "bg-zinc-500/35" : "bg-stone-200"
+                    )}
+                    style={{
+                      height: `${Math.min(1, h) * 100}%`,
+                      minHeight: 3,
+                    }}
+                  />
+                )
+              })}
               <div
-                key={i}
-                className={cn(
-                  "w-[2px] rounded-full transition-colors duration-150",
-                  played ? "bg-zinc-500/35" : "bg-stone-200"
-                )}
-                style={{
-                  height: `${Math.min(1, h) * 100}%`,
-                  minHeight: 3,
-                }}
+                className="pointer-events-none absolute bottom-0 top-0 w-0.5 rounded-full bg-zinc-500 shadow-[0_0_12px_rgba(63,63,70,0.4)]"
+                style={{ left: `calc(${playheadPct * 100}% - 1px)` }}
+                aria-hidden
               />
-            )
-          })}
-          <div
-            className="absolute bottom-0 top-0 w-0.5 rounded-full bg-zinc-500 shadow-[0_0_12px_rgba(63,63,70,0.4)] pointer-events-none"
-            style={{ left: `calc(${playheadPct * 100}% - 1px)` }}
-            aria-hidden
-          />
-        </div>
-        
-        {/* Time & controls */}
-        <div className="flex items-center justify-between text-sm mb-4">
-          <span className="text-zinc-700 font-medium">07:23</span>
-          <span className="text-gray-400">23:45</span>
-        </div>
-        
-        <div className="flex items-center justify-center gap-4">
-          <button className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
-            <span className="text-xs font-semibold">-15</span>
-          </button>
-          <button 
-            type="button"
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="w-16 h-16 bg-zinc-500 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors shadow-lg shadow-zinc-500/35"
-          >
-            {isPlaying ? (
-              <Pause className="w-7 h-7 text-white" fill="white" />
-            ) : (
-              <Play className="w-7 h-7 text-white ml-1" fill="white" />
-            )}
-          </button>
-          <button className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
-            <span className="text-xs font-semibold">+15</span>
-          </button>
-          <button className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
-            <span className="text-xs font-semibold">1x</span>
-          </button>
-        </div>
-      </div>
+            </div>
+            <div className="mb-4 flex items-center justify-between text-sm">
+              <span className="font-medium text-zinc-700">07:23</span>
+              <span className="text-gray-400">23:45</span>
+            </div>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                type="button"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+              >
+                <span className="text-xs font-semibold">-15</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-500 shadow-lg shadow-zinc-500/35 transition-colors hover:bg-zinc-600"
+              >
+                {isPlaying ? (
+                  <Pause className="h-7 w-7 fill-white text-white" />
+                ) : (
+                  <Play className="ml-1 h-7 w-7 fill-white text-white" />
+                )}
+              </button>
+              <button
+                type="button"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+              >
+                <span className="text-xs font-semibold">+15</span>
+              </button>
+              <button
+                type="button"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+              >
+                <span className="text-xs font-semibold">1x</span>
+              </button>
+            </div>
+          </div>
 
-      {/* Summary / Transcript + template (+) */}
-      <div className="flex items-stretch justify-between gap-3 border-b border-stone-100 px-5">
-        <div className="flex gap-8">
-          {(
-            [
-              { id: "summary" as const, label: "Summary" },
-              { id: "transcript" as const, label: "Transcript" },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "py-3.5 text-[15px] font-medium tracking-tight border-b-[2.5px] transition-colors -mb-px",
-                activeTab === tab.id
-                  ? "text-zinc-900 border-zinc-500"
-                  : "text-zinc-400 border-transparent hover:text-zinc-600"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+          <div className="flex items-stretch justify-between gap-2 border-b border-stone-100 px-4 sm:px-5">
+            <div className="flex min-w-0 gap-6 sm:gap-8">
+              {(
+                [
+                  { id: "marks" as const, label: "Marks" },
+                  { id: "summary" as const, label: "Summary", showChevron: true },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setNoteSub(tab.id)}
+                  className={cn(
+                    "flex items-center gap-0.5 py-3.5 text-[15px] font-medium tracking-tight transition-colors -mb-px border-b-[2.5px]",
+                    noteSub === tab.id
+                      ? "border-zinc-500 text-zinc-900"
+                      : "border-transparent text-zinc-400 hover:text-zinc-600"
+                  )}
+                >
+                  {tab.label}
+                  {"showChevron" in tab && tab.showChevron ? (
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" strokeWidth={2.5} aria-hidden />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+            <div className="flex shrink-0 items-center pb-px">
+              <button
+                type="button"
+                onClick={() => {
+                  closeAllOverlays()
+                  setShowTemplatePage(true)
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:bg-stone-100"
+                aria-label="Templates"
+                title="Templates"
+              >
+                <Plus className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+            </div>
+          </div>
+
+          {noteSub === "marks" ? (
+            <div className="mx-auto w-full min-w-0 max-w-prose flex-1 overflow-y-auto overflow-x-hidden px-5 pb-8 pt-5">
+              <p className="text-center text-[12px] leading-relaxed text-zinc-400">
+                AI-generated content for reference only
+              </p>
+              <h1 className="mt-5 break-words text-[22px] font-semibold tracking-tight text-zinc-900">Recording marks</h1>
+              <div className="mt-6 space-y-5">
+                {RECORDING_MARKS.map((m, idx) => (
+                  <article
+                    key={idx}
+                    className="rounded-2xl border border-stone-200/90 bg-gradient-to-b from-white to-stone-50/80 p-4 shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 text-zinc-500">
+                      <Flag className="h-4 w-4 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
+                      <span className="font-mono text-[13px] tabular-nums">{m.t}</span>
+                    </div>
+                    <h2 className="mt-2 break-words text-[16px] font-semibold leading-snug text-zinc-900">{m.title}</h2>
+                    <p
+                      className={cn(
+                        "mt-2 break-words text-[15px] leading-relaxed text-zinc-600",
+                        markExpand[idx] ? "" : "line-clamp-3"
+                      )}
+                    >
+                      {m.body}
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-2.5 text-[14px] font-medium text-sky-600 hover:text-sky-700"
+                      onClick={() => setMarkExpand((p) => ({ ...p, [idx]: !p[idx] }))}
+                    >
+                      {markExpand[idx] ? "Show less" : "Show more"}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto w-full min-w-0 max-w-prose flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-4 pb-8 pt-4 sm:space-y-6 sm:px-5 sm:pb-10 sm:pt-5">
+              <p className="text-center text-[11px] leading-relaxed text-zinc-400 sm:text-[12px]">
+                AI-generated content for reference only
+              </p>
+
+              <header className="min-w-0 space-y-2 sm:space-y-2.5">
+                <h1 className="break-words text-[20px] font-semibold leading-snug tracking-tight text-zinc-900 sm:text-[22px] sm:leading-tight">
+                  Product requirements discussion
+                </h1>
+                <p className="text-[13px] text-zinc-500 sm:text-[14px]">Jan 15, 2024 · 2:32 PM · 23 min</p>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {["Meeting", "Product", "Knowledge"].map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 sm:px-2.5 sm:py-1 sm:text-[12px]"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </header>
+
+              <section className="min-w-0 space-y-2 sm:space-y-2.5">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 sm:text-[12px]">Overview</h2>
+                <p className="min-w-0 break-words text-[14px] leading-[1.62] text-zinc-800 sm:text-[15px] sm:leading-[1.65]">
+                  The team reviewed knowledge-graph visualization—how it helps organize information, surface relationships,
+                  and compound learning. The graph should speed up processing and support decisions while helping users build
+                  a personal knowledge system.
+                </p>
+              </section>
+
+              <section className="min-w-0 space-y-2 sm:space-y-2.5">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 sm:text-[12px]">Key points</h2>
+                <ul className="space-y-2.5 sm:space-y-3">
+                  {[
+                    "Support rich node taxonomy (people, orgs, projects, themes)",
+                    "Ship automatic link discovery and smart recommendations",
+                    "Enable library-grounded AI assistance",
+                  ].map((line) => (
+                    <li key={line} className="flex min-w-0 gap-2.5 text-[14px] leading-[1.58] text-zinc-800 sm:gap-3 sm:text-[15px] sm:leading-[1.62]">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-400" aria-hidden />
+                      <span className="min-w-0 flex-1 break-words">{line}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="min-w-0 space-y-2 sm:space-y-2.5">
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 sm:text-[12px]">Action items</h2>
+                <div className="space-y-2 sm:space-y-2.5">
+                  {[
+                    { t: "Prototype the knowledge graph UI", who: "@design" },
+                    { t: "Research competitor graph implementations", who: "@product" },
+                  ].map((row) => (
+                    <div
+                      key={row.t}
+                      className="flex items-start gap-2.5 rounded-xl border border-stone-200/80 bg-stone-50/50 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3"
+                    >
+                      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-2 border-zinc-300 sm:h-4 sm:w-4" aria-hidden />
+                      <p className="min-w-0 flex-1 text-[14px] leading-snug text-zinc-800 sm:text-[15px]">{row.t}</p>
+                      <span className="shrink-0 text-[11px] text-zinc-400 sm:text-[12px]">{row.who}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="min-w-0 space-y-2 rounded-2xl border border-stone-200/90 bg-white p-3 shadow-sm shadow-stone-900/[0.04] sm:space-y-2.5 sm:p-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-[14px] font-semibold text-zinc-900 sm:text-[15px]">Mind map</h3>
+                  <button type="button" className="rounded-lg p-1.5 text-zinc-400 hover:bg-stone-100" aria-label="Expand">
+                    <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} />
+                  </button>
+                </div>
+                <p className="min-w-0 break-words text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">Thanks for using Mind—enjoy exploring.</p>
+                <div className="-mx-1 overflow-x-auto pb-0.5 pt-0.5">
+                  <div className="flex min-w-max items-stretch gap-1.5 px-1 sm:gap-2">
+                    <span className="shrink-0 self-center rounded-xl bg-violet-100 px-2.5 py-2 text-[11px] font-semibold leading-snug text-violet-900 sm:px-3 sm:py-2.5 sm:text-[12px]">
+                      How to use Mind?
+                    </span>
+                    {[
+                      { label: "Recording", bg: "bg-sky-100 text-sky-900" },
+                      { label: "Multimodal input", bg: "bg-amber-100 text-amber-900" },
+                      { label: "Files UI", bg: "bg-emerald-100 text-emerald-900" },
+                      { label: "Ask Mind", bg: "bg-rose-100 text-rose-900" },
+                      { label: "Export & share", bg: "bg-indigo-100 text-indigo-900" },
+                    ].map((b) => (
+                      <span
+                        key={b.label}
+                        className={cn(
+                          "shrink-0 self-center rounded-lg px-2 py-1.5 text-[10px] font-medium leading-tight sm:px-2.5 sm:py-2 sm:text-[11px]",
+                          b.bg
+                        )}
+                      >
+                        {b.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <div className="flex min-w-0 gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSummaryFeedback((v) => (v === "up" ? null : "up"))}
+                  className={cn(
+                    "flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 rounded-xl border-2 border-stone-200 bg-white px-2 py-2.5 text-[13px] font-medium text-zinc-700 transition-colors sm:gap-2 sm:py-3 sm:text-[14px]",
+                    summaryFeedback === "up" && "border-sky-400 bg-sky-50 text-sky-900"
+                  )}
+                >
+                  <ThumbsUp className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={1.85} aria-hidden />
+                  <span className="whitespace-nowrap">Helpful</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSummaryFeedback((v) => (v === "down" ? null : "down"))}
+                  className={cn(
+                    "flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 rounded-xl border-2 border-stone-200 bg-white px-2 py-2.5 text-[13px] font-medium text-zinc-700 transition-colors sm:gap-2 sm:py-3 sm:text-[14px]",
+                    summaryFeedback === "down" && "border-orange-300 bg-orange-50 text-orange-900"
+                  )}
+                >
+                  <ThumbsDown className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={1.85} aria-hidden />
+                  <span className="whitespace-nowrap">Not helpful</span>
+                </button>
+              </div>
+
+              <section className="min-w-0 space-y-2 sm:space-y-2.5">
+                <h3 className="flex items-center gap-1.5 text-[14px] font-semibold text-zinc-900 sm:gap-2 sm:text-[15px]">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
+                  Mind insights
+                </h3>
+                <div className="space-y-2 sm:space-y-2.5">
+                  {MIND_INSIGHT_CARDS.map((card) => (
+                    <button
+                      key={card.title}
+                      type="button"
+                      onClick={() =>
+                        toast.message(card.title, {
+                          description: card.desc.length > 100 ? `${card.desc.slice(0, 100)}…` : card.desc,
+                        })
+                      }
+                      className="flex w-full min-w-0 flex-col rounded-xl border border-stone-200/90 bg-stone-50/60 p-3 text-left transition-colors hover:border-stone-300 hover:bg-stone-50 sm:p-3.5"
+                    >
+                      <span className="break-words text-[14px] font-medium leading-snug text-zinc-900 sm:text-[15px]">{card.title}</span>
+                      <span className="mt-1 line-clamp-2 break-words text-[12px] leading-relaxed text-zinc-600 sm:mt-1.5 sm:text-[13px]">{card.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
         </div>
-        <div className="flex shrink-0 items-center pb-px">
-          <button
-            type="button"
-            onClick={() => {
-              closeAllOverlays()
-              setShowTemplatePage(true)
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:bg-stone-100"
-            aria-label="Choose template"
-            title="Templates"
-          >
-            <Plus className="h-5 w-5" strokeWidth={1.75} />
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* More (…) dropdown */}
       {showToolsMenu && (
@@ -312,7 +620,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
           />
           <div
             role="menu"
-            className="absolute right-3 top-[50px] z-[47] w-[min(280px,calc(100%-24px))] overflow-hidden rounded-xl border border-stone-200/95 bg-white py-1 shadow-xl shadow-stone-900/12"
+            className="absolute right-3 top-[108px] z-[47] w-[min(280px,calc(100%-24px))] overflow-hidden rounded-xl border border-stone-200/95 bg-white py-1 shadow-xl shadow-stone-900/12"
           >
             {note != null && onAssignNoteToNewFolder != null && (
               <button
@@ -322,13 +630,16 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                 className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
               >
                 <FolderInput className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
-                存入文件夹
+                Save to folder
               </button>
             )}
             <button
               type="button"
               role="menuitem"
-              onClick={() => setShowToolsMenu(false)}
+              onClick={() => {
+                setShowToolsMenu(false)
+                toast.message("Find and replace", { description: "Full-text find and replace is coming soon (demo)." })
+              }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
             >
               <SmartSearchIcon className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
@@ -337,7 +648,17 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
             <button
               type="button"
               role="menuitem"
-              onClick={() => setShowToolsMenu(false)}
+              onClick={() => {
+                setShowToolsMenu(false)
+                toast.promise(
+                  new Promise((r) => setTimeout(r, 900)),
+                  {
+                    loading: "Re-transcribing…",
+                    success: "Transcription updated (demo)",
+                    error: "Transcription failed",
+                  }
+                )
+              }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
             >
               <RefreshCw className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
@@ -353,7 +674,15 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
             <button
               type="button"
               role="menuitem"
-              onClick={() => setShowToolsMenu(false)}
+              onClick={() => {
+                setShowToolsMenu(false)
+                if (note) {
+                  onTrashNote?.(note.id)
+                  toast.success("Moved to trash")
+                } else {
+                  toast.message("Nothing to delete", { description: "No note is attached to this screen." })
+                }
+              }}
               className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] font-medium text-red-600 hover:bg-red-50/80"
             >
               <Trash2 className="h-5 w-5 shrink-0 text-red-500" strokeWidth={1.5} />
@@ -363,111 +692,6 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
         </div>
       )}
 
-      {/* Body */}
-      <div className="flex-1 overflow-hidden">
-        {/* Transcript */}
-        {activeTab === "transcript" && (
-          <div className="h-full overflow-y-auto">
-            <div className="px-5 py-5 max-w-prose mx-auto">
-              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-400 mb-6">
-                Transcript
-              </p>
-              <div className="space-y-6">
-                {TRANSCRIPT_BLOCKS.map((block, i) => (
-                  <div key={i} className="space-y-1.5">
-                    <span className="text-[12px] tabular-nums text-zinc-400">{block.t}</span>
-                    <p
-                      className={cn(
-                        "text-[17px] leading-[1.65] tracking-[-0.01em] transition-colors duration-200",
-                        i === activeTranscriptIdx ? "text-zinc-900 font-normal" : "text-zinc-400"
-                      )}
-                    >
-                      {block.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Summary */}
-        {activeTab === "summary" && (
-          <div className="p-5 pb-8 space-y-10 overflow-y-auto max-w-prose mx-auto">
-            <p className="text-center text-[12px] text-zinc-400 leading-relaxed">
-              AI-generated · for reference only
-            </p>
-
-            <header className="space-y-3">
-              <h1 className="text-[26px] font-semibold tracking-tight text-zinc-900 leading-tight">
-                Product requirements discussion
-              </h1>
-              <p className="text-[15px] text-zinc-500">
-                Jan 15, 2024 · 2:32 PM · 23 min
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {["Meeting", "Product", "Knowledge"].map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2.5 py-1 rounded-md bg-stone-100 text-[12px] font-medium text-zinc-600"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </header>
-
-            <section className="space-y-4">
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                Overview
-              </h2>
-              <p className="text-[17px] leading-[1.7] text-zinc-800">
-                The team reviewed knowledge-graph visualization—how it helps organize information, surface relationships, and compound learning. The graph should speed up processing and support decisions while helping users build a personal knowledge system.
-              </p>
-            </section>
-
-            <section className="space-y-4">
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                Key points
-              </h2>
-              <ul className="space-y-4">
-                {[
-                  "Support rich node taxonomy (people, orgs, projects, themes)",
-                  "Ship automatic link discovery and smart recommendations",
-                  "Enable library-grounded AI assistance",
-                ].map((line) => (
-                  <li key={line} className="flex gap-3 text-[17px] leading-[1.65] text-zinc-800">
-                    <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-zinc-400" aria-hidden />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="space-y-4">
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                Action items
-              </h2>
-              <div className="space-y-3">
-                {[
-                  { t: "Prototype the knowledge graph UI", who: "@design" },
-                  { t: "Research competitor graph implementations", who: "@product" },
-                ].map((row) => (
-                  <div
-                    key={row.t}
-                    className="flex items-start gap-3 rounded-xl border border-stone-200/80 bg-stone-50/50 px-4 py-3.5"
-                  >
-                    <div className="mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-zinc-300" aria-hidden />
-                    <p className="flex-1 text-[16px] leading-snug text-zinc-800">{row.t}</p>
-                    <span className="text-[12px] text-zinc-400 shrink-0">{row.who}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
-      </div>
-
       {/* Bottom bar */}
       <div className="p-4 border-t border-gray-100 space-y-3">
         <div className="relative">
@@ -476,11 +700,24 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
           </span>
           <input
             type="text"
+            value={askDraft}
+            onChange={(e) => setAskDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                submitAskAboutNote()
+              }
+            }}
             placeholder="Ask about this note…"
             className="w-full rounded-xl border border-sky-200/90 bg-white px-4 py-3 pr-12 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
           />
-          <button className="absolute right-3 top-1/2 -translate-y-1/2">
-            <MessageSquare className="w-5 h-5 text-gray-400" />
+          <button
+            type="button"
+            onClick={submitAskAboutNote}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-500 hover:bg-sky-50 hover:text-sky-700"
+            aria-label="Send question"
+          >
+            <MessageSquare className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -1045,7 +1282,17 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowShareOptions(false)}
+                    onClick={() => {
+                      setShareLinkStep("options")
+                      setShareLinkPick({
+                        recording: false,
+                        transcript: false,
+                        marks: true,
+                        summary: false,
+                      })
+                      setShowShareOptions(false)
+                      setShowShareLinkModal(true)
+                    }}
                   >
                     <Link2 className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
                     <span className="flex-1 text-[15px] text-zinc-900">Share link</span>
@@ -1119,6 +1366,160 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share link: scope + copy / then international social */}
+      {showShareLinkModal && (
+        <div className="absolute inset-0 z-[52]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-zinc-900/35 backdrop-blur-[2px]"
+            aria-label="Close"
+            onClick={() => {
+              setShowShareLinkModal(false)
+              setShareLinkStep("options")
+            }}
+          />
+          <div className="absolute bottom-0 left-0 right-0 flex max-h-[88vh] flex-col rounded-t-[1.25rem] bg-white shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.18)] animate-in slide-in-from-bottom duration-300">
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="h-1 w-10 rounded-full bg-zinc-200" />
+            </div>
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 pb-3">
+              <span className="text-base font-semibold text-zinc-900">
+                {shareLinkStep === "social" ? "Share to social" : "Share link"}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowShareLinkModal(false)
+                  setShareLinkStep("options")
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-100"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-2">
+              {shareLinkStep === "options" ? (
+                <>
+                  <h3 className="mb-2 text-[13px] font-semibold text-zinc-900">Included in link</h3>
+                  <div className="overflow-hidden rounded-xl border border-zinc-200/90 divide-y divide-zinc-100 bg-white">
+                    {(
+                      [
+                        { key: "recording" as const, label: "Recording", Icon: Mic },
+                        { key: "transcript" as const, label: "Transcript", Icon: FileText },
+                        { key: "marks" as const, label: "Marks", Icon: Flag },
+                        { key: "summary" as const, label: "Summary", Icon: Sparkles },
+                      ] as const
+                    ).map(({ key, label, Icon }) => {
+                      const on = shareLinkPick[key]
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setShareLinkPick((p) => ({ ...p, [key]: !p[key] }))}
+                          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-zinc-50/90 active:bg-zinc-100/80"
+                        >
+                          <Icon className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.65} aria-hidden />
+                          <span className="flex-1 text-[15px] text-zinc-900">{label}</span>
+                          <span
+                            className={cn(
+                              "flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors",
+                              on ? "border-zinc-900 bg-zinc-900" : "border-zinc-300 bg-white"
+                            )}
+                            aria-hidden
+                          >
+                            {on ? <Check className="h-3 w-3 text-white" strokeWidth={3} /> : null}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="mt-3 text-center text-[12px] leading-relaxed text-zinc-400">
+                    Anyone with the link can view the selection. Link expires in 7 days (demo).
+                  </p>
+                  <div className="mt-5 space-y-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const keys = ["recording", "transcript", "marks", "summary"] as const
+                        if (!keys.some((k) => shareLinkPick[k])) {
+                          toast.error("Pick at least one item to share")
+                          return
+                        }
+                        setShareLinkStep("social")
+                      }}
+                      className="w-full rounded-xl bg-zinc-900 py-3.5 text-[15px] font-semibold text-white shadow-sm hover:bg-zinc-800"
+                    >
+                      Share
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const shareUrl = `https://mind.app/s/n/${note?.id ?? 0}`
+                        try {
+                          await navigator.clipboard.writeText(shareUrl)
+                          toast.success("Link copied", { description: "Recipients can open it for 7 days (demo)." })
+                        } catch {
+                          toast.error("Copy failed", { description: "Try again or copy the URL manually." })
+                        }
+                      }}
+                      className="w-full rounded-xl border-2 border-zinc-200 bg-white py-3.5 text-[15px] font-semibold text-zinc-900 hover:bg-zinc-50"
+                    >
+                      Copy link
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShareLinkStep("options")}
+                    className="mb-3 flex items-center gap-1 text-[14px] font-medium text-zinc-600 hover:text-zinc-900"
+                  >
+                    <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
+                    Back
+                  </button>
+                  <p className="mb-4 text-[13px] leading-relaxed text-zinc-500">
+                    Opens the platform’s share page in a new tab (X, Facebook, WhatsApp, LinkedIn, and more).
+                  </p>
+                  <SocialShareRow
+                    title={note?.title || "Mind note"}
+                    body={(() => {
+                      const shareUrl = `https://mind.app/s/n/${note?.id ?? 0}`
+                      const labels: Record<keyof typeof shareLinkPick, string> = {
+                        recording: "Recording",
+                        transcript: "Transcript",
+                        marks: "Marks",
+                        summary: "Summary",
+                      }
+                      const picked = (Object.keys(shareLinkPick) as (keyof typeof shareLinkPick)[]).filter(
+                        (k) => shareLinkPick[k]
+                      )
+                      const scope = picked.map((k) => labels[k]).join(", ")
+                      return `${shareUrl}\nIncludes: ${scope}`
+                    })()}
+                    onAfterAction={() =>
+                      toast.message("Share page opened", { description: "Allow pop-ups if the window was blocked." })
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowShareLinkModal(false)
+                      setShareLinkStep("options")
+                    }}
+                    className="mt-5 w-full rounded-xl border border-zinc-200 py-3 text-[14px] font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Done
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -106,7 +106,7 @@ export const mx = {
       fieldFocus: "focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-200",
       softHover: "hover:border-cyan-200/80 hover:bg-cyan-50/40",
     },
-    video: {
+    mindmap: {
       well: "bg-teal-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
       icon: "text-teal-800",
       sparkle: "text-teal-600",
