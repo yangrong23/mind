@@ -2,20 +2,27 @@
 
 import { useState } from "react"
 import type { MindAccountId } from "@/lib/mind-accounts"
+import type { NoteFolder } from "@/lib/note-folders"
 import { BottomNav, type TabType } from "./bottom-nav"
-import { NotesTab, type Note } from "./notes-tab"
+import { NotesTab, mockNotes, type Note } from "./notes-tab"
 import { NoteDetail } from "./note-detail"
 import { KnowledgeTab } from "./knowledge-tab"
 import { KnowledgeDetail } from "./knowledge-detail"
 import { AgentTab, AgentChat } from "./agent-tab"
 import { MeTab } from "./me-tab"
 import { RecordingPage } from "./recording-page"
+import type { FactoryModalKind } from "./content-factory-modals"
 
 type View = 
   | { type: "tabs" }
   | { type: "note-detail"; note?: Note }
   | { type: "recording" }
-  | { type: "kb-detail"; kb?: { name: string; color: string; description?: string }; initialView?: "content" | "graph" | "factory" }
+  | {
+      type: "kb-detail"
+      kb?: { name: string; color: string; description?: string }
+      initialView?: "content" | "graph" | "factory"
+      initialFactoryModal?: FactoryModalKind
+    }
   | { type: "agent-chat"; agent: { id: number; name: string; description: string; avatar: string; color: string } }
   | {
       type: "kb-agent-chat"
@@ -25,10 +32,22 @@ type View =
       initialView?: "content" | "graph" | "factory"
     }
 
+const SEED_FOLDER_WELCOME = "seed-folder-welcome"
+const SEED_FOLDER_TUTORIAL = "seed-folder-tutorial"
+
 export function MindAppV2() {
   const [activeTab, setActiveTab] = useState<TabType>("notes")
   const [currentView, setCurrentView] = useState<View>({ type: "tabs" })
   const [activeAccountId, setActiveAccountId] = useState<MindAccountId>("work")
+  const [folders, setFolders] = useState<NoteFolder[]>([
+    { id: SEED_FOLDER_WELCOME, name: "欢迎", color: "#334155", iconKey: "folder" },
+    { id: SEED_FOLDER_TUTORIAL, name: "教程", color: "#fb923c", iconKey: "folder" },
+  ])
+  const [notes, setNotes] = useState<Note[]>(() =>
+    mockNotes.map((n) =>
+      n.id === 1 ? { ...n, folderId: SEED_FOLDER_WELCOME } : n.id === 2 ? { ...n, folderId: SEED_FOLDER_TUTORIAL } : n
+    )
+  )
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-sky-50/80 via-stone-50 to-teal-50/50 p-4">
@@ -63,14 +82,17 @@ export function MindAppV2() {
         </div>
 
         {/* Main content */}
-        <div className="absolute inset-0 pt-[50px] pb-0 flex flex-col">
-          <div className="flex-1 overflow-hidden relative">
+        <div className="absolute inset-0 flex min-h-0 flex-col pt-[50px] pb-0">
+          <div className="relative min-h-0 flex-1 overflow-hidden">
             {/* Tab root */}
             {currentView.type === "tabs" && (
               <>
                 {activeTab === "notes" && (
                   <NotesTab
                     activeAccountId={activeAccountId}
+                    notes={notes}
+                    folders={folders}
+                    onNotesChange={setNotes}
                     onNoteClick={(note) => setCurrentView({ type: "note-detail", note })}
                     onStartRecording={() => setCurrentView({ type: "recording" })}
                   />
@@ -85,22 +107,12 @@ export function MindAppV2() {
                 )}
                 {activeTab === "agent" && (
                   <AgentTab
-                    onAgentChat={(agent) => setCurrentView({ 
-                      type: "agent-chat", 
-                      agent 
-                    })}
-                    onOpenContentFactory={() => {
-                      setActiveTab("knowledge")
+                    onAgentChat={(agent) =>
                       setCurrentView({
-                        type: "kb-detail",
-                        kb: {
-                          name: "Product library",
-                          color: "from-stone-500 to-zinc-700",
-                          description: "Specs and PRDs",
-                        },
-                        initialView: "factory",
+                        type: "agent-chat",
+                        agent,
                       })
-                    }}
+                    }
                   />
                 )}
                 {activeTab === "me" && (
@@ -115,10 +127,17 @@ export function MindAppV2() {
             {/* Note detail (recording/import) */}
             {currentView.type === "note-detail" && (
               <NoteDetail
+                note={currentView.note}
                 onBack={() => setCurrentView({ type: "tabs" })}
                 onMovedToLibrary={(kb) => {
                   setActiveTab("knowledge")
                   setCurrentView({ type: "kb-detail", kb })
+                }}
+                onAssignNoteToNewFolder={(noteId, folder) => {
+                  setFolders((prev) => [...prev, folder])
+                  setNotes((prev) =>
+                    prev.map((n) => (n.id === noteId ? { ...n, folderId: folder.id } : n))
+                  )
                 }}
               />
             )}
@@ -137,6 +156,7 @@ export function MindAppV2() {
                 onBack={() => setCurrentView({ type: "tabs" })}
                 knowledgeBase={currentView.kb}
                 initialView={currentView.initialView}
+                initialFactoryModal={currentView.initialFactoryModal}
                 onAgentChat={(context) =>
                   setCurrentView({
                     type: "kb-agent-chat",

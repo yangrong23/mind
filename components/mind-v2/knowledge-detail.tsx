@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
@@ -14,7 +14,6 @@ import { TextNoteEditor } from "@/components/mind-v2/text-note-editor"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
 import {
   ChevronLeft,
-  Search,
   MoreHorizontal,
   Plus,
   Camera,
@@ -30,10 +29,12 @@ import {
   Copy,
   ThumbsUp,
   ThumbsDown,
+  Bot,
   Youtube,
   Library,
   Trash2,
 } from "lucide-react"
+import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 
 type ShareTarget =
   | { scope: "library" }
@@ -48,6 +49,8 @@ interface KnowledgeDetailProps {
     description?: string
   }
   initialView?: "content" | "graph" | "factory"
+  /** When set (e.g. from Agent → Studio), open this factory modal once on mount */
+  initialFactoryModal?: FactoryModalKind | null
 }
 
 const mockContents = [
@@ -258,7 +261,13 @@ function notebookSummaryForLibrary(name: string, sourceCount: number): string {
   return `This library "${name}" auto-generates a summary from ${sourceCount} uploaded sources. It weaves transcripts, web clips, and document highlights into one readable thread: first the core takeaway from each source, then where they complement, repeat, or conflict—so you can build context before asking questions. The summary favors retrieval and stable citations—follow up on specific passages in chat for answers with source references.`
 }
 
-export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialView = "content" }: KnowledgeDetailProps) {
+export function KnowledgeDetail({
+  onBack,
+  onAgentChat,
+  knowledgeBase,
+  initialView = "content",
+  initialFactoryModal,
+}: KnowledgeDetailProps) {
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [hubRichNoteOpen, setHubRichNoteOpen] = useState(false)
   const [showNotebookAsk, setShowNotebookAsk] = useState(false)
@@ -266,6 +275,12 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
   const [showContentDetail, setShowContentDetail] = useState<LibraryDoc | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
+
+  useEffect(() => {
+    if (initialFactoryModal) {
+      setFactoryModal(initialFactoryModal)
+    }
+  }, [initialFactoryModal])
   const [factoryUserJobs, setFactoryUserJobs] = useState<FactoryJob[]>([])
   const [factoryQuotaBanner, setFactoryQuotaBanner] = useState(false)
   const [factoryToastFailedJobId, setFactoryToastFailedJobId] = useState<string | null>(null)
@@ -416,28 +431,45 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
 
           <p className="mt-5 text-[15px] leading-[1.75] text-justify text-zinc-800">{notebookSummaryBody}</p>
 
-          <div className="mt-5 flex items-center gap-1">
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
-              aria-label="Copy summary"
-            >
-              <Copy className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
-              aria-label="Good summary"
-            >
-              <ThumbsUp className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
-              aria-label="Bad summary"
-            >
-              <ThumbsDown className="h-5 w-5" />
-            </button>
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
+                aria-label="Copy summary"
+              >
+                <Copy className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
+                aria-label="Good summary"
+              >
+                <ThumbsUp className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
+                aria-label="Bad summary"
+              >
+                <ThumbsDown className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                title="Agent chat—grounded answers and stronger as your library grows"
+                aria-label="Open agent Q&A"
+                onClick={() => {
+                  setShowNotebookAsk(false)
+                  onAgentChat?.({ kbName: kbDisplayName })
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-violet-100/90 hover:text-violet-800"
+              >
+                <Bot className="h-5 w-5" strokeWidth={1.85} />
+              </button>
+            </div>
+            <p className="max-w-[14rem] text-[11px] leading-snug text-zinc-400 sm:max-w-none">
+              Worth more over time—use Q&A as your library grows.
+            </p>
           </div>
 
           <button
@@ -460,9 +492,6 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         </div>
 
         <div className="shrink-0 border-t border-stone-200/80 bg-[#faf7f6]/95 px-3 pb-3 pt-2 backdrop-blur-sm">
-          <p className="mb-2 px-0.5 text-center text-[11px] leading-snug text-zinc-500">
-            Mind may be wrong—verify important details.
-          </p>
           <div className="flex items-end gap-2">
             <label className="sr-only" htmlFor="notebook-ask-sources">
               Ask sources
@@ -483,16 +512,6 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
               <ChevronDown className="h-4 w-4 text-zinc-400" />
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setShowNotebookAsk(false)
-              onAgentChat?.({ kbName: kbDisplayName })
-            }}
-            className="mt-2 w-full rounded-xl border border-stone-200/90 bg-white py-2.5 text-[13px] font-medium text-zinc-600 hover:bg-stone-50"
-          >
-            Open conversational Q&A (Minder)
-          </button>
         </div>
       </div>
     )
@@ -570,7 +589,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         </button>
         <div className="flex items-center gap-1">
           <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Search className="w-5 h-5 text-gray-600" />
+            <SmartSearchIcon className="w-5 h-5 text-gray-600" />
           </button>
           <div className="relative">
             <button 

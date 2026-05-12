@@ -3,14 +3,12 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
-import { 
-  Search, ChevronRight, Compass,
-  RefreshCw
-} from "lucide-react"
+import { ChevronRight, Compass, RefreshCw } from "lucide-react"
+import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 
 type KBCategory = "mine" | "team" | "subscribed"
 
-interface KnowledgeBase {
+export type KnowledgeBase = {
   id: number
   name: string
   description: string
@@ -22,7 +20,7 @@ interface KnowledgeBase {
   subscribers?: number
 }
 
-const mockKBs: KnowledgeBase[] = [
+export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
   { id: 1, name: "Product library", description: "Specs and PRDs", category: "mine", count: 156, lastUpdate: "Just now", color: "from-zinc-400 to-stone-600" },
   { id: 2, name: "Study notes", description: "Personal learning log", category: "mine", count: 89, lastUpdate: "1h ago", color: "from-stone-500 to-zinc-700" },
   { id: 3, name: "Reading list", description: "Book notes and quotes", category: "mine", count: 45, lastUpdate: "Yesterday", color: "from-zinc-500 to-stone-600" },
@@ -40,7 +38,7 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
   const [activeCategory, setActiveCategory] = useState<KBCategory>("mine")
   const [showDiscover, setShowDiscover] = useState(false)
 
-  const filteredKBs = mockKBs.filter(kb => kb.category === activeCategory)
+  const filteredKBs = MOCK_KNOWLEDGE_BASES.filter((kb) => kb.category === activeCategory)
 
   const categories = [
     { id: "mine" as KBCategory, label: "Mine" },
@@ -163,7 +161,7 @@ function DiscoverPage({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <SmartSearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Search libraries"

@@ -4,12 +4,11 @@ import { useState, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { getMindAccount, accountSpaceLabel, type MindAccountId } from "@/lib/mind-accounts"
 import { mx } from "@/lib/medrix-design-tokens"
-import {
-  Search, Mic,
-  Bluetooth, X,
-  Battery, HardDrive, RefreshCw, Wifi, Smartphone,
-  Library, Trash2,
-} from "lucide-react"
+import { Mic, Bluetooth, Smartphone, Library, Trash2, ChevronRight, ChevronDown } from "lucide-react"
+import type { NoteFolder } from "@/lib/note-folders"
+import { folderIconComponent } from "@/lib/note-folders"
+import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
+import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
 
 export interface Note {
   id: number
@@ -24,9 +23,11 @@ export interface Note {
   source?: string
   /** Multimodal badge, e.g. highlight count */
   highlightCount?: number
+  /** Local folder (存入文件夹); color comes from folder definition */
+  folderId?: string | null
 }
 
-const mockNotes: Note[] = [
+export const mockNotes: Note[] = [
   {
     id: 1,
     title: "Product requirements sync",
@@ -101,12 +102,15 @@ function NoteCardSkeleton() {
 
 interface SwipeableMemoCardProps {
   note: Note
+  folders: NoteFolder[]
   onOpen: () => void
   onArchive?: () => void
   onDelete?: () => void
 }
 
-function SwipeableMemoCard({ note, onOpen, onArchive, onDelete }: SwipeableMemoCardProps) {
+function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: SwipeableMemoCardProps) {
+  const folder = note.folderId ? folders.find((f) => f.id === note.folderId) : undefined
+  const FolderIcon = folder ? folderIconComponent(folder.iconKey) : null
   const startX = useRef(0)
   const [dx, setDx] = useState(0)
   const dragging = useRef(false)
@@ -179,7 +183,7 @@ function SwipeableMemoCard({ note, onOpen, onArchive, onDelete }: SwipeableMemoC
             )}
           </div>
           <p className="mb-3 line-clamp-2 text-[15px] leading-relaxed text-gray-600">{note.preview}</p>
-          <div className="flex items-center gap-2 text-[13px] text-gray-500">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-gray-500">
             <span>{note.date}</span>
             {note.duration && (
               <>
@@ -195,6 +199,12 @@ function SwipeableMemoCard({ note, onOpen, onArchive, onDelete }: SwipeableMemoC
               )}
             </span>
           </div>
+          {folder && FolderIcon && (
+            <div className="mt-2 flex items-center gap-1.5 text-[12px] text-gray-600">
+              <FolderIcon className="h-4 w-4 shrink-0" style={{ color: folder.color }} strokeWidth={2} aria-hidden />
+              <span className="truncate font-medium text-gray-700">{folder.name}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -203,17 +213,27 @@ function SwipeableMemoCard({ note, onOpen, onArchive, onDelete }: SwipeableMemoC
 
 interface NotesTabProps {
   activeAccountId: MindAccountId
+  notes: Note[]
+  folders: NoteFolder[]
+  onNotesChange: (notes: Note[]) => void
   onNoteClick: (note: Note) => void
   onStartRecording: () => void
 }
 
-export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: NotesTabProps) {
+export function NotesTab({
+  activeAccountId,
+  notes,
+  folders,
+  onNotesChange,
+  onNoteClick,
+  onStartRecording,
+}: NotesTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
+  const [showRecordOptions, setShowRecordOptions] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
   const [filterType, setFilterType] = useState<"all" | "hardware" | "phone">("all")
   const [showFilterMenu, setShowFilterMenu] = useState(false)
-  const [notes, setNotes] = useState(mockNotes)
 
   const filteredNotes =
     filterType === "all" ? notes : notes.filter((n) => n.type === filterType)
@@ -222,7 +242,7 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
     <div className="relative flex h-full flex-col bg-[#ebebe8]">
       <div className="border-b border-gray-300/90 bg-white">
         <div className="flex items-center justify-between px-5 py-3">
-          <button type="button" onClick={() => setShowDeviceSheet(true)} className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="status" aria-label="Notes space and recorder status">
             <div
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg",
@@ -251,16 +271,30 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
                   )}
                 />
               </div>
+              <p className="text-[11px] text-gray-500">Recorder status · use mic button for devices</p>
             </div>
-          </button>
+          </div>
 
-          <button type="button" className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-200">
-            <Search className="h-5 w-5 text-gray-700" />
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-200"
+            aria-label="Smart search"
+          >
+            <SmartSearchIcon className="h-5 w-5 text-gray-700" />
           </button>
         </div>
       </div>
 
       <div className="px-5 pb-2 pt-5">
+        <button
+          type="button"
+          className="mb-1 flex items-center gap-1 text-[15px] font-semibold text-gray-900"
+          aria-haspopup="listbox"
+          aria-expanded={false}
+        >
+          全部文件
+          <ChevronDown className="h-4 w-4 text-gray-500" strokeWidth={2} aria-hidden />
+        </button>
         <div className="flex items-center justify-between">
           <h1 className="text-[28px] font-bold tracking-tight text-gray-900">Notes</h1>
           <button
@@ -323,7 +357,7 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
             </p>
             <button
               type="button"
-              onClick={onStartRecording}
+              onClick={() => setShowRecordOptions(true)}
               className="mt-6 rounded-full bg-zinc-600 px-6 py-3 text-[15px] font-medium text-white hover:bg-zinc-700"
             >
               Start recording
@@ -338,9 +372,10 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
                 <SwipeableMemoCard
                   key={note.id}
                   note={note}
+                  folders={folders}
                   onOpen={() => onNoteClick(note)}
                   onArchive={() => {}}
-                  onDelete={() => setNotes((prev) => prev.filter((n) => n.id !== note.id))}
+                  onDelete={() => onNotesChange(notes.filter((n) => n.id !== note.id))}
                 />
               )
             )}
@@ -350,121 +385,82 @@ export function NotesTab({ activeAccountId, onNoteClick, onStartRecording }: Not
 
       <button
         type="button"
-        onClick={onStartRecording}
+        onClick={() => setShowRecordOptions(true)}
         className="absolute bottom-7 right-6 z-30 flex items-center justify-center"
-        aria-label="Start recording"
+        aria-label="Recording options"
       >
         <div className="flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full bg-gradient-to-br from-zinc-400 via-zinc-500 to-stone-600 text-white shadow-[0_10px_28px_-6px_rgba(63,63,70,0.35)] ring-[3px] ring-white/95 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-95">
           <Mic className="h-7 w-7" strokeWidth={2.25} />
         </div>
       </button>
 
-      {showDeviceSheet && (
-        <div className="absolute inset-0 z-50">
-          <div className="absolute inset-0 bg-zinc-900/25" onClick={() => setShowDeviceSheet(false)} />
+      {showRecordOptions && (
+        <div className="absolute inset-0 z-40">
+          <button
+            type="button"
+            className="absolute inset-0 bg-zinc-900/35"
+            aria-label="Dismiss"
+            onClick={() => setShowRecordOptions(false)}
+          />
           <div className="absolute bottom-0 left-0 right-0 animate-in slide-in-from-bottom rounded-t-3xl bg-white duration-300">
             <div className="flex justify-center pb-2 pt-3">
-              <div className="h-1 w-10 rounded-full bg-gray-400" />
+              <div className="h-1 w-10 rounded-full bg-gray-300" />
             </div>
-            <div className="flex items-center justify-between px-5 pb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Devices</h3>
+            <div className="px-5 pb-2">
+              <h3 className="text-lg font-semibold text-gray-900">Record</h3>
+              <p className="mt-1 text-sm text-gray-500">Start a capture or open device details</p>
+            </div>
+            <div className="space-y-2 px-5 pb-6">
               <button
                 type="button"
-                onClick={() => setShowDeviceSheet(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-200"
+                onClick={() => {
+                  setShowRecordOptions(false)
+                  onStartRecording()
+                }}
+                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-gray-900 py-3.5 pl-4 pr-3 text-left text-white"
               >
-                <X className="h-5 w-5 text-gray-600" />
-              </button>
-            </div>
-
-            <div className="px-5 pb-4">
-              <div
-                className={cn(
-                  "rounded-2xl border-2 p-4 transition-all",
-                  isDeviceConnected
-                    ? "border-stone-300/80 bg-gradient-to-br from-stone-100 to-stone-50"
-                    : "border-gray-300 bg-gray-100"
-                )}
-              >
-                <div className="mb-4 flex items-center gap-4">
-                  <div
-                    className={cn(
-                      "flex h-14 w-14 items-center justify-center rounded-2xl",
-                      isDeviceConnected ? "bg-gradient-to-br from-sky-600 to-sky-800" : "bg-gray-400"
-                    )}
-                  >
-                    <Bluetooth className="h-7 w-7 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="font-semibold text-gray-900">Mind Recorder</span>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-medium",
-                          isDeviceConnected ? "bg-zinc-700 text-white" : "bg-gray-300 text-gray-700"
-                        )}
-                      >
-                        {isDeviceConnected ? "Connected" : "Disconnected"}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-600">SN: MR-2024-001234</span>
-                  </div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <Mic className="h-5 w-5" strokeWidth={2.25} />
                 </div>
-
-                {isDeviceConnected && (
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-xl bg-white/80 p-3 text-center">
-                      <Battery className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} />
-                      <div className="text-lg font-semibold text-gray-900">85%</div>
-                      <div className="text-xs text-gray-600">Battery</div>
-                    </div>
-                    <div className="rounded-xl bg-white/80 p-3 text-center">
-                      <HardDrive className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} />
-                      <div className="text-lg font-semibold text-gray-900">2.3G</div>
-                      <div className="text-xs text-gray-600">Free</div>
-                    </div>
-                    <div className="rounded-xl bg-white/80 p-3 text-center">
-                      <Wifi className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} />
-                      <div className="text-lg font-semibold text-gray-900">v2.1</div>
-                      <div className="text-xs text-gray-600">Firmware</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2 px-5 pb-6">
-              {isDeviceConnected ? (
-                <>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600"
-                  >
-                    <RefreshCw className="h-5 w-5" />
-                    Sync now
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsDeviceConnected(false)}
-                    className="w-full rounded-xl bg-gray-200 py-3 font-medium text-gray-700 hover:bg-gray-300"
-                  >
-                    Disconnect
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsDeviceConnected(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600"
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-semibold">Start recording</div>
+                  <div className="text-[12px] text-white/70">Phone mic or linked Mind Recorder</div>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-white/50" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRecordOptions(false)
+                  setShowDeviceSheet(true)
+                }}
+                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white py-3.5 pl-4 pr-3 text-left hover:bg-gray-50"
+              >
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                    isDeviceConnected ? "bg-sky-600" : "bg-gray-400"
+                  )}
                 >
-                  <Bluetooth className="h-5 w-5" />
-                  Search & connect
-                </button>
-              )}
+                  <Bluetooth className="h-5 w-5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-semibold text-gray-900">Source & devices</div>
+                  <div className="text-[12px] text-gray-500">Battery, storage, firmware, pairing</div>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-gray-300" />
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      <MindDevicesSheet
+        open={showDeviceSheet}
+        onClose={() => setShowDeviceSheet(false)}
+        isDeviceConnected={isDeviceConnected}
+        onSetDeviceConnected={setIsDeviceConnected}
+      />
     </div>
   )
 }

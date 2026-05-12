@@ -27,15 +27,17 @@ import {
   User,
   Trash2,
   FolderInput,
-  FileSearch,
   Pencil,
   ImageIcon,
   Languages,
   Cpu,
 } from "lucide-react"
+import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
+import { CreateFolderSheet } from "./create-folder-sheet"
+import type { Note } from "./notes-tab"
+import type { NoteFolder } from "@/lib/note-folders"
 
 const knowledgeBases = [
-  { id: 1, name: "Product library", category: "Personal", count: 156, recent: true, color: "from-zinc-400 to-stone-600", description: "Specs and PRDs" },
   { id: 2, name: "Tech docs", category: "Team", count: 89, recent: true, color: "from-zinc-500 to-stone-600", description: "Playbooks and internal docs" },
   { id: 3, name: "Meeting notes", category: "Personal", count: 234, recent: false, color: "from-stone-500 to-stone-700", description: "Calls and standups" },
   { id: 4, name: "User research", category: "Team", count: 67, recent: false, color: "from-zinc-500 to-zinc-600", description: "Interviews and insights" },
@@ -49,9 +51,12 @@ const recommendedKBs = [
 export type MovedLibraryMeta = { name: string; color: string; description?: string }
 
 interface NoteDetailProps {
+  note?: Note | null
   onBack: () => void
   /** After a successful move, opens the destination library for a continuous Notes → Library flow */
   onMovedToLibrary?: (kb: MovedLibraryMeta) => void
+  /** Create a new folder and assign the current note to it (Notes 首页展示颜色与名称) */
+  onAssignNoteToNewFolder?: (noteId: number, folder: NoteFolder) => void
 }
 
 const TRANSCRIPT_BLOCKS = [
@@ -63,11 +68,12 @@ const TRANSCRIPT_BLOCKS = [
   { t: "00:10:15", text: "For implementation we’re weighing D3.js versus React Flow; next step is a performance and maintainability review." },
 ] as const
 
-export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
+export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFolder }: NoteDetailProps) {
   const [activeTab, setActiveTab] = useState<"summary" | "transcript">("summary")
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadPct, setPlayheadPct] = useState(0.32)
   const [showKBSheet, setShowKBSheet] = useState(false)
+  const [showCreateFolderSheet, setShowCreateFolderSheet] = useState(false)
   /** Share icon: export / copy / share link */
   const [showShareOptions, setShowShareOptions] = useState(false)
   /** More menu: note utilities */
@@ -92,6 +98,12 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
     setShowToolsMenu(false)
     setShowShareOptions(false)
     setShowKBSheet(true)
+  }
+
+  const openCreateFolderSheet = () => {
+    setShowToolsMenu(false)
+    setShowShareOptions(false)
+    setShowCreateFolderSheet(true)
   }
 
   const closeAllOverlays = () => {
@@ -302,22 +314,24 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
             role="menu"
             className="absolute right-3 top-[50px] z-[47] w-[min(280px,calc(100%-24px))] overflow-hidden rounded-xl border border-stone-200/95 bg-white py-1 shadow-xl shadow-stone-900/12"
           >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={openMoveToLibrary}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
-            >
-              <FolderInput className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
-              Move to folder
-            </button>
+            {note != null && onAssignNoteToNewFolder != null && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={openCreateFolderSheet}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
+              >
+                <FolderInput className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
+                存入文件夹
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"
               onClick={() => setShowToolsMenu(false)}
               className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
             >
-              <FileSearch className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
+              <SmartSearchIcon className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
               Find and replace
             </button>
             <button
@@ -1293,6 +1307,22 @@ export function NoteDetail({ onBack, onMovedToLibrary }: NoteDetailProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {showCreateFolderSheet && note != null && onAssignNoteToNewFolder && (
+        <CreateFolderSheet
+          open={showCreateFolderSheet}
+          onClose={() => setShowCreateFolderSheet(false)}
+          onCreate={(payload) => {
+            const id = `folder-${Date.now()}`
+            onAssignNoteToNewFolder(note.id, {
+              id,
+              name: payload.name,
+              color: payload.color,
+              iconKey: payload.iconKey,
+            })
+          }}
+        />
       )}
     </div>
   )

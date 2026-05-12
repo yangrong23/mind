@@ -1,6 +1,7 @@
 "use client"
 
-import { Sparkles, Microscope, FileText, BarChart3, Stethoscope, Search } from "lucide-react"
+import { Sparkles, Microscope, FileText, BarChart3, Stethoscope } from "lucide-react"
+import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 
 const filters = [
   { id: "all", label: "All", icon: null },
@@ -44,7 +45,7 @@ export function FilterButtons({ activeFilter, onFilterChange }: FilterButtonsPro
 
       {/* Search Input */}
       <div className="relative ml-auto">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+        <SmartSearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
           placeholder="Search cases..."

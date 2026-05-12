@@ -10,12 +10,37 @@ import {
   type MindAccountId,
 } from "@/lib/mind-accounts"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
-import { 
-  Settings, ChevronRight, Share2, User, Bell,
-  HelpCircle, Shield, Palette, Globe, Smartphone,
-  Award, TrendingUp, Clock, Mic, Brain, Bot,
-  Cloud, Sparkles, Target, Map, Calendar,
-  Zap, Hash, MoreHorizontal, Trash2, Building2, ChevronsUpDown, LogOut,
+import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
+import {
+  Settings,
+  ChevronRight,
+  Share2,
+  User,
+  Bell,
+  HelpCircle,
+  Shield,
+  Palette,
+  Globe,
+  Smartphone,
+  Award,
+  TrendingUp,
+  Clock,
+  Mic,
+  Brain,
+  Bot,
+  Cloud,
+  Sparkles,
+  Target,
+  Map,
+  Calendar,
+  Zap,
+  Hash,
+  MoreHorizontal,
+  Trash2,
+  Building2,
+  ChevronsUpDown,
+  LogOut,
+  Bluetooth,
 } from "lucide-react"
 
 // Heatmap sample data
@@ -146,6 +171,8 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
   ])
   const [offlineOnly, setOfflineOnly] = useState(false)
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
+  const [showDeviceSheet, setShowDeviceSheet] = useState(false)
+  const [isDeviceConnected, setIsDeviceConnected] = useState(true)
 
   const stats = {
     totalNotes: 156,
@@ -189,15 +216,17 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
     { icon: User, label: "Personalization", desc: "Preferences and custom instructions", action: () => { setShowSettingsHub(false); setShowPersonalization(true) } },
     { icon: Cloud, label: "Cloud sync", desc: "Private cloud backup and storage", action: () => { setShowSettingsHub(false); setShowCloudSync(true) } },
     { icon: Bell, label: "Notifications", desc: "Push and reminders", action: () => setShowSettingsHub(false) },
-    { icon: Smartphone, label: "Devices", desc: "Mind Recorder", action: () => setShowSettingsHub(false) },
+    { icon: Smartphone, label: "Devices", desc: "Recorder, pairing, lexicon, offline", action: () => { setShowSettingsHub(false); setShowDeviceSheet(true) } },
     { icon: Shield, label: "Privacy & security", desc: "Data protection", action: () => setShowSettingsHub(false) },
     { icon: HelpCircle, label: "Help & feedback", desc: "Guides and support", action: () => setShowSettingsHub(false) },
   ]
 
   return (
-    <div className={cn("flex flex-col h-full", mx.pageBg)}>
+    <div className={cn("relative flex h-full min-h-0 flex-col", mx.pageBg)}>
+      {/* Single scroll: profile hero (flex min-h-0 fixes clipped bottom scroll) */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-8">
       {/* Profile — one calm header, no duplicate metrics below */}
-      <div className={cn("px-5 pt-5 pb-5", mx.brandHero, mx.brandHeroBorder)}>
+      <div className={cn("px-5 pt-4 pb-4", mx.brandHero, mx.brandHeroBorder)}>
         <div className="flex items-start justify-between gap-3">
           <button
             type="button"
@@ -265,7 +294,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-2 border-t border-sky-100/70 pt-4">
+        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-sky-100/70 pt-3">
           {[
             { value: stats.totalNotes, label: "Notes" },
             { value: stats.consecutiveDays, label: "Streak" },
@@ -282,15 +311,92 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
           type="button"
           onClick={() => setShowCreditsPlans(true)}
           className={cn(
-            "mt-4 w-full rounded-xl border border-sky-100/90 bg-white/60 py-2.5 text-[13px] font-medium text-sky-800 shadow-sm shadow-sky-900/5 backdrop-blur-sm transition-colors hover:bg-white/90",
+            "mt-3 w-full rounded-xl border border-sky-100/90 bg-white/60 py-2 text-[13px] font-medium text-sky-800 shadow-sm shadow-sky-900/5 backdrop-blur-sm transition-colors hover:bg-white/90",
             mx.brandFocusRing
           )}
         >
           {stats.creditsRemaining.toLocaleString("en-US")} credits · Plans & refill
         </button>
+
+        <div className="mt-3 space-y-3 rounded-xl border border-sky-100/70 bg-white/55 p-3 shadow-sm shadow-sky-900/5 backdrop-blur-sm">
+          <div>
+            <div className="flex items-start justify-between gap-2">
+              <p className={cn("text-[12px] font-semibold", mx.brandOnHero)}>Activity</p>
+              <p className={cn("max-w-[10rem] text-right text-[10px] leading-snug", mx.brandOnHeroMuted)}>
+                Last ~13 weeks · tap a square
+              </p>
+            </div>
+            <div className="mt-2">
+              <div className="grid grid-cols-13 gap-px sm:gap-0.5">
+                {heatmapData.slice(-91).map((day, i) => (
+                  <button
+                    key={`hero-${day.date}-${i}`}
+                    type="button"
+                    onClick={() => setHeatmapDayDetail({ date: day.date, value: day.value })}
+                    title={formatHeatmapDayLabel(day.date)}
+                    className={mxHeatmapCell(day.value)}
+                  />
+                ))}
+              </div>
+              <div className={cn("mt-1 flex justify-between text-[10px]", mx.brandOnHeroMuted)}>
+                <span>Mar</span>
+                <span>Apr</span>
+                <span>May</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-0 border-t border-sky-100/60 pt-2">
+            <button
+              type="button"
+              onClick={() => setPersonalizedFeed({ type: "daily" })}
+              className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
+            >
+              <Sparkles className="h-4 w-4 shrink-0 text-sky-700 opacity-90" />
+              <span>Daily review</span>
+              <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPersonalizedFeed({ type: "insights" })}
+              className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
+            >
+              <Target className="h-4 w-4 shrink-0 text-indigo-700 opacity-90" />
+              <span>AI insights</span>
+              <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowInsights(true)}
+              className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
+            >
+              <TrendingUp className="h-4 w-4 shrink-0 text-emerald-800 opacity-90" />
+              <span>Insights workspace</span>
+              <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
+            </button>
+            <div className="flex items-center gap-2 rounded-lg py-2 text-[13px] text-zinc-500">
+              <Map className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+              <span>Knowledge map</span>
+              <span className="ml-auto text-[10px] font-medium text-zinc-400">Soon</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDeviceSheet(true)}
+              className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
+            >
+              <Bluetooth className="h-4 w-4 shrink-0 text-sky-700 opacity-90" aria-hidden />
+              <span>Devices</span>
+              <span className="min-w-0 flex-1 truncate text-right text-[11px] font-normal text-zinc-500">
+                Recorder, pairing, lexicon, offline
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+            </button>
+          </div>
+        </div>
+      </div>
       </div>
 
-      {/* Multi-account: work vs personal */}
+      {/* Multi-account: work vs personal (outside main scroll) */}
       {showAccountSwitcher && (
         <div className="absolute inset-0 z-[58] flex flex-col justify-center px-5 py-10">
           <button
@@ -417,143 +523,6 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
           </div>
         </div>
       )}
-
-      <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4">
-        {/* Device, lexicon, offline */}
-        <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white">
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <div
-              className="relative h-[52px] w-11 shrink-0 rounded-xl bg-gradient-to-b from-stone-100 to-stone-300/90 ring-1 ring-stone-200/80"
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-medium text-zinc-900">Medrix Mind</p>
-              <p className="mt-0.5 text-[13px] text-zinc-500">
-                <span className="font-medium text-zinc-600">78%</span>
-                <span className="text-zinc-400"> · </span>
-                ~42h storage
-              </p>
-            </div>
-          </div>
-
-          <div className="h-px bg-stone-100" />
-
-          <div className="px-4 py-3.5">
-            <p className="text-[15px] font-medium text-zinc-900">Lexicon</p>
-            <textarea
-              value={lexiconDraft}
-              onChange={(e) => setLexiconDraft(e.target.value)}
-              onBlur={() => {
-                const raw = lexiconDraft.trim()
-                if (!raw) return
-                const parts = raw.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean)
-                if (parts.length) {
-                  setLexiconTags((prev) => Array.from(new Set([...prev, ...parts])).slice(0, 24))
-                  setLexiconDraft("")
-                }
-              }}
-              placeholder="Add terms (comma or new line) to bias transcription and search"
-              rows={2}
-              className="mt-2 w-full resize-none rounded-lg border border-stone-200/90 bg-stone-50/50 px-3 py-2 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400/80 focus:outline-none focus:ring-1 focus:ring-zinc-400/20"
-            />
-            {lexiconTags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {lexiconTags.map((tag) => (
-                  <span key={tag} className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-zinc-600">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="h-px bg-stone-100" />
-
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-medium text-zinc-900">Offline-only processing</p>
-              <p className="mt-0.5 text-[12px] leading-snug text-zinc-500">
-                Fully offline: cloud Claw and advanced skills are unavailable
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={offlineOnly}
-              onClick={() => {
-                if (!offlineOnly) setOfflineConfirmOpen(true)
-                else setOfflineOnly(false)
-              }}
-              className={cn(
-                "relative h-7 w-[44px] shrink-0 rounded-full p-0.5 transition-colors",
-                offlineOnly ? "bg-orange-600" : "bg-stone-200"
-              )}
-            >
-              <span
-                className={cn(
-                  "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
-                  offlineOnly ? "translate-x-[18px]" : "translate-x-0"
-                )}
-              />
-            </button>
-          </div>
-        </div>
-
-        {/* Activity + insights entry — single card, no second stat grid */}
-        <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200/80 bg-white">
-          <div className="flex items-baseline justify-between px-4 pt-3.5">
-            <p className="text-[15px] font-medium text-zinc-900">Activity</p>
-            <span className="text-[12px] text-zinc-400">Last ~13 weeks</span>
-          </div>
-          <p className="px-4 pt-1 text-[12px] text-zinc-500">Tap a square for that day</p>
-          <div className="px-4 pb-3 pt-2">
-            <div className="grid grid-cols-13 gap-px sm:gap-0.5">
-              {heatmapData.slice(-91).map((day, i) => (
-                <button
-                  key={`${day.date}-${i}`}
-                  type="button"
-                  onClick={() => setHeatmapDayDetail({ date: day.date, value: day.value })}
-                  title={formatHeatmapDayLabel(day.date)}
-                  className={mxHeatmapCell(day.value)}
-                />
-              ))}
-            </div>
-            <div className="mt-1.5 flex justify-between text-[10px] text-zinc-400">
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-            </div>
-          </div>
-
-          <div className="h-px bg-stone-100" />
-
-          <button
-            type="button"
-            onClick={() => setPersonalizedFeed({ type: "daily" })}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-[15px] text-zinc-800 active:bg-stone-50"
-          >
-            <Sparkles className="h-4 w-4 shrink-0 text-zinc-600 opacity-80" />
-            <span>Daily review</span>
-            <ChevronRight className="ml-auto h-4 w-4 text-zinc-300" />
-          </button>
-          <div className="h-px bg-stone-100" />
-          <button
-            type="button"
-            onClick={() => setPersonalizedFeed({ type: "insights" })}
-            className="flex w-full items-center gap-2 px-4 py-3 text-left text-[15px] text-zinc-800 active:bg-stone-50"
-          >
-            <Target className="h-4 w-4 shrink-0 text-stone-600 opacity-80" />
-            <span>AI insights</span>
-            <ChevronRight className="ml-auto h-4 w-4 text-zinc-300" />
-          </button>
-          <div className="h-px bg-stone-100" />
-          <div className="flex items-center gap-2 px-4 py-3 text-[15px] text-zinc-500">
-            <Map className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-            <span>Knowledge map</span>
-            <span className="ml-auto text-[11px] font-medium text-zinc-400">Soon</span>
-          </div>
-        </div>
-      </div>
 
       {/* Share card modal */}
       {showShareCard && (
@@ -1493,6 +1462,92 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             </div>
           )
         })()}
+
+      <MindDevicesSheet
+        open={showDeviceSheet}
+        onClose={() => setShowDeviceSheet(false)}
+        isDeviceConnected={isDeviceConnected}
+        onSetDeviceConnected={setIsDeviceConnected}
+        zOverlayClass="z-[60]"
+      >
+        <div className="space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">On this device</p>
+          <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm shadow-stone-900/[0.03] divide-y divide-stone-100">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div
+                className="relative h-[52px] w-11 shrink-0 rounded-xl bg-gradient-to-b from-stone-100 to-stone-300/90 ring-1 ring-stone-200/80"
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-[14px] font-medium text-zinc-900">Medrix Mind</p>
+                <p className="mt-0.5 text-[13px] text-zinc-500">
+                  <span className="font-medium text-zinc-600">78%</span>
+                  <span className="text-zinc-400"> · </span>
+                  ~42h storage
+                </p>
+              </div>
+            </div>
+
+            <div className="px-4 py-3">
+              <p className="text-[14px] font-medium text-zinc-900">Lexicon</p>
+              <textarea
+                value={lexiconDraft}
+                onChange={(e) => setLexiconDraft(e.target.value)}
+                onBlur={() => {
+                  const raw = lexiconDraft.trim()
+                  if (!raw) return
+                  const parts = raw.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean)
+                  if (parts.length) {
+                    setLexiconTags((prev) => Array.from(new Set([...prev, ...parts])).slice(0, 24))
+                    setLexiconDraft("")
+                  }
+                }}
+                placeholder="Add terms (comma or new line) to bias transcription and search"
+                rows={2}
+                className="mt-2 w-full resize-none rounded-lg border border-stone-200/90 bg-stone-50/50 px-3 py-2 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400/80 focus:outline-none focus:ring-1 focus:ring-zinc-400/20"
+              />
+              {lexiconTags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {lexiconTags.map((tag) => (
+                    <span key={tag} className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-zinc-600">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[14px] font-medium text-zinc-900">Offline-only processing</p>
+                <p className="mt-0.5 text-[12px] leading-snug text-zinc-500">
+                  Fully offline: cloud Claw and advanced skills are unavailable
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={offlineOnly}
+                onClick={() => {
+                  if (!offlineOnly) setOfflineConfirmOpen(true)
+                  else setOfflineOnly(false)
+                }}
+                className={cn(
+                  "relative h-7 w-[44px] shrink-0 rounded-full p-0.5 transition-colors",
+                  offlineOnly ? "bg-orange-600" : "bg-stone-200"
+                )}
+              >
+                <span
+                  className={cn(
+                    "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
+                    offlineOnly ? "translate-x-[18px]" : "translate-x-0"
+                  )}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      </MindDevicesSheet>
 
       {insightShareSheet && (
         <div className="absolute inset-0 z-[70]">

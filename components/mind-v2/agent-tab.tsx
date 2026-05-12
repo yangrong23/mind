@@ -2,6 +2,15 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
+import { MOCK_KNOWLEDGE_BASES } from "@/components/mind-v2/knowledge-tab"
+import { ContentFactoryModals, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
+import {
+  normalizeStudioFromAgentHandoff,
+  resolveAgentStudioLibraryName,
+  type StudioFromAgentHandoff,
+  type StudioLibraryLinkMode,
+} from "@/components/mind-v2/studio-handoff"
 import {
   Plus,
   ChevronRight,
@@ -14,13 +23,15 @@ import {
   Factory,
 } from "lucide-react"
 
-const STUDIO_OUTPUTS = [
+const STUDIO_OUTPUTS: { id: FactoryModalKind; label: string; sub: string }[] = [
+  { id: "report", label: "Report", sub: "Structured write-up" },
   { id: "audio", label: "Audio overview", sub: "Narrated recap" },
   { id: "video", label: "Video brief", sub: "Short explainer" },
   { id: "flashcards", label: "Flashcards", sub: "Study deck" },
   { id: "quiz", label: "Quiz", sub: "Check understanding" },
   { id: "slides", label: "Slides", sub: "Outline to deck" },
-] as const
+  { id: "infographic", label: "Infographic", sub: "Visual summary" },
+]
 
 interface Agent {
   id: number
@@ -61,19 +72,43 @@ const chatHistory = [
 
 interface AgentTabProps {
   onAgentChat: (agent: Agent) => void
-  onOpenContentFactory?: () => void
 }
 
-export function AgentTab({ onAgentChat, onOpenContentFactory }: AgentTabProps) {
+function libraryLinkSummary(mode: StudioLibraryLinkMode, pickedKbIds: number[]): string {
+  if (mode === "all") return "All libraries"
+  if (mode === "auto") return "Auto"
+  if (pickedKbIds.length === 0) return "Auto"
+  const rows = pickedKbIds
+    .map((id) => MOCK_KNOWLEDGE_BASES.find((k) => k.id === id))
+    .filter((x): x is (typeof MOCK_KNOWLEDGE_BASES)[number] => Boolean(x))
+  if (rows.length === 0) return "Auto"
+  if (rows.length === 1) return rows[0].name
+  return `${rows[0].name} +${rows.length - 1}`
+}
+
+export function AgentTab({ onAgentChat }: AgentTabProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [showCreateSheet, setShowCreateSheet] = useState(false)
   const [showExplore, setShowExplore] = useState(false)
   const [showKBSelect, setShowKBSelect] = useState(false)
-  const [selectedKBs, setSelectedKBs] = useState<string[]>([])
+  const [libraryLinkMode, setLibraryLinkMode] = useState<StudioLibraryLinkMode>("auto")
+  const [pickedKbIds, setPickedKbIds] = useState<number[]>([])
   const [showStudioMenu, setShowStudioMenu] = useState(false)
+  const [agentStudioSession, setAgentStudioSession] = useState<StudioFromAgentHandoff | null>(null)
+
+  const linkSummary = libraryLinkSummary(libraryLinkMode, pickedKbIds)
+
+  function openStudioWithKind(factoryKind: FactoryModalKind) {
+    const mode =
+      libraryLinkMode === "pick" && pickedKbIds.length === 0 ? "auto" : libraryLinkMode
+    const ids = mode === "pick" ? pickedKbIds : []
+    setAgentStudioSession(
+      normalizeStudioFromAgentHandoff({ factoryKind, libraryLinkMode: mode, pickedKbIds: ids })
+    )
+  }
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#f5f5f4] text-zinc-800">
+    <div className="relative flex h-full min-h-0 flex-col bg-[#f5f5f4] text-zinc-800">
       {/* Left drawer */}
       <div 
         className={cn(
@@ -206,10 +241,15 @@ export function AgentTab({ onAgentChat, onOpenContentFactory }: AgentTabProps) {
                 setShowStudioMenu(false)
                 setShowKBSelect(true)
               }}
-              className="flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-[12px] font-medium text-zinc-700 hover:bg-stone-100"
+              className="flex max-w-[min(52%,11rem)] flex-col items-start gap-0 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-left hover:bg-stone-100"
             >
-              <Plus className="h-3.5 w-3.5" />
-              Libraries
+              <span className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-700">
+                <Plus className="h-3.5 w-3.5 shrink-0" />
+                Libraries
+              </span>
+              <span className="w-full truncate pl-5 text-[10px] font-normal leading-tight text-zinc-500">
+                {linkSummary}
+              </span>
             </button>
             <div className="relative min-w-0 flex-1 sm:flex-initial">
               <button
@@ -233,7 +273,7 @@ export function AgentTab({ onAgentChat, onOpenContentFactory }: AgentTabProps) {
                         type="button"
                         onClick={() => {
                           setShowStudioMenu(false)
-                          onOpenContentFactory?.()
+                          openStudioWithKind(item.id)
                         }}
                         className="w-full px-3 py-2.5 text-left hover:bg-stone-50"
                       >
@@ -303,50 +343,109 @@ export function AgentTab({ onAgentChat, onOpenContentFactory }: AgentTabProps) {
             </div>
             <div className="px-5 pb-3">
               <h3 className="text-lg font-semibold text-gray-900">Link libraries</h3>
-              <p className="mt-1 text-sm text-gray-500">Replies can use sources from what you select</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Studio and replies use this scope. Pick <span className="font-medium text-zinc-700">All</span>, let Mind
+                choose with <span className="font-medium text-zinc-700">Auto</span>, or shortlist libraries.
+              </p>
             </div>
-            <div className="px-5 pb-6 max-h-64 overflow-y-auto">
-              {[
-                { id: "kb1", name: "Product docs", icon: "📚", count: 45 },
-                { id: "kb2", name: "Tech notes", icon: "💻", count: 128 },
-                { id: "kb3", name: "Meetings", icon: "📝", count: 32 },
-                { id: "kb4", name: "Study", icon: "🎓", count: 67 },
-              ].map((kb) => (
-                <button
-                  key={kb.id}
-                  onClick={() => {
-                    setSelectedKBs(prev => 
-                      prev.includes(kb.id) ? prev.filter(id => id !== kb.id) : [...prev, kb.id]
-                    )
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl mb-2 transition-colors",
-                    selectedKBs.includes(kb.id) ? "bg-zinc-50 border-2 border-zinc-500" : "bg-gray-50 border-2 border-transparent"
-                  )}
-                >
-                  <span className="text-2xl">{kb.icon}</span>
-                  <div className="flex-1 text-left">
-                    <div className="font-medium text-gray-900">{kb.name}</div>
-                    <div className="text-xs text-gray-500">{kb.count} items</div>
-                  </div>
-                  {selectedKBs.includes(kb.id) && (
-                    <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
-                      <span className="text-white text-sm">✓</span>
+            <div className="px-5 pb-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setLibraryLinkMode("all")
+                  setPickedKbIds([])
+                }}
+                className={cn(
+                  "w-full rounded-xl border-2 px-3 py-2.5 text-left transition-colors",
+                  libraryLinkMode === "all"
+                    ? "border-zinc-500 bg-zinc-50"
+                    : "border-transparent bg-gray-50"
+                )}
+              >
+                <div className="font-medium text-gray-900">All libraries</div>
+                <div className="text-xs text-gray-500">Use every linked base when generating</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLibraryLinkMode("auto")
+                  setPickedKbIds([])
+                }}
+                className={cn(
+                  "w-full rounded-xl border-2 px-3 py-2.5 text-left transition-colors",
+                  libraryLinkMode === "auto"
+                    ? "border-zinc-500 bg-zinc-50"
+                    : "border-transparent bg-gray-50"
+                )}
+              >
+                <div className="font-medium text-gray-900">Auto</div>
+                <div className="text-xs text-gray-500">Mind picks matching libraries per run</div>
+              </button>
+            </div>
+            <div className="px-5 pb-1 text-xs font-medium uppercase tracking-wide text-zinc-400">Or choose</div>
+            <div className="px-5 pb-6 max-h-52 overflow-y-auto">
+              {MOCK_KNOWLEDGE_BASES.map((kb) => {
+                const selected = pickedKbIds.includes(kb.id)
+                const KbIcon = knowledgeBaseIconForTitle(kb.name, kb.description)
+                return (
+                  <button
+                    key={kb.id}
+                    type="button"
+                    onClick={() => {
+                      setLibraryLinkMode("pick")
+                      setPickedKbIds((prev) =>
+                        prev.includes(kb.id) ? prev.filter((id) => id !== kb.id) : [...prev, kb.id]
+                      )
+                    }}
+                    className={cn(
+                      "mb-2 flex w-full items-center gap-3 rounded-xl p-3 transition-colors",
+                      selected ? "border-2 border-zinc-500 bg-zinc-50" : "border-2 border-transparent bg-gray-50"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br",
+                        kb.color
+                      )}
+                    >
+                      <KbIcon className="h-5 w-5 text-white" strokeWidth={2} aria-hidden />
                     </div>
-                  )}
-                </button>
-              ))}
+                    <div className="min-w-0 flex-1 text-left">
+                      <div className="font-medium text-gray-900">{kb.name}</div>
+                      <div className="truncate text-xs text-gray-500">
+                        {kb.count} items · {kb.description}
+                      </div>
+                    </div>
+                    {selected && (
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-500">
+                        <span className="text-sm text-white">✓</span>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
             </div>
             <div className="px-5 pb-6">
               <button
+                type="button"
                 onClick={() => setShowKBSelect(false)}
-                className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium"
+                className="w-full rounded-xl bg-gray-900 py-3 font-medium text-white"
               >
-                Done{selectedKBs.length > 0 ? ` (${selectedKBs.length})` : ""}
+                Done
+                {libraryLinkMode === "pick" && pickedKbIds.length > 0 ? ` (${pickedKbIds.length})` : ""}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {agentStudioSession && (
+        <ContentFactoryModals
+          open={agentStudioSession.factoryKind}
+          onClose={() => setAgentStudioSession(null)}
+          libraryName={resolveAgentStudioLibraryName(agentStudioSession)}
+          onGenerateSubmit={() => setAgentStudioSession(null)}
+        />
       )}
     </div>
   )

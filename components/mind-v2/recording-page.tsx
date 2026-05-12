@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { X, Pause, Bookmark, Mic, Square, Bluetooth, ChevronDown } from "lucide-react"
+import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
+import { X, Pause, Bookmark, Mic, Square, Bluetooth, ChevronRight } from "lucide-react"
 
 interface RecordingPageProps {
   onStop: () => void
@@ -14,7 +15,8 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
   const [duration, setDuration] = useState(0)
   const [bookmarks, setBookmarks] = useState<number[]>([])
   const [waveformData, setWaveformData] = useState<number[]>(Array(50).fill(0.2))
-  const [isDeviceConnected] = useState(true)
+  const [isDeviceConnected, setIsDeviceConnected] = useState(true)
+  const [showDeviceSheet, setShowDeviceSheet] = useState(false)
 
   useEffect(() => {
     if (isPaused) return
@@ -44,7 +46,7 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950">
+    <div className="relative flex h-full flex-col bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950">
       <div className="flex items-center justify-between px-5 py-4">
         <button 
           onClick={onClose}
@@ -63,30 +65,38 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
         <div className="w-10" />
       </div>
 
-      <div className="px-5 mb-4">
-        <div className={cn(
-          "flex items-center justify-between p-3 rounded-xl",
-          isDeviceConnected ? "bg-zinc-500/15 border border-zinc-400/20" : "bg-white/5"
-        )}>
+      <div className="mb-4 px-5">
+        <button
+          type="button"
+          onClick={() => setShowDeviceSheet(true)}
+          className={cn(
+            "flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors",
+            isDeviceConnected ? "border border-zinc-400/20 bg-zinc-500/15 hover:bg-zinc-500/25" : "bg-white/5 hover:bg-white/10"
+          )}
+        >
           <div className="flex items-center gap-2">
-            <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center",
-              isDeviceConnected ? "bg-zinc-500" : "bg-zinc-600"
-            )}>
-              <Bluetooth className="w-4 h-4 text-white" />
+            <div
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-lg",
+                isDeviceConnected ? "bg-zinc-500" : "bg-zinc-600"
+              )}
+            >
+              <Bluetooth className="h-4 w-4 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-medium text-white">Mind Recorder</span>
-                <span className="px-1.5 py-0.5 bg-zinc-500 text-[10px] text-white rounded">
-                  Connected
+                <span className="rounded bg-zinc-500 px-1.5 py-0.5 text-[10px] text-white">
+                  {isDeviceConnected ? "Connected" : "Disconnected"}
                 </span>
               </div>
-              <span className="text-xs text-white/50">85% · High-quality capture</span>
+              <span className="text-xs text-white/50">
+                {isDeviceConnected ? "85% · High-quality capture" : "Tap for device details & pairing"}
+              </span>
             </div>
           </div>
-          <ChevronDown className="w-4 h-4 text-white/50" />
-        </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-white/50" aria-hidden />
+        </button>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6">
@@ -210,6 +220,14 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
           </button>
         </div>
       </div>
+
+      <MindDevicesSheet
+        open={showDeviceSheet}
+        onClose={() => setShowDeviceSheet(false)}
+        isDeviceConnected={isDeviceConnected}
+        onSetDeviceConnected={setIsDeviceConnected}
+        zOverlayClass="z-[80]"
+      />
     </div>
   )
 }
