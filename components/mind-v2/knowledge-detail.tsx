@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
-import { ContentFactoryModals, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
+import { ContentFactoryModals, type FactoryGenerationSettings, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import {
   StudioFactoryJobsInline,
+  factorySettingsLeadMeta,
   mockTitleForFactoryKind,
   type FactoryJob,
 } from "@/components/mind-v2/content-factory-progress-panel"
@@ -33,6 +35,8 @@ import {
   Youtube,
   Library,
   Trash2,
+  Send,
+  GitBranch,
 } from "lucide-react"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 
@@ -271,6 +275,7 @@ export function KnowledgeDetail({
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [hubRichNoteOpen, setHubRichNoteOpen] = useState(false)
   const [showNotebookAsk, setShowNotebookAsk] = useState(false)
+  const [notebookAskDraft, setNotebookAskDraft] = useState("")
   const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
   const [showContentDetail, setShowContentDetail] = useState<LibraryDoc | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
@@ -281,6 +286,10 @@ export function KnowledgeDetail({
       setFactoryModal(initialFactoryModal)
     }
   }, [initialFactoryModal])
+
+  useEffect(() => {
+    if (!showNotebookAsk) setNotebookAskDraft("")
+  }, [showNotebookAsk])
   const [factoryUserJobs, setFactoryUserJobs] = useState<FactoryJob[]>([])
   const [factoryQuotaBanner, setFactoryQuotaBanner] = useState(false)
   const [factoryToastFailedJobId, setFactoryToastFailedJobId] = useState<string | null>(null)
@@ -293,9 +302,16 @@ export function KnowledgeDetail({
   const kbIntroDetail = `This library currently has ${sourceCount} source${sourceCount === 1 ? "" : "s"}. Use Hub to browse, Graph to see connections, and Studio to generate new media from these materials.`
   const notebookSummaryBody = notebookSummaryForLibrary(kbDisplayName, sourceCount)
 
-  function scheduleFactoryJobFinish(jobId: string, kind: FactoryModalKind) {
+  function scheduleFactoryJobFinish(
+    jobId: string,
+    kind: FactoryModalKind,
+    settings?: FactoryGenerationSettings
+  ) {
     window.setTimeout(() => {
       const fail = Math.random() < 0.14
+      const lead = factorySettingsLeadMeta(kind, settings)
+      const sources = `${2 + Math.floor(Math.random() * 4)} sources`
+      const metaTail = [lead, sources, "just now"].filter(Boolean).join(" · ")
       setFactoryUserJobs((prev) =>
         prev.map((j) => {
           if (j.id !== jobId || j.status !== "generating") return j
@@ -304,7 +320,8 @@ export function KnowledgeDetail({
             ...j,
             status: "complete" as const,
             title: mockTitleForFactoryKind(kind),
-            meta: `${2 + Math.floor(Math.random() * 4)} sources · just now`,
+            meta: metaTail,
+            settings,
           }
         })
       )
@@ -314,28 +331,42 @@ export function KnowledgeDetail({
     }, 2800)
   }
 
-  function handleFactoryGenerateSubmit(kind: FactoryModalKind) {
+  function handleFactoryGenerateSubmit(kind: FactoryModalKind, settings?: FactoryGenerationSettings) {
     setFactoryToastFailedJobId(null)
     const id = `u-${Date.now()}`
-    setFactoryUserJobs((prev) => [...prev, { id, kind, status: "generating" }])
+    setFactoryUserJobs((prev) => [...prev, { id, kind, status: "generating", settings }])
     setActiveView("factory")
     if (kind === "slides" && Math.random() < 0.38) {
       setFactoryQuotaBanner(true)
     }
-    scheduleFactoryJobFinish(id, kind)
+    scheduleFactoryJobFinish(id, kind, settings)
   }
 
   function handleFactoryRetry(jobId: string) {
     setFactoryToastFailedJobId(null)
     let kind: FactoryModalKind = "report"
+    let settings: FactoryGenerationSettings | undefined
     setFactoryUserJobs((prev) => {
       const row = prev.find((x) => x.id === jobId)
-      if (row) kind = row.kind
+      if (row) {
+        kind = row.kind
+        settings = row.settings
+      }
       return prev.map((x) =>
         x.id === jobId ? { ...x, status: "generating", title: undefined, meta: undefined } : x
       )
     })
-    window.setTimeout(() => scheduleFactoryJobFinish(jobId, kind), 0)
+    window.setTimeout(() => scheduleFactoryJobFinish(jobId, kind, settings), 0)
+  }
+
+  function submitNotebookAsk() {
+    const q = notebookAskDraft.trim()
+    if (!q) {
+      toast.error("请输入问题")
+      return
+    }
+    toast.success("已向资料库提问", { description: q.length > 140 ? `${q.slice(0, 140)}…` : q })
+    setNotebookAskDraft("")
   }
 
   const KbHeaderIcon = knowledgeBaseIconForTitle(
@@ -416,6 +447,7 @@ export function KnowledgeDetail({
           </h1>
           <button
             type="button"
+            onClick={() => toast.message("更多", { description: "资料库操作菜单（演示）。" })}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-stone-200/60"
             aria-label="More"
           >
@@ -435,6 +467,7 @@ export function KnowledgeDetail({
             <div className="flex items-center gap-0.5">
               <button
                 type="button"
+                onClick={() => toast.success("已复制摘要")}
                 className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
                 aria-label="Copy summary"
               >
@@ -442,6 +475,7 @@ export function KnowledgeDetail({
               </button>
               <button
                 type="button"
+                onClick={() => toast.success("感谢反馈", { description: "已记录为有帮助" })}
                 className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
                 aria-label="Good summary"
               >
@@ -449,6 +483,7 @@ export function KnowledgeDetail({
               </button>
               <button
                 type="button"
+                onClick={() => toast.message("已记录", { description: "我们会改进摘要质量（演示）。" })}
                 className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
                 aria-label="Bad summary"
               >
@@ -456,8 +491,8 @@ export function KnowledgeDetail({
               </button>
               <button
                 type="button"
-                title="Agent chat—grounded answers and stronger as your library grows"
-                aria-label="Open agent Q&A"
+                title="Deep knowledge chat—retrieve, compare, and cite across your library"
+                aria-label="Open Mind Agent (library-grounded)"
                 onClick={() => {
                   setShowNotebookAsk(false)
                   onAgentChat?.({ kbName: kbDisplayName })
@@ -468,12 +503,17 @@ export function KnowledgeDetail({
               </button>
             </div>
             <p className="max-w-[14rem] text-[11px] leading-snug text-zinc-400 sm:max-w-none">
-              Worth more over time—use Q&A as your library grows.
+              Open Mind Agent for deep, library-grounded Q&A—it gets stronger as your library grows.
             </p>
           </div>
 
           <button
             type="button"
+            onClick={() => toast.promise(new Promise((r) => setTimeout(r, 800)), {
+              loading: "正在生成音频概览…",
+              success: "已加入播放队列（演示）",
+              error: "生成失败",
+            })}
             className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-full border border-stone-200/90 bg-white py-3 text-[15px] font-medium text-zinc-800 shadow-sm shadow-stone-900/5 transition-colors hover:bg-stone-50"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100" aria-hidden>
@@ -499,17 +539,34 @@ export function KnowledgeDetail({
             <input
               id="notebook-ask-sources"
               type="text"
+              value={notebookAskDraft}
+              onChange={(e) => setNotebookAskDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  submitNotebookAsk()
+                }
+              }}
               placeholder={`Ask ${sourceCount} sources…`}
               className="min-h-[44px] min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-200/60"
             />
             <button
               type="button"
+              onClick={() => toast.message("来源范围", { description: `当前提问将覆盖 ${sourceCount} 条资料（演示）。` })}
               className="flex shrink-0 items-center gap-1 rounded-xl border border-stone-200 bg-white px-2.5 py-2 text-[13px] font-medium text-zinc-700 shadow-sm"
               aria-label="Sources"
             >
               <FileText className="h-4 w-4 text-zinc-500" />
               <span>{sourceCount}</span>
               <ChevronDown className="h-4 w-4 text-zinc-400" />
+            </button>
+            <button
+              type="button"
+              onClick={submitNotebookAsk}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm hover:bg-violet-700"
+              aria-label="Send question"
+            >
+              <Send className="h-5 w-5" strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -531,11 +588,15 @@ export function KnowledgeDetail({
             <ChevronLeft className="w-6 h-6 text-gray-700" />
           </button>
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => onAgentChat?.({ 
-                kbName: knowledgeBase?.name || "Medrix Mind", 
-                contentTitle: showContentDetail.title 
-              })}
+            <button
+              type="button"
+              title="Deep knowledge entry—answers grounded in this item and your library"
+              onClick={() =>
+                onAgentChat?.({
+                  kbName: knowledgeBase?.name || "Medrix Mind",
+                  contentTitle: showContentDetail.title,
+                })
+              }
               className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-zinc-500 to-stone-500 text-white rounded-full text-xs font-medium"
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -847,23 +908,20 @@ export function KnowledgeDetail({
 
               <button
                 type="button"
-                onClick={() => setFactoryModal("video")}
+                onClick={() => setFactoryModal("mindmap")}
                 className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <div
                     className={cn(
                       "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                      mx.factoryTone.video.well,
-                      mx.factoryTone.video.icon
+                      mx.factoryTone.mindmap.well,
+                      mx.factoryTone.mindmap.icon
                     )}
                   >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="4" width="20" height="16" rx="2" />
-                      <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" />
-                    </svg>
+                    <GitBranch className="h-5 w-5" strokeWidth={2} />
                   </div>
-                  <span className="truncate text-[15px] font-medium text-zinc-800">Video overview</span>
+                  <span className="truncate text-[15px] font-medium text-zinc-800">Mind map</span>
                 </div>
                 <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>

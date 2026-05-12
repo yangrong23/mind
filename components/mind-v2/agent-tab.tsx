@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
 import { MOCK_KNOWLEDGE_BASES } from "@/components/mind-v2/knowledge-tab"
@@ -26,7 +27,7 @@ import {
 const STUDIO_OUTPUTS: { id: FactoryModalKind; label: string; sub: string }[] = [
   { id: "report", label: "Report", sub: "Structured write-up" },
   { id: "audio", label: "Audio overview", sub: "Narrated recap" },
-  { id: "video", label: "Video brief", sub: "Short explainer" },
+  { id: "mindmap", label: "Mind map", sub: "Structure from sources" },
   { id: "flashcards", label: "Flashcards", sub: "Study deck" },
   { id: "quiz", label: "Quiz", sub: "Check understanding" },
   { id: "slides", label: "Slides", sub: "Outline to deck" },
@@ -94,6 +95,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
   const [libraryLinkMode, setLibraryLinkMode] = useState<StudioLibraryLinkMode>("auto")
   const [pickedKbIds, setPickedKbIds] = useState<number[]>([])
   const [showStudioMenu, setShowStudioMenu] = useState(false)
+  const [agentHomeDraft, setAgentHomeDraft] = useState("")
   const [agentStudioSession, setAgentStudioSession] = useState<StudioFromAgentHandoff | null>(null)
 
   const linkSummary = libraryLinkSummary(libraryLinkMode, pickedKbIds)
@@ -105,6 +107,16 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
     setAgentStudioSession(
       normalizeStudioFromAgentHandoff({ factoryKind, libraryLinkMode: mode, pickedKbIds: ids })
     )
+  }
+
+  function submitAgentHomePrompt() {
+    const q = agentHomeDraft.trim()
+    if (!q) {
+      toast.error("请先描述任务或问题")
+      return
+    }
+    toast.success("已排队处理", { description: q.length > 100 ? `${q.slice(0, 100)}…` : q })
+    setAgentHomeDraft("")
   }
 
   return (
@@ -231,6 +243,14 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
           <div className="mx-auto w-full max-w-md shrink-0 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
           <input
             type="text"
+            value={agentHomeDraft}
+            onChange={(e) => setAgentHomeDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                submitAgentHomePrompt()
+              }
+            }}
             placeholder="Describe a topic, task, or instruction…"
             className="mb-3 w-full bg-transparent text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
           />
@@ -287,6 +307,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
             </div>
             <button
               type="button"
+              onClick={() => toast.message("语音输入", { description: "按住说话（演示）。" })}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-100 text-zinc-600 hover:bg-stone-200"
               aria-label="Voice input"
             >
@@ -294,6 +315,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
             </button>
             <button
               type="button"
+              onClick={submitAgentHomePrompt}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-md shadow-sky-600/25 hover:bg-sky-700"
               aria-label="Send"
             >
@@ -444,7 +466,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
           open={agentStudioSession.factoryKind}
           onClose={() => setAgentStudioSession(null)}
           libraryName={resolveAgentStudioLibraryName(agentStudioSession)}
-          onGenerateSubmit={() => setAgentStudioSession(null)}
+          onGenerateSubmit={(_kind, _settings) => setAgentStudioSession(null)}
         />
       )}
     </div>
@@ -695,9 +717,11 @@ function agentAvatarIsRemoteUrl(avatar: string) {
 interface AgentChatProps {
   agent: Agent
   onBack: () => void
+  /** Shown under the header when present — e.g. library-grounded “deep knowledge” entry */
+  entryHint?: string
 }
 
-export function AgentChat({ agent, onBack }: AgentChatProps) {
+export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
   const avatar = agent.avatar ?? ""
   const showRemoteAvatar = agentAvatarIsRemoteUrl(avatar)
   const [input, setInput] = useState("")
@@ -722,10 +746,10 @@ export function AgentChat({ agent, onBack }: AgentChatProps) {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        placeholder="Message…"
+        placeholder={entryHint ? "Ask something that needs depth in your library…" : "Message…"}
         className="min-w-0 flex-1 px-4 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none"
       />
-      <button type="button" className="p-2 hover:bg-gray-100 rounded-full" aria-label="Voice input">
+      <button type="button" className="p-2 hover:bg-gray-100 rounded-full" aria-label="Voice input" onClick={() => toast.message("语音输入", { description: "按住说话（演示）。" })}>
         <Mic className="w-5 h-5 text-gray-500" />
       </button>
       <button
@@ -764,6 +788,12 @@ export function AgentChat({ agent, onBack }: AgentChatProps) {
         </div>
       </div>
 
+      {entryHint ? (
+        <div className="shrink-0 border-b border-violet-100/90 bg-violet-50/90 px-4 py-2.5">
+          <p className="text-[13px] leading-snug text-violet-950/90">{entryHint}</p>
+        </div>
+      ) : null}
+
       {messages.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5 py-6">
           <div
@@ -779,7 +809,11 @@ export function AgentChat({ agent, onBack }: AgentChatProps) {
             )}
           </div>
           <h3 className="mb-1 text-center font-semibold text-gray-900">Hi, I&apos;m {agent.name}</h3>
-          <p className="mb-8 max-w-[260px] text-center text-sm text-gray-500">Send a message to start</p>
+          <p className="mb-8 max-w-[280px] text-center text-sm text-gray-500">
+            {entryHint
+              ? "Your library is the context—ask layered questions and I’ll stay grounded in your sources."
+              : "Send a message to start"}
+          </p>
           <div className="w-full max-w-md rounded-2xl border border-gray-200/90 bg-white p-3 shadow-sm">{composer}</div>
         </div>
       ) : (

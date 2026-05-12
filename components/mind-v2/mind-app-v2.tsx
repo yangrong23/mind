@@ -139,6 +139,10 @@ export function MindAppV2() {
                     prev.map((n) => (n.id === noteId ? { ...n, folderId: folder.id } : n))
                   )
                 }}
+                onTrashNote={(noteId) => {
+                  setNotes((prev) => prev.filter((n) => n.id !== noteId))
+                  setCurrentView({ type: "tabs" })
+                }}
               />
             )}
 
@@ -182,12 +186,13 @@ export function MindAppV2() {
                 agent={{
                   id: 999,
                   name: "Mind Agent",
-                  description: currentView.context.contentTitle 
-                    ? `Q&A grounded in “${currentView.context.contentTitle}”`
-                    : `Q&A grounded in the “${currentView.context.kbName}” library`,
+                  description: currentView.context.contentTitle
+                    ? `Deep knowledge · grounded in “${currentView.context.contentTitle}”`
+                    : `Deep knowledge · grounded in “${currentView.context.kbName}”`,
                   avatar: "🧠",
                   color: "from-stone-500 to-zinc-700",
                 }}
+                entryHint="This is the deep-knowledge entry: retrieve, compare, and cite from your saved sources—built for layered questions and synthesis, not quick generic answers."
                 onBack={() =>
                   setCurrentView({
                     type: "kb-detail",
