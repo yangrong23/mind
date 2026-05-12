@@ -6,7 +6,7 @@ import { mx } from "@/lib/medrix-design-tokens"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { ContentFactoryModals, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import {
-  ContentFactoryProgressPanel,
+  StudioFactoryJobsInline,
   mockTitleForFactoryKind,
   type FactoryJob,
 } from "@/components/mind-v2/content-factory-progress-panel"
@@ -266,7 +266,6 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
   const [showContentDetail, setShowContentDetail] = useState<LibraryDoc | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
-  const [factoryProgressOpen, setFactoryProgressOpen] = useState(false)
   const [factoryUserJobs, setFactoryUserJobs] = useState<FactoryJob[]>([])
   const [factoryQuotaBanner, setFactoryQuotaBanner] = useState(false)
   const [factoryToastFailedJobId, setFactoryToastFailedJobId] = useState<string | null>(null)
@@ -303,8 +302,8 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
   function handleFactoryGenerateSubmit(kind: FactoryModalKind) {
     setFactoryToastFailedJobId(null)
     const id = `u-${Date.now()}`
-    setFactoryUserJobs((prev) => [{ id, kind, status: "generating" }, ...prev])
-    setFactoryProgressOpen(true)
+    setFactoryUserJobs((prev) => [...prev, { id, kind, status: "generating" }])
+    setActiveView("factory")
     if (kind === "slides" && Math.random() < 0.38) {
       setFactoryQuotaBanner(true)
     }
@@ -772,7 +771,7 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         )}
 
         {activeView === "factory" && (
-          <div className="flex min-h-full flex-1 flex-col bg-stone-50/80 px-4 pb-8 pt-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-stone-50/80 px-4 pb-10 pt-4">
             <h3 className="mb-3 text-[15px] font-semibold tracking-tight text-zinc-800">Create new content</h3>
 
             <div className="space-y-2">
@@ -950,10 +949,23 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
               </button>
             </div>
 
-            <div className="mt-10 flex flex-col items-center text-center">
-              <Sparkles className="mb-2 h-7 w-7 text-sky-700/30" strokeWidth={1.5} />
-              <p className="max-w-[240px] text-[13px] leading-relaxed text-zinc-500">Studio outputs will appear here.</p>
-            </div>
+            <StudioFactoryJobsInline
+              userJobs={factoryUserJobs}
+              showQuotaBanner={factoryQuotaBanner}
+              onDismissQuotaBanner={() => setFactoryQuotaBanner(false)}
+              toastFailedJobId={factoryToastFailedJobId}
+              onRetryJob={handleFactoryRetry}
+            />
+
+            {factoryUserJobs.length === 0 ? (
+              <div className="mt-10 flex flex-col items-center text-center">
+                <Sparkles className="mb-2 h-7 w-7 text-sky-700/30" strokeWidth={1.5} />
+                <p className="max-w-[260px] text-[13px] leading-relaxed text-zinc-500">
+                  Choose a format above to generate. Runs and results stack here so you can start another anytime—no
+                  extra screen.
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
       </div>
@@ -965,20 +977,6 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         onClose={() => setFactoryModal(null)}
         libraryName={kbDisplayName}
         onGenerateSubmit={handleFactoryGenerateSubmit}
-      />
-
-      <ContentFactoryProgressPanel
-        open={factoryProgressOpen}
-        onBack={() => {
-          setFactoryProgressOpen(false)
-          setFactoryToastFailedJobId(null)
-        }}
-        libraryTitle={kbDisplayName}
-        userJobs={factoryUserJobs}
-        showQuotaBanner={factoryQuotaBanner}
-        onDismissQuotaBanner={() => setFactoryQuotaBanner(false)}
-        toastFailedJobId={factoryToastFailedJobId}
-        onRetryJob={handleFactoryRetry}
       />
     </div>
   )
