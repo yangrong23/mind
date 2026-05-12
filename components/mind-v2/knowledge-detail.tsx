@@ -1,9 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { ContentFactoryModals, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
+import {
+  ContentFactoryProgressPanel,
+  mockTitleForFactoryKind,
+  type FactoryJob,
+} from "@/components/mind-v2/content-factory-progress-panel"
+import { TextNoteEditor } from "@/components/mind-v2/text-note-editor"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
 import {
   ChevronLeft,
@@ -24,6 +31,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   Youtube,
+  Library,
+  Trash2,
 } from "lucide-react"
 
 type ShareTarget =
@@ -94,6 +103,135 @@ const mockContents = [
   },
 ]
 
+type LibraryDoc = (typeof mockContents)[number]
+
+const DELETE_STRIP_PX = 88
+const DELETE_REVEAL_THRESHOLD = 40
+
+function SwipeableLibraryDocRow({
+  content,
+  onOpen,
+  onDelete,
+}: {
+  content: LibraryDoc
+  onOpen: () => void
+  onDelete: () => void
+}) {
+  const startX = useRef(0)
+  const startDx = useRef(0)
+  const [dx, setDx] = useState(0)
+  const dragging = useRef(false)
+
+  const snapOpen = () => setDx(-DELETE_STRIP_PX)
+  const snapClosed = () => setDx(0)
+
+  const onStart = (clientX: number) => {
+    startX.current = clientX
+    startDx.current = dx
+    dragging.current = true
+  }
+  const onMove = (clientX: number) => {
+    if (!dragging.current) return
+    const d = clientX - startX.current
+    const next = startDx.current + d
+    setDx(Math.max(-DELETE_STRIP_PX, Math.min(120, next)))
+  }
+  const onEnd = () => {
+    dragging.current = false
+    if (dx > 48) {
+      snapClosed()
+      return
+    }
+    if (dx < -DELETE_REVEAL_THRESHOLD) {
+      snapOpen()
+      return
+    }
+    snapClosed()
+  }
+
+  const deleteRow = () => {
+    onDelete()
+    snapClosed()
+  }
+
+  const revealed = dx <= -DELETE_REVEAL_THRESHOLD / 2
+
+  return (
+    <div className="relative overflow-hidden border-b border-stone-100 last:border-b-0">
+      <div
+        className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-zinc-600 text-white"
+        style={{ opacity: dx > 0 ? Math.min(1, dx / 72) : 0 }}
+      >
+        <Library className="h-6 w-6" strokeWidth={1.75} aria-hidden />
+      </div>
+
+      <button
+        type="button"
+        style={{ width: DELETE_STRIP_PX }}
+        className={cn(
+          "absolute inset-y-0 right-0 z-20 flex flex-col items-center justify-center gap-1 bg-red-600 text-white transition-opacity",
+          revealed ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        aria-label={`Delete ${content.title}`}
+        onClick={(e) => {
+          e.stopPropagation()
+          deleteRow()
+        }}
+      >
+        <Trash2 className="h-6 w-6 shrink-0" strokeWidth={1.75} aria-hidden />
+        <span className="text-[11px] font-semibold">Delete</span>
+      </button>
+
+      <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            if (revealed) snapClosed()
+            else onOpen()
+          }
+        }}
+        onClick={() => {
+          if (revealed) {
+            snapClosed()
+            return
+          }
+          if (Math.abs(dx) < 8) onOpen()
+        }}
+        onTouchStart={(e) => onStart(e.touches[0].clientX)}
+        onTouchMove={(e) => onMove(e.touches[0].clientX)}
+        onTouchEnd={onEnd}
+        onMouseDown={(e) => onStart(e.clientX)}
+        onMouseMove={(e) => dragging.current && onMove(e.clientX)}
+        onMouseUp={onEnd}
+        onMouseLeave={() => dragging.current && onEnd()}
+        className="relative z-10 flex w-full cursor-pointer select-none items-start gap-3 bg-white p-4 text-left hover:bg-stone-50/80"
+        style={{
+          transform: `translateX(${dx}px)`,
+          transition: dragging.current ? "none" : "transform 0.2s ease-out",
+        }}
+      >
+        <img
+          src={content.image}
+          alt=""
+          className="h-16 w-16 shrink-0 rounded-lg bg-stone-100 object-cover"
+        />
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h3 className="text-[15px] font-medium leading-snug text-zinc-900">{content.title}</h3>
+          <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-zinc-600">{content.excerpt}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] text-zinc-400">
+            <span className="text-zinc-600">{content.source}</span>
+            <span>|</span>
+            <span>{content.author}</span>
+            <span>|</span>
+            <span>{content.date}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function bodyForContent(id: number, title: string, excerpt: string): string[] {
   const common = [
     excerpt,
@@ -122,14 +260,69 @@ function notebookSummaryForLibrary(name: string, sourceCount: number): string {
 
 export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialView = "content" }: KnowledgeDetailProps) {
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const [hubRichNoteOpen, setHubRichNoteOpen] = useState(false)
   const [showNotebookAsk, setShowNotebookAsk] = useState(false)
   const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
-  const [showContentDetail, setShowContentDetail] = useState<typeof mockContents[0] | null>(null)
+  const [showContentDetail, setShowContentDetail] = useState<LibraryDoc | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
-  const sourceCount = mockContents.length
+  const [factoryProgressOpen, setFactoryProgressOpen] = useState(false)
+  const [factoryUserJobs, setFactoryUserJobs] = useState<FactoryJob[]>([])
+  const [factoryQuotaBanner, setFactoryQuotaBanner] = useState(false)
+  const [factoryToastFailedJobId, setFactoryToastFailedJobId] = useState<string | null>(null)
+  const [contents, setContents] = useState<LibraryDoc[]>(() => mockContents.map((c) => ({ ...c })))
+  const sourceCount = contents.length
   const kbDisplayName = knowledgeBase?.name || "Notebook"
+  const kbIntroLead =
+    knowledgeBase?.description ||
+    "Grounded Q&A over your sources—summaries, citations, and chat stay tied to what you uploaded."
+  const kbIntroDetail = `This library currently has ${sourceCount} source${sourceCount === 1 ? "" : "s"}. Use Hub to browse, Graph to see connections, and Studio to generate new media from these materials.`
   const notebookSummaryBody = notebookSummaryForLibrary(kbDisplayName, sourceCount)
+
+  function scheduleFactoryJobFinish(jobId: string, kind: FactoryModalKind) {
+    window.setTimeout(() => {
+      const fail = Math.random() < 0.14
+      setFactoryUserJobs((prev) =>
+        prev.map((j) => {
+          if (j.id !== jobId || j.status !== "generating") return j
+          if (fail) return { ...j, status: "failed" as const }
+          return {
+            ...j,
+            status: "complete" as const,
+            title: mockTitleForFactoryKind(kind),
+            meta: `${2 + Math.floor(Math.random() * 4)} sources · just now`,
+          }
+        })
+      )
+      if (fail) {
+        setFactoryToastFailedJobId(jobId)
+      }
+    }, 2800)
+  }
+
+  function handleFactoryGenerateSubmit(kind: FactoryModalKind) {
+    setFactoryToastFailedJobId(null)
+    const id = `u-${Date.now()}`
+    setFactoryUserJobs((prev) => [{ id, kind, status: "generating" }, ...prev])
+    setFactoryProgressOpen(true)
+    if (kind === "slides" && Math.random() < 0.38) {
+      setFactoryQuotaBanner(true)
+    }
+    scheduleFactoryJobFinish(id, kind)
+  }
+
+  function handleFactoryRetry(jobId: string) {
+    setFactoryToastFailedJobId(null)
+    let kind: FactoryModalKind = "report"
+    setFactoryUserJobs((prev) => {
+      const row = prev.find((x) => x.id === jobId)
+      if (row) kind = row.kind
+      return prev.map((x) =>
+        x.id === jobId ? { ...x, status: "generating", title: undefined, meta: undefined } : x
+      )
+    })
+    window.setTimeout(() => scheduleFactoryJobFinish(jobId, kind), 0)
+  }
 
   const KbHeaderIcon = knowledgeBaseIconForTitle(
     knowledgeBase?.name ?? "",
@@ -142,10 +335,10 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
     { icon: Mic, label: "Audio" },
     { icon: FolderOpen, label: "Local file" },
     { icon: Link2, label: "Link" },
-    { icon: FileText, label: "Note", hasArrow: true },
+    { icon: FileText, label: "Note", openRichNote: true as const },
     { icon: Youtube, label: "YouTube" },
     { icon: FolderPlus, label: "New folder" },
-  ]
+  ] as const
 
   const shareSheet = shareTarget && (
     <div className="absolute inset-0 z-[60]">
@@ -306,6 +499,12 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
     )
   }
 
+  if (hubRichNoteOpen) {
+    return (
+      <TextNoteEditor variant="hubRich" onBack={() => setHubRichNoteOpen(false)} />
+    )
+  }
+
   if (showContentDetail) {
     return (
       <div className="relative flex flex-col h-full bg-white">
@@ -385,15 +584,28 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
             {showAddMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  {addMenuItems.map((item, i) => (
+                <div className="absolute right-0 top-full z-50 mt-1.5 w-[15rem] overflow-hidden rounded-2xl border border-stone-200/90 bg-white py-1.5 shadow-[0_12px_40px_-4px_rgba(0,0,0,0.12)] animate-in fade-in slide-in-from-top-2 duration-200">
+                  {addMenuItems.map((item) => (
                     <button
-                      key={i}
-                      onClick={() => setShowAddMenu(false)}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                      key={item.label}
+                      type="button"
+                      onClick={() => {
+                        setShowAddMenu(false)
+                        if ("openRichNote" in item && item.openRichNote) {
+                          setHubRichNoteOpen(true)
+                        }
+                      }}
+                      className="mx-1.5 flex w-[calc(100%-12px)] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 active:bg-stone-100/80"
                     >
-                      <span className="text-[15px] text-gray-800">{item.label}</span>
-                      <item.icon className="w-5 h-5 text-gray-400" />
+                      <span className="text-[15px] text-zinc-800">{item.label}</span>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {"openRichNote" in item && item.openRichNote ? (
+                          <ChevronRight className="h-4 w-4 text-zinc-400" aria-hidden />
+                        ) : null}
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100/90 text-stone-500">
+                          <item.icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -431,9 +643,12 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         <button
           type="button"
           onClick={() => setShowNotebookAsk(true)}
-          className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-zinc-500 text-white text-[11px] font-semibold hover:bg-zinc-600"
+          className={cn(
+            "shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition-colors",
+            mx.knowledgeAskPill
+          )}
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <Sparkles className={cn("h-3.5 w-3.5", mx.knowledgeAskSparkle)} strokeWidth={2} />
           Ask
         </button>
       </div>
@@ -467,39 +682,30 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
           <div className="flex min-h-0 flex-1 flex-col bg-stone-50/80">
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="px-4 pb-2 pt-3">
+              <div className="mb-4 rounded-xl border border-stone-200/90 bg-white px-3.5 py-3 shadow-sm shadow-stone-900/[0.02]">
+                <h2 className="text-[13px] font-semibold text-zinc-900">About this library</h2>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-700">{kbIntroLead}</p>
+                <p className="mt-2 text-[12px] leading-relaxed text-zinc-500">{kbIntroDetail}</p>
+              </div>
               <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
                 All documents
               </h2>
               <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white">
-                {mockContents.map((content) => (
-                  <button
-                    key={content.id}
-                    type="button"
-                    onClick={() => setShowContentDetail(content)}
-                    className="flex w-full items-start gap-3 border-b border-stone-100 p-4 text-left last:border-b-0 hover:bg-stone-50/80"
-                  >
-                    <img
-                      src={content.image}
-                      alt=""
-                      className="h-16 w-16 shrink-0 rounded-lg bg-stone-100 object-cover"
+                {contents.length === 0 ? (
+                  <div className="px-4 py-10 text-center text-[13px] text-zinc-500">No documents yet</div>
+                ) : (
+                  contents.map((content) => (
+                    <SwipeableLibraryDocRow
+                      key={content.id}
+                      content={content}
+                      onOpen={() => setShowContentDetail(content)}
+                      onDelete={() => {
+                        setContents((prev) => prev.filter((c) => c.id !== content.id))
+                        setShowContentDetail((open) => (open?.id === content.id ? null : open))
+                      }}
                     />
-                    <div className="min-w-0 flex-1 pt-0.5">
-                      <h3 className="text-[15px] font-medium leading-snug text-zinc-900">
-                        {content.title}
-                      </h3>
-                      <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-zinc-600">
-                        {content.excerpt}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] text-zinc-400">
-                        <span className="text-zinc-600">{content.source}</span>
-                        <span>|</span>
-                        <span>{content.author}</span>
-                        <span>|</span>
-                        <span>{content.date}</span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                  ))
+                )}
               </div>
             </div>
             </div>
@@ -566,139 +772,187 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         )}
 
         {activeView === "factory" && (
-          <div className="px-5 py-4">
-            <h3 className="font-medium text-gray-700 mb-4">Generate</h3>
-            
-            <div className="space-y-3">
+          <div className="flex min-h-full flex-1 flex-col bg-stone-50/80 px-4 pb-8 pt-4">
+            <h3 className="mb-3 text-[15px] font-semibold tracking-tight text-zinc-800">Create new content</h3>
+
+            <div className="space-y-2">
               <button
                 type="button"
                 onClick={() => setFactoryModal("report")}
-                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                      mx.factoryTone.report.well,
+                      mx.factoryTone.report.icon
+                    )}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <path d="M14 2v6h6" />
                       <path d="M12 18v-6M9 15h6" />
                     </svg>
                   </div>
-                  <span className="font-medium text-gray-900">Report</span>
+                  <span className="truncate text-[15px] font-medium text-zinc-800">Report</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setFactoryModal("audio")}
-                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cn(
+                      "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                      mx.factoryTone.audio.well,
+                      mx.factoryTone.audio.icon
+                    )}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M2 10v3a1 1 0 001 1h3l4 4V3L6 7H3a1 1 0 00-1 1z" />
                       <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
                     </svg>
+                    <Sparkles
+                      className={cn("absolute -right-0.5 -top-0.5 h-3 w-3", mx.factoryTone.audio.sparkle)}
+                      strokeWidth={2}
+                    />
                   </div>
-                  <span className="font-medium text-gray-900">Audio brief</span>
+                  <span className="truncate text-[15px] font-medium text-zinc-800">Audio overview</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setFactoryModal("video")}
-                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                      mx.factoryTone.video.well,
+                      mx.factoryTone.video.icon
+                    )}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="4" width="20" height="16" rx="2" />
                       <polygon points="10 9 16 12 10 15 10 9" fill="currentColor" />
                     </svg>
                   </div>
-                  <span className="font-medium text-gray-900">Video brief</span>
+                  <span className="truncate text-[15px] font-medium text-zinc-800">Video overview</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setFactoryModal("flashcards")}
-                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cn(
+                      "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                      mx.factoryTone.flashcards.well,
+                      mx.factoryTone.flashcards.icon
+                    )}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="6" width="16" height="12" rx="2" />
                       <path d="M22 10v8a2 2 0 01-2 2H8" />
                       <path d="M8 10l3 3-3 3" />
                     </svg>
+                    <Sparkles
+                      className={cn("absolute -right-0.5 -top-0.5 h-3 w-3", mx.factoryTone.flashcards.sparkle)}
+                      strokeWidth={2}
+                    />
                   </div>
-                  <span className="font-medium text-gray-900">Flashcards</span>
+                  <span className="truncate text-[15px] font-medium text-zinc-800">Flashcards</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setFactoryModal("quiz")}
-                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <path d="M9 9h.01M12 12a3 3 0 100-6 3 3 0 000 6zM9 15h6" />
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                      mx.factoryTone.quiz.well,
+                      mx.factoryTone.quiz.icon
+                    )}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="5" y="5" width="14" height="14" rx="2" />
+                      <path d="M12 16v.01M10 10a2 2 0 1 1 4 0c0 1.5-2 1.5-2 3" strokeLinecap="round" />
                     </svg>
                   </div>
-                  <span className="font-medium text-gray-900">Quiz</span>
+                  <span className="truncate text-[15px] font-medium text-zinc-800">Quiz</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setFactoryModal("infographic")}
-                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                      mx.factoryTone.infographic.well,
+                      mx.factoryTone.infographic.icon
+                    )}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="18" y1="20" x2="18" y2="10" />
                       <line x1="12" y1="20" x2="12" y2="4" />
                       <line x1="6" y1="20" x2="6" y2="14" />
                     </svg>
                   </div>
-                  <span className="font-medium text-gray-900">Infographic</span>
+                  <span className="truncate text-[15px] font-medium text-zinc-800">Infographic</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setFactoryModal("slides")}
-                className="flex w-full items-center justify-between rounded-2xl bg-zinc-50/80 p-4 transition-colors hover:bg-zinc-100/60"
+                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                      mx.factoryTone.slides.well,
+                      mx.factoryTone.slides.icon
+                    )}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="3" width="20" height="14" rx="2" />
                       <line x1="8" y1="21" x2="16" y2="21" />
                       <line x1="12" y1="17" x2="12" y2="21" />
                     </svg>
                   </div>
-                  <span className="font-medium text-gray-900">Slides</span>
+                  <span className="truncate text-[15px] font-medium text-zinc-800">Presentation</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>
             </div>
 
-            <div className="mt-8 flex flex-col items-center text-center">
-              <svg className="w-8 h-8 text-gray-300 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M12 2l2 7h7l-5.5 4 2 7-5.5-4-5.5 4 2-7L3 9h7l2-7z" />
-              </svg>
-              <p className="text-sm text-gray-400">Studio outputs land here</p>
+            <div className="mt-10 flex flex-col items-center text-center">
+              <Sparkles className="mb-2 h-7 w-7 text-sky-700/30" strokeWidth={1.5} />
+              <p className="max-w-[240px] text-[13px] leading-relaxed text-zinc-500">Studio outputs will appear here.</p>
             </div>
           </div>
         )}
@@ -710,6 +964,21 @@ export function KnowledgeDetail({ onBack, onAgentChat, knowledgeBase, initialVie
         open={factoryModal}
         onClose={() => setFactoryModal(null)}
         libraryName={kbDisplayName}
+        onGenerateSubmit={handleFactoryGenerateSubmit}
+      />
+
+      <ContentFactoryProgressPanel
+        open={factoryProgressOpen}
+        onBack={() => {
+          setFactoryProgressOpen(false)
+          setFactoryToastFailedJobId(null)
+        }}
+        libraryTitle={kbDisplayName}
+        userJobs={factoryUserJobs}
+        showQuotaBanner={factoryQuotaBanner}
+        onDismissQuotaBanner={() => setFactoryQuotaBanner(false)}
+        toastFailedJobId={factoryToastFailedJobId}
+        onRetryJob={handleFactoryRetry}
       />
     </div>
   )

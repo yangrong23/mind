@@ -16,6 +16,11 @@ import {
   List,
   ListOrdered,
   Underline,
+  Wand2,
+  ListChecks,
+  CirclePlus,
+  Keyboard,
+  Sparkles,
 } from "lucide-react"
 
 export interface TextNoteEditorProps {
@@ -28,6 +33,11 @@ export interface TextNoteEditorProps {
     /** Stored rich HTML (plain text is wrapped as a single paragraph) */
     html: string
   }
+  /**
+   * `full` — Notes tab editor with inline formatting + AI strip.
+   * `hubRich` — Knowledge Hub “new note”: title + body + bottom toolbar (mobile-style rich text).
+   */
+  variant?: "full" | "hubRich"
 }
 
 function execFormat(command: "bold" | "italic" | "underline" | "insertUnorderedList" | "insertOrderedList") {
@@ -38,9 +48,31 @@ function execFormat(command: "bold" | "italic" | "underline" | "insertUnorderedL
   }
 }
 
-export function TextNoteEditor({ onBack, onSave, note }: TextNoteEditorProps) {
+function execDoc(cmd: string, value?: string) {
+  try {
+    document.execCommand(cmd, false, value)
+  } catch {
+    /* noop */
+  }
+}
+
+function htmlBodyIsEmpty(html: string) {
+  const text = html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\u00a0/g, " ")
+    .trim()
+  return text.length === 0
+}
+
+export function TextNoteEditor({ onBack, onSave, note, variant = "full" }: TextNoteEditorProps) {
   const [title, setTitle] = useState(note?.title || "")
   const editorRef = useRef<HTMLDivElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const hubHeadingCycle = useRef(0)
+  const [editorFocused, setEditorFocused] = useState(false)
+  const [bodyEmpty, setBodyEmpty] = useState(true)
+  const [hubAiHint, setHubAiHint] = useState(false)
   const [showShareSheet, setShowShareSheet] = useState(false)
   const [aiMessage, setAiMessage] = useState("")
   const [showAIModelSelect, setShowAIModelSelect] = useState(false)
@@ -63,6 +95,7 @@ export function TextNoteEditor({ onBack, onSave, note }: TextNoteEditorProps) {
         : `<p>${raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`
       : "<p><br></p>"
     el.innerHTML = initial
+    setBodyEmpty(htmlBodyIsEmpty(initial))
   }, [note?.id, note?.html, note?.title])
 
   const readHtml = () => editorRef.current?.innerHTML?.trim() || "<p></p>"
@@ -73,6 +106,216 @@ export function TextNoteEditor({ onBack, onSave, note }: TextNoteEditorProps) {
 
   const focusEditor = () => {
     editorRef.current?.focus()
+  }
+
+  const syncBodyEmpty = useCallback(() => {
+    const html = editorRef.current?.innerHTML?.trim() || "<p></p>"
+    setBodyEmpty(htmlBodyIsEmpty(html))
+  }, [])
+
+  const handleHubBack = useCallback(() => {
+    const html = readHtml()
+    const hasContent = title.trim().length > 0 || !htmlBodyIsEmpty(html)
+    if (onSave && hasContent) {
+      onSave({ title: title.trim(), html })
+    }
+    onBack()
+  }, [onBack, onSave, title])
+
+  const hubToolbarBtn =
+    "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-stone-100 active:bg-stone-200/80"
+
+  if (variant === "hubRich") {
+    return (
+      <div className="relative flex h-full flex-col bg-white">
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-2 py-2.5">
+          <button type="button" onClick={handleHubBack} className="rounded-full p-2 hover:bg-stone-100" aria-label="Back">
+            <ChevronLeft className="h-6 w-6 text-zinc-800" strokeWidth={2} />
+          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              className="rounded-full p-2 hover:bg-stone-100"
+              aria-label="Undo"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                focusEditor()
+                execDoc("undo")
+                syncBodyEmpty()
+              }}
+            >
+              <Undo2 className="h-5 w-5 text-zinc-600" strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              className="rounded-full p-2 hover:bg-stone-100"
+              aria-label="Redo"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                focusEditor()
+                execDoc("redo")
+                syncBodyEmpty()
+              }}
+            >
+              <Redo2 className="h-5 w-5 text-zinc-600" strokeWidth={2} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-2 pt-3">
+          <div className="flex min-w-0 items-center gap-1">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Title"
+              className="min-w-0 flex-1 border-0 bg-transparent text-[20px] font-normal text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0"
+            />
+            <button
+              type="button"
+              title="Generate title"
+              aria-label="Generate title from body"
+              className="shrink-0 rounded-full p-2 text-zinc-400 transition-colors hover:bg-stone-100 hover:text-zinc-600"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                const html = editorRef.current?.innerHTML?.trim() || "<p></p>"
+                const text = html
+                  .replace(/<[^>]+>/g, " ")
+                  .replace(/\s+/g, " ")
+                  .trim()
+                if (!text) {
+                  setTitle("Untitled note")
+                  return
+                }
+                const max = 36
+                const head = text.slice(0, max).trim()
+                setTitle(text.length > max ? `${head}…` : head)
+              }}
+            >
+              <Sparkles className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+          </div>
+          <div className="relative mt-4 min-h-[min(50vh,320px)] flex-1">
+            {bodyEmpty && !editorFocused ? (
+              <div className="pointer-events-none absolute left-0 top-0 select-none text-[17px] leading-relaxed text-zinc-400">
+                Start writing
+              </div>
+            ) : null}
+            <div
+              ref={editorRef}
+              contentEditable
+              suppressContentEditableWarning
+              className={cn(
+                "min-h-[min(50vh,320px)] w-full pb-8 text-[17px] leading-[1.75] text-zinc-900 caret-sky-600 outline-none",
+                "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
+                "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
+                "[&_p]:min-h-[1.4em]"
+              )}
+              onInput={syncBodyEmpty}
+              onFocus={() => setEditorFocused(true)}
+              onBlur={() => {
+                setEditorFocused(false)
+                syncBodyEmpty()
+              }}
+              onPaste={(e) => {
+                e.preventDefault()
+                const t = e.clipboardData.getData("text/plain")
+                execDoc("insertText", t)
+                syncBodyEmpty()
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t border-stone-100 bg-white px-1 pt-1 pb-[max(10px,env(safe-area-inset-bottom))]">
+          <div className="flex items-center justify-around">
+            <button
+              type="button"
+              className={hubToolbarBtn}
+              aria-label="Smart layout"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setHubAiHint(true)
+                window.setTimeout(() => setHubAiHint(false), 2200)
+              }}
+            >
+              <Wand2 className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              className={hubToolbarBtn}
+              aria-label="Heading and body styles"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                focusEditor()
+                const order = ["h2", "h3", "p"] as const
+                const tag = order[hubHeadingCycle.current % order.length]
+                hubHeadingCycle.current += 1
+                execDoc("formatBlock", tag)
+              }}
+            >
+              <span className="text-[15px] font-semibold tracking-tight text-zinc-700">Aa</span>
+            </button>
+            <button
+              type="button"
+              className={hubToolbarBtn}
+              aria-label="List"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                focusEditor()
+                execFormat("insertUnorderedList")
+                syncBodyEmpty()
+              }}
+            >
+              <ListChecks className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              className={hubToolbarBtn}
+              aria-label="Insert image"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <CirclePlus className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              className={hubToolbarBtn}
+              aria-label="Dismiss keyboard"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                ;(document.activeElement as HTMLElement | null)?.blur()
+                setEditorFocused(false)
+              }}
+            >
+              <Keyboard className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+          </div>
+        </div>
+
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ""
+            if (!file) return
+            const url = URL.createObjectURL(file)
+            focusEditor()
+            execDoc("insertImage", url)
+            syncBodyEmpty()
+          }}
+        />
+
+        {hubAiHint ? (
+          <div className="pointer-events-none absolute bottom-[72px] left-1/2 z-10 max-w-[min(90%,280px)] -translate-x-1/2 rounded-full bg-zinc-900/90 px-4 py-2 text-center text-[12px] text-white shadow-lg">
+            AI-assisted layout is coming soon
+          </div>
+        ) : null}
+      </div>
+    )
   }
 
   return (
@@ -94,10 +337,28 @@ export function TextNoteEditor({ onBack, onSave, note }: TextNoteEditorProps) {
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button type="button" className="rounded-full p-2 hover:bg-gray-200" aria-label="Undo">
+          <button
+            type="button"
+            className="rounded-full p-2 hover:bg-gray-200"
+            aria-label="Undo"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              focusEditor()
+              execDoc("undo")
+            }}
+          >
             <Undo2 className="h-5 w-5 text-gray-600" />
           </button>
-          <button type="button" className="rounded-full p-2 hover:bg-gray-200" aria-label="Redo">
+          <button
+            type="button"
+            className="rounded-full p-2 hover:bg-gray-200"
+            aria-label="Redo"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              focusEditor()
+              execDoc("redo")
+            }}
+          >
             <Redo2 className="h-5 w-5 text-gray-600" />
           </button>
         </div>

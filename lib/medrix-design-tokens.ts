@@ -77,6 +77,96 @@ export const mx = {
   navActiveWell: "bg-sky-100/95",
   navActiveIcon: "text-sky-800",
   navActiveLabel: "text-sky-900",
+
+  /**
+   * Content Studio / factory: one hue per format.
+   * Wells use the same *weight* as `navActiveWell` (pastel ~100, ~95% opacity); icons use matching ~800 ink.
+   * Hues stay in the app’s cool band (sky → cyan → teal → emerald → blue → indigo → violet) so nothing clashes with the nav.
+   */
+  factoryTone: {
+    report: {
+      well: "bg-sky-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+      icon: "text-sky-800",
+      sparkle: "text-sky-600",
+      pillOn: "border-sky-400 bg-sky-50 text-sky-900",
+      cardOn: "border-sky-400 bg-sky-50/90",
+      check: "text-sky-600",
+      styleCardOn: "border-sky-500 bg-sky-50/80 ring-1 ring-sky-200",
+      fieldFocus: "focus:border-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-200",
+      softHover: "hover:border-sky-200/80 hover:bg-sky-50/40",
+    },
+    audio: {
+      well: "bg-cyan-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+      icon: "text-cyan-800",
+      sparkle: "text-cyan-600",
+      pillOn: "border-cyan-400 bg-cyan-50 text-cyan-900",
+      cardOn: "border-cyan-400 bg-cyan-50/90",
+      check: "text-cyan-600",
+      styleCardOn: "border-cyan-500 bg-cyan-50/80 ring-1 ring-cyan-200",
+      fieldFocus: "focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-200",
+      softHover: "hover:border-cyan-200/80 hover:bg-cyan-50/40",
+    },
+    video: {
+      well: "bg-teal-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+      icon: "text-teal-800",
+      sparkle: "text-teal-600",
+      pillOn: "border-teal-400 bg-teal-50 text-teal-900",
+      cardOn: "border-teal-400 bg-teal-50/90",
+      check: "text-teal-600",
+      styleCardOn: "border-teal-500 bg-teal-50/80 ring-1 ring-teal-200",
+      fieldFocus: "focus:border-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-200",
+      softHover: "hover:border-teal-200/80 hover:bg-teal-50/40",
+    },
+    flashcards: {
+      well: "bg-emerald-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+      icon: "text-emerald-800",
+      sparkle: "text-emerald-600",
+      pillOn: "border-emerald-400 bg-emerald-50 text-emerald-900",
+      cardOn: "border-emerald-400 bg-emerald-50/90",
+      check: "text-emerald-600",
+      styleCardOn: "border-emerald-500 bg-emerald-50/80 ring-1 ring-emerald-200",
+      fieldFocus: "focus:border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-200",
+      softHover: "hover:border-emerald-200/80 hover:bg-emerald-50/40",
+    },
+    quiz: {
+      well: "bg-blue-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+      icon: "text-blue-800",
+      sparkle: "text-blue-600",
+      pillOn: "border-blue-400 bg-blue-50 text-blue-900",
+      cardOn: "border-blue-400 bg-blue-50/90",
+      check: "text-blue-600",
+      styleCardOn: "border-blue-500 bg-blue-50/80 ring-1 ring-blue-200",
+      fieldFocus: "focus:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-200",
+      softHover: "hover:border-blue-200/80 hover:bg-blue-50/40",
+    },
+    infographic: {
+      well: "bg-indigo-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+      icon: "text-indigo-800",
+      sparkle: "text-indigo-600",
+      pillOn: "border-indigo-400 bg-indigo-50 text-indigo-900",
+      cardOn: "border-indigo-400 bg-indigo-50/90",
+      check: "text-indigo-600",
+      styleCardOn: "border-indigo-500 bg-indigo-50/80 ring-1 ring-indigo-200",
+      fieldFocus: "focus:border-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-200",
+      softHover: "hover:border-indigo-200/80 hover:bg-indigo-50/40",
+    },
+    slides: {
+      well: "bg-violet-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+      icon: "text-violet-800",
+      sparkle: "text-violet-600",
+      pillOn: "border-violet-400 bg-violet-50 text-violet-900",
+      cardOn: "border-violet-400 bg-violet-50/90",
+      check: "text-violet-600",
+      styleCardOn: "border-violet-500 bg-violet-50/80 ring-1 ring-violet-200",
+      fieldFocus: "focus:border-violet-300 focus:outline-none focus:ring-1 focus:ring-violet-200",
+      softHover: "hover:border-violet-200/80 hover:bg-violet-50/40",
+    },
+  } as const,
+
+  /** Knowledge header “Ask” — same family as nav, lighter than primary CTA */
+  knowledgeAskPill:
+    "border border-sky-200/90 bg-sky-50/95 text-sky-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] hover:border-sky-300/90 hover:bg-sky-100/80",
+  knowledgeAskSparkle: "text-sky-700",
 } as const
 
 /** Heatmap: slight cool tint at higher activity */
