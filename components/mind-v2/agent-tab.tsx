@@ -227,17 +227,19 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
             <div className="h-0.5 w-5 rounded-full bg-zinc-500" />
             <div className="h-0.5 w-5 rounded-full bg-zinc-500" />
           </button>
-          <div className="text-right">
+          <div className="max-w-[min(72%,20rem)] text-right">
             <div className="text-[16px] font-semibold tracking-tight text-zinc-900">Minder</div>
-            <div className="text-[12px] text-zinc-500">Libraries, agents & studio</div>
+            <p className="mt-1 text-[11.5px] leading-snug text-zinc-500">
+              Go deep on what you saved—<span className="text-zinc-600">agents reason on it; Studio ships the output.</span>
+            </p>
           </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col items-stretch justify-center gap-4 py-2">
           <p className="shrink-0 px-0.5 text-center text-[13px] leading-relaxed text-zinc-500">
-            Link <span className="font-medium text-zinc-700">libraries</span> so results stay tied to your sources. Use{" "}
-            <span className="font-medium text-zinc-700">agents</span> from the menu for focused workflows, or{" "}
-            <span className="font-medium text-zinc-700">Studio</span> in the bar for narrated recaps, decks, and other outputs.
+            Link <span className="font-medium text-zinc-700">libraries</span> so every answer traces back to a source. Open{" "}
+            <span className="font-medium text-zinc-700">agents</span> from the menu for focused threads, or{" "}
+            <span className="font-medium text-zinc-700">Studio</span> in the bar for recaps, decks, and other deliverables.
           </p>
 
           <div className="mx-auto w-full max-w-md shrink-0 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
