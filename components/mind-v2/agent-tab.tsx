@@ -77,6 +77,8 @@ const chatHistory = [
 
 interface AgentTabProps {
   onAgentChat: (agent: Agent) => void
+  /** Run send / attach only after demo sign-in. */
+  requireAuthThen?: (run: () => void) => void
 }
 
 function libraryLinkSummary(mode: StudioLibraryLinkMode, pickedKbIds: number[]): string {
@@ -91,7 +93,8 @@ function libraryLinkSummary(mode: StudioLibraryLinkMode, pickedKbIds: number[]):
   return `${rows[0].name} +${rows.length - 1}`
 }
 
-export function AgentTab({ onAgentChat }: AgentTabProps) {
+export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
+  const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [showCreateSheet, setShowCreateSheet] = useState(false)
   const [showExplore, setShowExplore] = useState(false)
@@ -122,13 +125,15 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
   }
 
   function submitAgentHomePrompt() {
-    const q = agentHomeDraft.trim()
-    if (!q) {
-      toast.error("Add a prompt first")
-      return
-    }
-    toast.success("Queued", { description: q.length > 100 ? `${q.slice(0, 100)}…` : q })
-    setAgentHomeDraft("")
+    runWithAuth(() => {
+      const q = agentHomeDraft.trim()
+      if (!q) {
+        toast.error("Add a prompt first")
+        return
+      }
+      toast.success("Queued", { description: q.length > 100 ? `${q.slice(0, 100)}…` : q })
+      setAgentHomeDraft("")
+    })
   }
 
   return (
@@ -317,7 +322,9 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
                               type="button"
                               onClick={() => {
                                 setShowStudioMenu(false)
-                                toast.message("Attach files", { description: "Demo — pick a file." })
+                                runWithAuth(() =>
+                                  toast.message("Attach files", { description: "Demo — pick a file." })
+                                )
                               }}
                               className="flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/90"
                             >
@@ -805,9 +812,11 @@ interface AgentChatProps {
   onBack: () => void
   /** Shown under the header when present — e.g. library-grounded “deep knowledge” entry */
   entryHint?: string
+  requireAuthThen?: (run: () => void) => void
 }
 
-export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
+export function AgentChat({ agent, onBack, entryHint, requireAuthThen }: AgentChatProps) {
+  const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const avatar = agent.avatar ?? ""
   const showRemoteAvatar = agentAvatarIsRemoteUrl(avatar)
   const [input, setInput] = useState("")
@@ -825,13 +834,15 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
     }, 1000)
   }
 
+  const trySend = () => runWithAuth(handleSend)
+
   const composer = (
     <div className="flex items-center gap-2">
       <input
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleSend()}
+        onKeyDown={(e) => e.key === "Enter" && trySend()}
         placeholder={entryHint ? "Turn saved knowledge into an outcome…" : "Message…"}
         className="min-w-0 flex-1 rounded-xl bg-zinc-100 px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300/60 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-600/50"
       />
@@ -839,7 +850,11 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
         type="button"
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
         aria-label="Upload file"
-        onClick={() => toast.message("Attach file", { description: "Demo — pick a file." })}
+        onClick={() =>
+          runWithAuth(() =>
+            toast.message("Attach file", { description: "Demo — pick a file." })
+          )
+        }
       >
         <FileStack className="h-5 w-5" strokeWidth={1.75} />
       </button>
@@ -857,7 +872,7 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
       </button>
       <button
         type="button"
-        onClick={handleSend}
+        onClick={trySend}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
         aria-label="Send"
       >

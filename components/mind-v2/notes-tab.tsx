@@ -644,8 +644,8 @@ export function NotesTab({
                   <ArrowUpDown className="h-4 w-4 text-zinc-400" strokeWidth={2} />
                 </button>
 
-                <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-zinc-400">View</p>
-                <div className="mb-4 grid grid-cols-2 gap-2">
+                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">View</p>
+                <div className="mb-3 grid grid-cols-2 gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
@@ -654,15 +654,17 @@ export function NotesTab({
                       toast.success("List view", { description: "Comfortable rows with previews." })
                     }}
                     className={cn(
-                      "flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-colors",
+                      "flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
                       notesViewMode === "list"
                         ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/45"
-                        : "border-transparent bg-stone-50/80 hover:bg-stone-100/90 dark:bg-zinc-800/40"
+                        : "border-stone-200/70 bg-stone-50/70 hover:bg-stone-100/85 dark:border-zinc-700/60 dark:bg-zinc-800/35 dark:hover:bg-zinc-800/55"
                     )}
                   >
-                    <LayoutList className="h-5 w-5 text-zinc-600 dark:text-zinc-300" strokeWidth={1.75} aria-hidden />
-                    <span className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100">List</span>
-                    <span className="text-[11px] leading-snug text-zinc-500">Rows with excerpt</span>
+                    <LayoutList className="h-3.5 w-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" strokeWidth={2} aria-hidden />
+                    <div className="min-w-0">
+                      <span className="block text-[12px] font-medium leading-tight text-zinc-900 dark:text-zinc-100">List</span>
+                      <span className="block text-[10px] leading-snug text-zinc-500">Rows + excerpt</span>
+                    </div>
                   </button>
                   <button
                     type="button"
@@ -672,15 +674,17 @@ export function NotesTab({
                       toast.success("Thumbnail view", { description: "Dense grid for quick scanning." })
                     }}
                     className={cn(
-                      "flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-colors",
+                      "flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
                       notesViewMode === "thumbnails"
                         ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/45"
-                        : "border-transparent bg-stone-50/80 hover:bg-stone-100/90 dark:bg-zinc-800/40"
+                        : "border-stone-200/70 bg-stone-50/70 hover:bg-stone-100/85 dark:border-zinc-700/60 dark:bg-zinc-800/35 dark:hover:bg-zinc-800/55"
                     )}
                   >
-                    <LayoutGrid className="h-5 w-5 text-zinc-600 dark:text-zinc-300" strokeWidth={1.75} aria-hidden />
-                    <span className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100">Thumbnails</span>
-                    <span className="text-[11px] leading-snug text-zinc-500">Small tiles, more on screen</span>
+                    <LayoutGrid className="h-3.5 w-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" strokeWidth={2} aria-hidden />
+                    <div className="min-w-0">
+                      <span className="block text-[12px] font-medium leading-tight text-zinc-900 dark:text-zinc-100">Thumbnails</span>
+                      <span className="block text-[10px] leading-snug text-zinc-500">Dense grid</span>
+                    </div>
                   </button>
                 </div>
 

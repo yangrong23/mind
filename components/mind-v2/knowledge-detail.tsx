@@ -57,6 +57,8 @@ interface KnowledgeDetailProps {
   initialView?: "content" | "graph" | "factory"
   /** When set (e.g. from Agent → Studio), open this factory modal once on mount */
   initialFactoryModal?: FactoryModalKind | null
+  /** Gate add-to-library / ask flows for guests who can still browse the library. */
+  requireAuthThen?: (run: () => void) => void
 }
 
 const mockContents = [
@@ -274,7 +276,9 @@ export function KnowledgeDetail({
   knowledgeBase,
   initialView = "content",
   initialFactoryModal,
+  requireAuthThen,
 }: KnowledgeDetailProps) {
+  const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [hubRichNoteOpen, setHubRichNoteOpen] = useState(false)
   const [showNotebookAsk, setShowNotebookAsk] = useState(false)
@@ -394,13 +398,15 @@ export function KnowledgeDetail({
   }
 
   function submitNotebookAsk() {
-    const q = notebookAskDraft.trim()
-    if (!q) {
-      toast.error("Add a question first")
-      return
-    }
-    toast.success("Question sent", { description: q.length > 140 ? `${q.slice(0, 140)}…` : q })
-    setNotebookAskDraft("")
+    runWithAuth(() => {
+      const q = notebookAskDraft.trim()
+      if (!q) {
+        toast.error("Add a question first")
+        return
+      }
+      toast.success("Question sent", { description: q.length > 140 ? `${q.slice(0, 140)}…` : q })
+      setNotebookAskDraft("")
+    })
   }
 
   const KbHeaderIcon = knowledgeBaseIconForTitle(
@@ -716,9 +722,13 @@ export function KnowledgeDetail({
                       type="button"
                       onClick={() => {
                         setShowAddMenu(false)
-                        if ("openRichNote" in item && item.openRichNote) {
-                          setHubRichNoteOpen(true)
-                        }
+                        runWithAuth(() => {
+                          if ("openRichNote" in item && item.openRichNote) {
+                            setHubRichNoteOpen(true)
+                          } else {
+                            toast.message(item.label, { description: "Would open import (demo)." })
+                          }
+                        })
                       }}
                       className="mx-1.5 flex w-[calc(100%-12px)] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 active:bg-stone-100/80"
                     >

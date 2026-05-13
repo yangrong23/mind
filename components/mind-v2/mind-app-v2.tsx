@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { Moon, Sun } from "lucide-react"
@@ -15,7 +15,7 @@ import { AgentTab, AgentChat } from "./agent-tab"
 import { MeTab } from "./me-tab"
 import { RecordingPage } from "./recording-page"
 import type { FactoryModalKind } from "./content-factory-modals"
-import { MindAuthScreens, MindGuestWelcome } from "./mind-auth-screens"
+import { MindAuthScreens } from "./mind-auth-screens"
 
 const DEMO_AUTH_SESSION_KEY = "mind-v2-demo-auth"
 
@@ -63,7 +63,8 @@ function MindThemeToggle() {
 
 export function MindAppV2() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [authFlowVisible, setAuthFlowVisible] = useState(false)
+  const [authOverlayOpen, setAuthOverlayOpen] = useState(false)
+  const pendingAfterAuth = useRef<(() => void) | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>("notes")
   const [currentView, setCurrentView] = useState<View>({ type: "tabs" })
   const [activeAccountId, setActiveAccountId] = useState<MindAccountId>("work")
@@ -110,13 +111,32 @@ export function MindAppV2() {
   function handleAuthenticated() {
     persistDemoSession()
     setIsLoggedIn(true)
-    setAuthFlowVisible(false)
+    setAuthOverlayOpen(false)
+    const next = pendingAfterAuth.current
+    pendingAfterAuth.current = null
+    next?.()
+  }
+
+  function handleDismissAuthOverlay() {
+    pendingAfterAuth.current = null
+    setAuthOverlayOpen(false)
+  }
+
+  /** Run immediately if logged in; otherwise open full-screen auth and run after successful sign-in. */
+  function requireAuthThen(run: () => void) {
+    if (isLoggedIn) {
+      run()
+      return
+    }
+    pendingAfterAuth.current = run
+    setAuthOverlayOpen(true)
   }
 
   function handleSessionSignOut() {
     clearDemoSession()
     setIsLoggedIn(false)
-    setAuthFlowVisible(false)
+    setAuthOverlayOpen(false)
+    pendingAfterAuth.current = null
     setCurrentView({ type: "tabs" })
     setActiveTab("notes")
     toast.message("Signed out", { description: "Sign in again to continue the demo." })
@@ -157,156 +177,170 @@ export function MindAppV2() {
 
         {/* Main content */}
         <div className="absolute inset-0 flex min-h-0 flex-col pt-[50px] pb-0">
-          {!isLoggedIn ? (
-            <div className="relative min-h-0 flex-1 overflow-hidden">
-              {authFlowVisible ? (
-                <MindAuthScreens
-                  onAuthenticated={handleAuthenticated}
-                  onDismissToGuest={() => setAuthFlowVisible(false)}
-                />
-              ) : (
-                <MindGuestWelcome onContinue={() => setAuthFlowVisible(true)} />
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="relative min-h-0 flex-1 overflow-hidden">
-                {/* Tab root */}
-                {currentView.type === "tabs" && (
-                  <>
-                    {activeTab === "notes" && (
-                      <NotesTab
-                        activeAccountId={activeAccountId}
-                        notes={notes}
-                        folders={folders}
-                        onNotesChange={setNotes}
-                        onNoteClick={(note) => setCurrentView({ type: "note-detail", note })}
-                        onStartRecording={() => setCurrentView({ type: "recording" })}
-                      />
-                    )}
-                    {activeTab === "knowledge" && (
-                      <KnowledgeTab
-                        onKBClick={(kb) =>
-                          setCurrentView({
-                            type: "kb-detail",
-                            kb: {
-                              name: kb.name,
-                              color: kb.color,
-                              description: kb.description,
-                              coverImage: kb.coverImage,
-                            },
-                          })
-                        }
-                      />
-                    )}
-                    {activeTab === "agent" && (
-                      <AgentTab
-                        onAgentChat={(agent) =>
-                          setCurrentView({
-                            type: "agent-chat",
-                            agent,
-                          })
-                        }
-                      />
-                    )}
-                    {activeTab === "me" && (
-                      <MeTab
-                        activeAccountId={activeAccountId}
-                        onActiveAccountChange={setActiveAccountId}
-                        onSessionSignOut={handleSessionSignOut}
-                      />
-                    )}
-                  </>
-                )}
-
-                {/* Note detail (recording/import) */}
-                {currentView.type === "note-detail" && (
-                  <NoteDetail
-                    note={currentView.note}
-                    onBack={() => setCurrentView({ type: "tabs" })}
-                    onMovedToLibrary={(kb) => {
-                      setActiveTab("knowledge")
-                      setCurrentView({ type: "kb-detail", kb })
-                    }}
-                    onAssignNoteToNewFolder={(noteId, folder) => {
-                      setFolders((prev) => [...prev, folder])
-                      setNotes((prev) =>
-                        prev.map((n) => (n.id === noteId ? { ...n, folderId: folder.id } : n))
-                      )
-                    }}
-                    onTrashNote={(noteId) => {
-                      setNotes((prev) => prev.filter((n) => n.id !== noteId))
-                      setCurrentView({ type: "tabs" })
-                    }}
-                  />
-                )}
-
-                {/* Recording */}
-                {currentView.type === "recording" && (
-                  <RecordingPage
-                    onStop={() => setCurrentView({ type: "note-detail" })}
-                    onClose={() => setCurrentView({ type: "tabs" })}
-                  />
-                )}
-
-                {/* Library detail */}
-                {currentView.type === "kb-detail" && (
-                  <KnowledgeDetail
-                    onBack={() => setCurrentView({ type: "tabs" })}
-                    knowledgeBase={currentView.kb}
-                    initialView={currentView.initialView}
-                    initialFactoryModal={currentView.initialFactoryModal}
-                    onAgentChat={(context) =>
-                      setCurrentView({
-                        type: "kb-agent-chat",
-                        context,
-                        kb: currentView.kb,
-                        initialView: currentView.initialView,
-                      })
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            {/* Tab root */}
+            {currentView.type === "tabs" && (
+              <>
+                {activeTab === "notes" && (
+                  <NotesTab
+                    activeAccountId={activeAccountId}
+                    notes={notes}
+                    folders={folders}
+                    onNotesChange={setNotes}
+                    onNoteClick={(note) =>
+                      requireAuthThen(() => setCurrentView({ type: "note-detail", note }))
+                    }
+                    onStartRecording={() =>
+                      requireAuthThen(() => setCurrentView({ type: "recording" }))
                     }
                   />
                 )}
-
-                {/* Agent chat */}
-                {currentView.type === "agent-chat" && (
-                  <AgentChat
-                    agent={currentView.agent}
-                    onBack={() => setCurrentView({ type: "tabs" })}
-                  />
-                )}
-
-                {/* Library-grounded agent chat */}
-                {currentView.type === "kb-agent-chat" && (
-                  <AgentChat
-                    agent={{
-                      id: 999,
-                      name: "Chat",
-                      description: currentView.context.contentTitle
-                        ? `Grounded on “${currentView.context.contentTitle}” and your library`
-                        : `Grounded on “${currentView.context.kbName}” and your library`,
-                      avatar: "💬",
-                      color: "from-sky-400 to-sky-700",
-                    }}
-                    entryHint="Route what you saved into answers and artifacts: retrieve, connect, and ship outcomes—not one-off replies disconnected from your library."
-                    onBack={() =>
+                {activeTab === "knowledge" && (
+                  <KnowledgeTab
+                    onKBClick={(kb) =>
                       setCurrentView({
                         type: "kb-detail",
-                        kb: currentView.kb,
-                        initialView: currentView.initialView,
+                        kb: {
+                          name: kb.name,
+                          color: kb.color,
+                          description: kb.description,
+                          coverImage: kb.coverImage,
+                        },
                       })
                     }
                   />
                 )}
-              </div>
+                {activeTab === "agent" && (
+                  <AgentTab
+                    requireAuthThen={requireAuthThen}
+                    onAgentChat={(agent) =>
+                      requireAuthThen(() =>
+                        setCurrentView({
+                          type: "agent-chat",
+                          agent,
+                        })
+                      )
+                    }
+                  />
+                )}
+                {activeTab === "me" && (
+                  <MeTab
+                    activeAccountId={activeAccountId}
+                    onActiveAccountChange={setActiveAccountId}
+                    onSessionSignOut={handleSessionSignOut}
+                  />
+                )}
+              </>
+            )}
 
-              {/* Bottom nav (tabs only) */}
-              {currentView.type === "tabs" && (
-                <div className="shrink-0 overflow-visible bg-gradient-to-t from-[#fafaf9] via-[#fafaf9]/85 to-transparent pb-0.5 pt-1 dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent">
-                  <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-                </div>
-              )}
-            </>
+            {/* Note detail (recording/import) */}
+            {currentView.type === "note-detail" && (
+              <NoteDetail
+                note={currentView.note}
+                onBack={() => setCurrentView({ type: "tabs" })}
+                onMovedToLibrary={(kb) => {
+                  setActiveTab("knowledge")
+                  setCurrentView({ type: "kb-detail", kb })
+                }}
+                onAssignNoteToNewFolder={(noteId, folder) => {
+                  setFolders((prev) => [...prev, folder])
+                  setNotes((prev) =>
+                    prev.map((n) => (n.id === noteId ? { ...n, folderId: folder.id } : n))
+                  )
+                }}
+                onTrashNote={(noteId) => {
+                  setNotes((prev) => prev.filter((n) => n.id !== noteId))
+                  setCurrentView({ type: "tabs" })
+                }}
+              />
+            )}
+
+            {/* Recording */}
+            {currentView.type === "recording" && (
+              <RecordingPage
+                onStop={() => setCurrentView({ type: "note-detail" })}
+                onClose={() => setCurrentView({ type: "tabs" })}
+              />
+            )}
+
+            {/* Library detail */}
+            {currentView.type === "kb-detail" && (
+              <KnowledgeDetail
+                requireAuthThen={requireAuthThen}
+                onBack={() => setCurrentView({ type: "tabs" })}
+                knowledgeBase={currentView.kb}
+                initialView={currentView.initialView}
+                initialFactoryModal={currentView.initialFactoryModal}
+                onAgentChat={(context) =>
+                  requireAuthThen(() =>
+                    setCurrentView({
+                      type: "kb-agent-chat",
+                      context,
+                      kb: currentView.kb,
+                      initialView: currentView.initialView,
+                    })
+                  )
+                }
+              />
+            )}
+
+            {/* Agent chat */}
+            {currentView.type === "agent-chat" && (
+              <AgentChat
+                requireAuthThen={requireAuthThen}
+                agent={currentView.agent}
+                onBack={() => setCurrentView({ type: "tabs" })}
+              />
+            )}
+
+            {/* Library-grounded agent chat */}
+            {currentView.type === "kb-agent-chat" && (
+              <AgentChat
+                requireAuthThen={requireAuthThen}
+                agent={{
+                  id: 999,
+                  name: "Chat",
+                  description: currentView.context.contentTitle
+                    ? `Grounded on “${currentView.context.contentTitle}” and your library`
+                    : `Grounded on “${currentView.context.kbName}” and your library`,
+                  avatar: "💬",
+                  color: "from-sky-400 to-sky-700",
+                }}
+                entryHint="Route what you saved into answers and artifacts: retrieve, connect, and ship outcomes—not one-off replies disconnected from your library."
+                onBack={() =>
+                  setCurrentView({
+                    type: "kb-detail",
+                    kb: currentView.kb,
+                    initialView: currentView.initialView,
+                  })
+                }
+              />
+            )}
+          </div>
+
+          {/* Bottom nav (tabs only) */}
+          {currentView.type === "tabs" && (
+            <div className="shrink-0 overflow-visible bg-gradient-to-t from-[#fafaf9] via-[#fafaf9]/85 to-transparent pb-0.5 pt-1 dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent">
+              <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+            </div>
           )}
+
+          {/* Full-bleed auth inside device chrome (browse first; opens from gated actions) */}
+          {authOverlayOpen ? (
+            <div
+              className="absolute inset-0 z-[100] flex min-h-0 flex-col bg-gradient-to-b from-sky-50/95 via-white to-stone-50/95 pt-[50px] dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="mind-auth-title"
+            >
+              <div className="flex min-h-0 flex-1 flex-col">
+                <MindAuthScreens
+                  onAuthenticated={handleAuthenticated}
+                  onDismiss={handleDismissAuthOverlay}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Home Indicator */}
