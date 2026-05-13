@@ -8,6 +8,7 @@ import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { ContentFactoryModals, type FactoryGenerationSettings, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import {
   StudioFactoryJobsInline,
+  factoryKindShortLabel,
   factorySettingsLeadMeta,
   mockTitleForFactoryKind,
   type FactoryJob,
@@ -31,12 +32,12 @@ import {
   Copy,
   ThumbsUp,
   ThumbsDown,
-  Bot,
   Youtube,
   Library,
   Trash2,
-  Send,
+  ArrowUp,
   GitBranch,
+  MessageCircle,
 } from "lucide-react"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 
@@ -51,6 +52,7 @@ interface KnowledgeDetailProps {
     name: string
     color: string
     description?: string
+    coverImage?: string
   }
   initialView?: "content" | "graph" | "factory"
   /** When set (e.g. from Agent → Studio), open this factory modal once on mount */
@@ -294,6 +296,7 @@ export function KnowledgeDetail({
   const [factoryUserJobs, setFactoryUserJobs] = useState<FactoryJob[]>([])
   const [factoryQuotaBanner, setFactoryQuotaBanner] = useState(false)
   const [factoryToastFailedJobId, setFactoryToastFailedJobId] = useState<string | null>(null)
+  const [archivedFactoryJobIds, setArchivedFactoryJobIds] = useState<string[]>([])
   const [contents, setContents] = useState<LibraryDoc[]>(() => mockContents.map((c) => ({ ...c })))
   const sourceCount = contents.length
   const kbDisplayName = knowledgeBase?.name || "Notebook"
@@ -350,6 +353,7 @@ export function KnowledgeDetail({
 
   function handleFactoryRetry(jobId: string) {
     setFactoryToastFailedJobId(null)
+    setArchivedFactoryJobIds((prev) => prev.filter((id) => id !== jobId))
     let kind: FactoryModalKind = "report"
     let settings: FactoryGenerationSettings | undefined
     setFactoryUserJobs((prev) => {
@@ -365,13 +369,37 @@ export function KnowledgeDetail({
     window.setTimeout(() => scheduleFactoryJobFinish(jobId, kind, settings), 0)
   }
 
+  function handleArchiveFactoryJobToHub(job: FactoryJob) {
+    if (archivedFactoryJobIds.includes(job.id)) return
+    const title = (job.title && job.title.trim()) || mockTitleForFactoryKind(job.kind)
+    const kindLabel = factoryKindShortLabel(job.kind)
+    const nextId = contents.reduce((max, c) => Math.max(max, c.id), 0) + 1
+    const now = new Date()
+    const dateStr = `${now.getMonth() + 1}/${now.getDate()}`
+    const doc: LibraryDoc = {
+      id: nextId,
+      title,
+      excerpt: `Studio ${kindLabel} output archived from your run—open it anytime from Hub.`,
+      source: "Studio",
+      author: kbDisplayName,
+      date: dateStr,
+      image: `https://picsum.photos/seed/factory-${encodeURIComponent(job.id)}/80/80`,
+    }
+    setContents((prev) => [doc, ...prev])
+    setArchivedFactoryJobIds((prev) => [...prev, job.id])
+    setActiveView("content")
+    toast.success("Archived to Hub", {
+      description: `“${title}” is now in “${kbDisplayName}”.`,
+    })
+  }
+
   function submitNotebookAsk() {
     const q = notebookAskDraft.trim()
     if (!q) {
-      toast.error("请输入问题")
+      toast.error("Add a question first")
       return
     }
-    toast.success("已向资料库提问", { description: q.length > 140 ? `${q.slice(0, 140)}…` : q })
+    toast.success("Question sent", { description: q.length > 140 ? `${q.slice(0, 140)}…` : q })
     setNotebookAskDraft("")
   }
 
@@ -438,8 +466,8 @@ export function KnowledgeDetail({
 
   if (showNotebookAsk) {
     return (
-      <div className="relative flex h-full flex-col bg-[#faf7f6]">
-        <div className="flex shrink-0 items-center justify-between border-b border-stone-200/80 bg-[#faf7f6]/95 px-3 py-2.5 backdrop-blur-sm">
+      <div className="relative flex h-full flex-col bg-gradient-to-b from-sky-50/40 via-[#fafbfc] to-white">
+        <div className="flex shrink-0 items-center justify-between border-b border-sky-100/50 bg-white/80 px-3 py-2.5 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80">
           <button
             type="button"
             onClick={() => setShowNotebookAsk(false)}
@@ -453,7 +481,7 @@ export function KnowledgeDetail({
           </h1>
           <button
             type="button"
-            onClick={() => toast.message("更多", { description: "资料库操作菜单（演示）。" })}
+            onClick={() => toast.message("More", { description: "Library actions (demo)." })}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-stone-200/60"
             aria-label="More"
           >
@@ -462,7 +490,7 @@ export function KnowledgeDetail({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-violet-600/90">Rolling summary</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700/90">Rolling summary</p>
           <h2 className="mt-1.5 text-[19px] font-semibold leading-snug tracking-tight text-zinc-900">{kbDisplayName}</h2>
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-100/90 px-2.5 py-1 text-[12px] font-medium text-zinc-600">
             <span className="tabular-nums">{sourceCount}</span>
@@ -476,7 +504,7 @@ export function KnowledgeDetail({
             <div className="flex items-center gap-0.5">
               <button
                 type="button"
-                onClick={() => toast.success("已复制摘要")}
+                onClick={() => toast.success("Copied")}
                 className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
                 aria-label="Copy summary"
               >
@@ -484,7 +512,7 @@ export function KnowledgeDetail({
               </button>
               <button
                 type="button"
-                onClick={() => toast.success("感谢反馈", { description: "已记录为有帮助" })}
+                onClick={() => toast.success("Thanks", { description: "Marked as helpful." })}
                 className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
                 aria-label="Good summary"
               >
@@ -492,7 +520,7 @@ export function KnowledgeDetail({
               </button>
               <button
                 type="button"
-                onClick={() => toast.message("已记录", { description: "我们会改进摘要质量（演示）。" })}
+                onClick={() => toast.message("Noted", { description: "We will improve summaries (demo)." })}
                 className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-stone-200/70 hover:text-zinc-800"
                 aria-label="Bad summary"
               >
@@ -500,33 +528,33 @@ export function KnowledgeDetail({
               </button>
               <button
                 type="button"
-                title="Deep knowledge chat—retrieve, compare, and cite across your library"
-                aria-label="Open Mind Agent (library-grounded)"
+                title="Library chat—retrieve, compare, and cite across your sources"
+                aria-label="Open Chat (library-grounded)"
                 onClick={() => {
                   setShowNotebookAsk(false)
                   onAgentChat?.({ kbName: kbDisplayName })
                 }}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:bg-violet-100/90 hover:text-violet-800"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-sky-600 transition-colors hover:bg-sky-100/90 hover:text-sky-800 dark:text-sky-400 dark:hover:bg-sky-950/50 dark:hover:text-sky-200"
               >
-                <Bot className="h-5 w-5" strokeWidth={1.85} />
+                <MessageCircle className="h-5 w-5" strokeWidth={1.85} />
               </button>
             </div>
-            <p className="max-w-[14rem] text-[11px] leading-snug text-zinc-400 sm:max-w-none">
-              Open Mind Agent for deep, library-grounded Q&A—it gets stronger as your library grows.
+            <p className="max-w-[14rem] text-[11px] leading-snug text-sky-800/80 dark:text-sky-200/70 sm:max-w-none">
+              Open Chat for library-grounded Q&amp;A—it gets stronger as your library grows.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => toast.promise(new Promise((r) => setTimeout(r, 800)), {
-              loading: "正在生成音频概览…",
-              success: "已加入播放队列（演示）",
-              error: "生成失败",
+              loading: "Generating audio overview…",
+              success: "Added to queue (demo)",
+              error: "Could not generate",
             })}
             className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-full border border-stone-200/90 bg-white py-3 text-[15px] font-medium text-zinc-800 shadow-sm shadow-stone-900/5 transition-colors hover:bg-stone-50"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100" aria-hidden>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-violet-600">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100" aria-hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-sky-600">
                 <path
                   d="M4 12h2l1.5-4 2 8 1.5-6H12l1 3 1-3h2l1.5 5 1.5-5H22"
                   stroke="currentColor"
@@ -540,7 +568,7 @@ export function KnowledgeDetail({
           </button>
         </div>
 
-        <div className="shrink-0 border-t border-stone-200/80 bg-[#faf7f6]/95 px-3 pb-3 pt-2 backdrop-blur-sm">
+        <div className="shrink-0 border-t border-sky-100/60 bg-white/85 px-3 pb-3 pt-2 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/85">
           <div className="flex items-end gap-2">
             <label className="sr-only" htmlFor="notebook-ask-sources">
               Ask sources
@@ -557,11 +585,11 @@ export function KnowledgeDetail({
                 }
               }}
               placeholder={`Ask ${sourceCount} sources…`}
-              className="min-h-[44px] min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-200/60"
+              className="min-h-[44px] min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200/60"
             />
             <button
               type="button"
-              onClick={() => toast.message("来源范围", { description: `当前提问将覆盖 ${sourceCount} 条资料（演示）。` })}
+              onClick={() => toast.message("Sources", { description: `Covers ${sourceCount} items (demo).` })}
               className="flex shrink-0 items-center gap-1 rounded-xl border border-stone-200 bg-white px-2.5 py-2 text-[13px] font-medium text-zinc-700 shadow-sm"
               aria-label="Sources"
             >
@@ -572,10 +600,10 @@ export function KnowledgeDetail({
             <button
               type="button"
               onClick={submitNotebookAsk}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm hover:bg-violet-700"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-md shadow-sky-600/25 transition-colors hover:bg-sky-700"
               aria-label="Send question"
             >
-              <Send className="h-5 w-5" strokeWidth={2} />
+              <ArrowUp className="h-5 w-5" strokeWidth={2.25} />
             </button>
           </div>
         </div>
@@ -592,32 +620,41 @@ export function KnowledgeDetail({
   if (showContentDetail) {
     return (
       <div className="relative flex flex-col h-full bg-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <button onClick={() => setShowContentDetail(null)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
-            <ChevronLeft className="w-6 h-6 text-gray-700" />
+        <div className="flex items-center justify-between border-b border-sky-100/80 bg-white px-4 py-3 dark:border-sky-900/40 dark:bg-zinc-950">
+          <button
+            type="button"
+            onClick={() => setShowContentDetail(null)}
+            className="-ml-2 rounded-full p-2 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-6 w-6 text-zinc-700 dark:text-zinc-200" />
           </button>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              title="Deep knowledge entry—answers grounded in this item and your library"
+              title="Chat—answers grounded in this item and your library"
+              aria-label="Open Chat for this item"
               onClick={() =>
                 onAgentChat?.({
                   kbName: knowledgeBase?.name || "Medrix Mind",
                   contentTitle: showContentDetail.title,
                 })
               }
-              className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-zinc-500 to-stone-500 text-white rounded-full text-xs font-medium"
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border border-sky-200/90 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-900 shadow-sm shadow-sky-900/5 transition-colors",
+                "hover:bg-sky-100/90 dark:border-sky-800/60 dark:bg-sky-950/45 dark:text-sky-50 dark:hover:bg-sky-900/55"
+              )}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              Mind Agent
+              <MessageCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+              Chat
             </button>
             <button
               type="button"
               onClick={() => setShareTarget({ scope: "item", title: showContentDetail.title })}
-              className="p-2 hover:bg-gray-100 rounded-full"
+              className="rounded-full p-2 hover:bg-sky-50 dark:hover:bg-sky-950/40"
               aria-label="Share"
             >
-              <MoreHorizontal className="w-5 h-5 text-gray-600" />
+              <MoreHorizontal className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
             </button>
           </div>
         </div>
@@ -712,14 +749,24 @@ export function KnowledgeDetail({
       </div>
 
       <div className="px-4 py-3 border-b border-stone-100 flex items-center gap-3 min-w-0">
-        <div
-          className={cn(
-            "w-11 h-11 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0",
-            knowledgeBase?.color || "from-zinc-400 to-stone-600"
-          )}
-        >
-          <KbHeaderIcon className="w-6 h-6 text-white" strokeWidth={1.75} aria-hidden />
-        </div>
+        {knowledgeBase?.coverImage ? (
+          <img
+            src={knowledgeBase.coverImage}
+            alt=""
+            width={44}
+            height={44}
+            className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
+          />
+        ) : (
+          <div
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br",
+              knowledgeBase?.color || "from-zinc-400 to-stone-600"
+            )}
+          >
+            <KbHeaderIcon className="h-6 w-6 text-white" strokeWidth={1.65} aria-hidden />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <h1 className="text-[16px] font-semibold tracking-tight text-zinc-900 truncate">
             {knowledgeBase?.name || "Notebook"}
@@ -770,10 +817,10 @@ export function KnowledgeDetail({
           <div className="flex min-h-0 flex-1 flex-col bg-stone-50/80">
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="px-4 pb-2 pt-3">
-              <div className="mb-4 overflow-hidden rounded-2xl border border-stone-200/70 bg-gradient-to-br from-white via-white to-violet-50/[0.35] p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_24px_-12px_rgba(15,23,42,0.12)] ring-1 ring-stone-100/80">
+              <div className="mb-4 overflow-hidden rounded-2xl border border-sky-100/60 bg-gradient-to-br from-white via-white to-sky-50/50 p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_24px_-12px_rgba(14,165,233,0.1)] ring-1 ring-sky-100/40 dark:border-zinc-700 dark:from-zinc-900 dark:via-zinc-900 dark:to-sky-950/20 dark:ring-zinc-700/60">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700/80">Overview</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700/90 dark:text-sky-300/90">Overview</p>
                     <h2 className="mt-1 text-[15px] font-semibold tracking-tight text-zinc-900">How this library fits together</h2>
                   </div>
                   <div className="shrink-0 rounded-full border border-stone-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-zinc-600 shadow-sm">
@@ -1048,6 +1095,9 @@ export function KnowledgeDetail({
               onDismissQuotaBanner={() => setFactoryQuotaBanner(false)}
               toastFailedJobId={factoryToastFailedJobId}
               onRetryJob={handleFactoryRetry}
+              onArchiveToLibrary={handleArchiveFactoryJobToHub}
+              archiveTargetLabel={kbDisplayName}
+              archivedJobIds={archivedFactoryJobIds}
             />
 
             {factoryUserJobs.length === 0 ? (

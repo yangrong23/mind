@@ -1,11 +1,27 @@
 /**
- * Medrix Mind — mostly neutral with restrained sky / emerald / indigo accents.
+ * Medrix Mind — mostly neutral with restrained sky / emerald accents (work = sky family).
  */
 
 import { cn } from "@/lib/utils"
 
 export const mx = {
   pageBg: "bg-stone-50",
+
+  /**
+   * App shell — soft, bright, low saturation (aligned with Studio pastel wells).
+   * Prefer over raw `gray-*` for cross-tab consistency.
+   */
+  shellCanvas:
+    "bg-gradient-to-b from-sky-50/55 via-white to-teal-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950",
+  shellSurface: "bg-white/90 dark:bg-zinc-900/95",
+  shellHairline: "border-stone-200/85 dark:border-zinc-700/90",
+  shellInk: "text-zinc-900 dark:text-zinc-100",
+  shellInkSecondary: "text-zinc-600 dark:text-zinc-300",
+  shellMuted: "text-zinc-500 dark:text-zinc-400",
+  shellIcon: "text-zinc-400 dark:text-zinc-500",
+  shellCard:
+    "rounded-2xl border border-stone-200/70 bg-white shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_8px_28px_-16px_rgba(15,23,42,0.08)] dark:border-zinc-700 dark:bg-zinc-900/80",
+  shellPillInactive: "bg-stone-100/90 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
 
   brandHero: "bg-gradient-to-b from-sky-50/80 via-white to-teal-50/40",
   brandHeroBorder: "border-b border-sky-100/85",
@@ -28,8 +44,8 @@ export const mx = {
   accentPersonalSoft: "bg-emerald-50",
   accentPersonalRing: "ring-2 ring-emerald-200/80",
 
-  accentWorkSoft: "bg-indigo-50",
-  accentWorkIcon: "text-indigo-600",
+  accentWorkSoft: "bg-sky-50",
+  accentWorkIcon: "text-sky-700",
 
   brandAccent: "text-sky-700",
   brandAccentHover: "hover:text-sky-800",

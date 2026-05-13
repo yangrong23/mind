@@ -245,7 +245,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               className={cn(
                 "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold",
                 activeAccount.kind === "work"
-                  ? "bg-gradient-to-br from-indigo-100 to-sky-100 ring-1 ring-indigo-200/60"
+                  ? "bg-gradient-to-br from-sky-100 to-sky-50 ring-1 ring-sky-200/70"
                   : cn(mx.accentPersonalAvatar, mx.accentPersonalRing)
               )}
             >
@@ -264,7 +264,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   className={cn(
                     "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                     activeAccount.kind === "work"
-                      ? cn(mx.accentWorkSoft, "text-indigo-800")
+                      ? cn(mx.accentWorkSoft, "text-sky-900")
                       : cn(mx.accentPersonalSoft, "text-emerald-800")
                   )}
                 >
@@ -364,13 +364,15 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               onClick={() => setPersonalizedFeed({ type: "insights" })}
               className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
             >
-              <Target className="h-4 w-4 shrink-0 text-indigo-700 opacity-90" />
+              <Target className="h-4 w-4 shrink-0 text-sky-700 opacity-90" />
               <span>AI insights</span>
               <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
             </button>
             <button
               type="button"
-              onClick={() => toast.message("知识图谱", { description: "该功能即将推出，敬请期待。" })}
+              onClick={() =>
+                toast.message("Knowledge map", { description: "This feature is coming soon." })
+              }
               className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
             >
               <Map className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
@@ -424,7 +426,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   className={cn(
                     "flex h-[68px] w-[68px] items-center justify-center rounded-full text-2xl font-semibold shadow-inner",
                     activeAccount.kind === "work"
-                      ? "bg-gradient-to-br from-indigo-100 to-sky-100 ring-2 ring-indigo-100"
+                      ? "bg-gradient-to-br from-sky-100 to-sky-50 ring-2 ring-sky-200/80"
                       : cn(mx.accentPersonalAvatar, "ring-2 ring-emerald-200/90")
                   )}
                 >
@@ -460,7 +462,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                     className={cn(
                       "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
                       acc.kind === "work"
-                        ? "bg-indigo-50 ring-1 ring-indigo-100"
+                        ? "bg-sky-50 ring-1 ring-sky-100"
                         : cn(mx.accentPersonalAvatar)
                     )}
                   >
@@ -476,7 +478,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                       <span
                         className={cn(
                           "rounded px-1.5 py-0.5 text-[10px] font-semibold",
-                          acc.kind === "work" ? cn(mx.accentWorkSoft, "text-indigo-800") : "bg-emerald-50 text-emerald-800"
+                          acc.kind === "work" ? cn(mx.accentWorkSoft, "text-sky-900") : "bg-emerald-50 text-emerald-800"
                         )}
                       >
                         {accountSpaceLabel(acc.kind)}
@@ -502,7 +504,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   mx.accentBlueHover
                 )}
                 onClick={() => {
-                  toast.message("添加账号", { description: "将打开系统账号流程（演示）。" })
+                  toast.message("Add account", { description: "Would open the system account flow (demo)." })
                   setShowAccountSwitcher(false)
                 }}
               >
@@ -516,7 +518,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   mx.accentBlueHover
                 )}
                 onClick={() => {
-                  toast.success("已退出当前账号", { description: "演示环境不会清除本地数据。" })
+                  toast.success("Signed out", { description: "Demo: local data is not cleared." })
                   setShowAccountSwitcher(false)
                 }}
               >
@@ -541,24 +543,24 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
                   <User className="w-6 h-6 text-gray-500" />
                 </div>
-                <span className="text-lg font-semibold text-gray-900">{activeAccount.displayName}</span>
+                <span className="text-lg font-semibold text-zinc-900">{activeAccount.displayName}</span>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-6">Notes in the last year</h3>
+              <h3 className="text-xl font-bold text-zinc-900 mb-6">Notes in the last year</h3>
 
               {/* Stats grid */}
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="text-center">
                   <div className={cn("text-sm mb-1", mx.citationMuted)}>All notes</div>
-                  <div className="text-4xl font-bold text-gray-900">{stats.totalNotes}</div>
+                  <div className="text-4xl font-bold text-zinc-900">{stats.totalNotes}</div>
                 </div>
                 <div className="text-center">
                   <div className={cn("text-sm mb-1", mx.citationMuted)}>Total days</div>
-                  <div className="text-4xl font-bold text-gray-900">{stats.totalDays}</div>
+                  <div className="text-4xl font-bold text-zinc-900">{stats.totalDays}</div>
                 </div>
                 <div className="text-center">
                   <div className={cn("text-sm mb-1", mx.citationMuted)}>Day streak</div>
-                  <div className="text-4xl font-bold text-gray-900">{stats.consecutiveDays}</div>
+                  <div className="text-4xl font-bold text-zinc-900">{stats.consecutiveDays}</div>
                 </div>
               </div>
 
@@ -583,9 +585,9 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               </div>
 
               {/* Brand + QR */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between pt-4 border-t border-stone-100/85">
                 <div>
-                  <div className="text-lg font-bold text-gray-900">Mind Notes</div>
+                  <div className="text-lg font-bold text-zinc-900">Mind Notes</div>
                   <div className="text-xs text-gray-400">Scan to try Mind Notes</div>
                 </div>
                 <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -606,7 +608,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               <div className="grid grid-cols-4 gap-4 mb-4">
                 <button
                   type="button"
-                  onClick={() => toast.success("已唤起分享", { description: "微信（演示）" })}
+                  onClick={() => toast.success("Share opened", { description: "WeChat (demo)" })}
                   className="flex flex-col items-center gap-2"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-500">
@@ -618,7 +620,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 </button>
                 <button
                   type="button"
-                  onClick={() => toast.success("已唤起分享", { description: "朋友圈（演示）" })}
+                  onClick={() => toast.success("Share opened", { description: "Moments (demo)" })}
                   className="flex flex-col items-center gap-2"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-600">
@@ -631,7 +633,9 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 </button>
                 <button
                   type="button"
-                  onClick={() => toast.success("已保存到相册", { description: "分享卡片已写入（演示）。" })}
+                  onClick={() =>
+                    toast.success("Saved to photos", { description: "Share card saved (demo)." })
+                  }
                   className="flex flex-col items-center gap-2"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
@@ -643,7 +647,9 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 </button>
                 <button
                   type="button"
-                  onClick={() => toast.message("更多分享方式", { description: "系统分享面板（演示）。" })}
+                  onClick={() =>
+                    toast.message("More ways to share", { description: "System share sheet (demo)." })
+                  }
                   className="flex flex-col items-center gap-2"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
@@ -712,32 +718,32 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
 
       {/* Settings hub (below membership) */}
       {showSettingsHub && (
-        <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white">
+        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white">
             <button type="button" onClick={() => setShowSettingsHub(false)} className="p-1">
               <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Settings</h1>
+            <h1 className="text-lg font-semibold text-zinc-900">Settings</h1>
             <div className="w-8" />
           </div>
 
           <div className="flex-1 overflow-y-auto p-5">
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-stone-100/85 overflow-hidden">
               {settingsMenuItems.map((item, i) => (
                 <button
                   key={item.label}
                   type="button"
                   onClick={item.action}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors",
-                    i !== settingsMenuItems.length - 1 && "border-b border-gray-100"
+                    "w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-stone-50/95 transition-colors",
+                    i !== settingsMenuItems.length - 1 && "border-b border-stone-100/85"
                   )}
                 >
                   <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
                     <item.icon className="w-5 h-5 text-slate-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900">{item.label}</div>
+                    <div className="font-medium text-zinc-900">{item.label}</div>
                     <div className="text-xs text-gray-500">{item.desc}</div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
@@ -749,8 +755,8 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
       )}
 
       {settingsExtra && (
-        <div className="absolute inset-0 z-[51] flex flex-col bg-gray-50 animate-in slide-in-from-right duration-200">
-          <div className="flex shrink-0 items-center gap-2 border-b border-gray-100 bg-white px-4 py-3">
+        <div className="absolute inset-0 z-[51] flex flex-col bg-stone-50/95 animate-in slide-in-from-right duration-200">
+          <div className="flex shrink-0 items-center gap-2 border-b border-stone-100/85 bg-white px-4 py-3">
             <button
               type="button"
               onClick={() => {
@@ -762,7 +768,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             >
               <ChevronRight className="h-6 w-6 rotate-180 text-gray-600" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-zinc-900">
               {settingsExtra === "notifications" && "Notifications"}
               {settingsExtra === "privacy" && "Privacy & security"}
               {settingsExtra === "help" && "Help & feedback"}
@@ -771,11 +777,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
             {settingsExtra === "notifications" && (
               <>
-                <p className="text-sm text-gray-500">以下为演示开关；打开或关闭时会给出提示。</p>
-                <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-                  <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                <p className="text-sm text-gray-500">
+                  Demo toggles; turning them on or off shows a short confirmation.
+                </p>
+                <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
+                  <div className="flex items-center justify-between px-4 py-4 border-b border-stone-100/85">
                     <div>
-                      <div className="text-[15px] text-gray-900">Recording ready</div>
+                      <div className="text-[15px] text-zinc-900">Recording ready</div>
                       <div className="mt-1 text-xs text-gray-400">Notify when a capture finishes processing</div>
                     </div>
                     <button
@@ -784,7 +792,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                       aria-checked={notifCaptureReady}
                       onClick={() => {
                         setNotifCaptureReady((v) => !v)
-                        toast.success("已保存")
+                        toast.success("Saved")
                       }}
                       className={cn(
                         "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
@@ -801,7 +809,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   </div>
                   <div className="flex items-center justify-between px-4 py-4">
                     <div>
-                      <div className="text-[15px] text-gray-900">Weekly digest</div>
+                      <div className="text-[15px] text-zinc-900">Weekly digest</div>
                       <div className="mt-1 text-xs text-gray-400">Summary of your capture activity</div>
                     </div>
                     <button
@@ -810,7 +818,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                       aria-checked={notifDigest}
                       onClick={() => {
                         setNotifDigest((v) => !v)
-                        toast.success("已保存")
+                        toast.success("Saved")
                       }}
                       className={cn(
                         "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
@@ -830,11 +838,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             )}
             {settingsExtra === "privacy" && (
               <>
-                <p className="text-sm text-gray-500">管理与本演示应用相关的隐私选项。</p>
-                <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
-                  <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                <p className="text-sm text-gray-500">
+                  Manage privacy options for this demo app.
+                </p>
+                <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
+                  <div className="flex items-center justify-between px-4 py-4 border-b border-stone-100/85">
                     <div>
-                      <div className="text-[15px] text-gray-900">Share crash reports</div>
+                      <div className="text-[15px] text-zinc-900">Share crash reports</div>
                       <div className="mt-1 text-xs text-gray-400">Helps fix bugs faster (no raw audio)</div>
                     </div>
                     <button
@@ -843,7 +853,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                       aria-checked={privacyCrashReports}
                       onClick={() => {
                         setPrivacyCrashReports((v) => !v)
-                        toast.success("已保存")
+                        toast.success("Saved")
                       }}
                       className={cn(
                         "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
@@ -860,10 +870,14 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   </div>
                   <button
                     type="button"
-                    onClick={() => toast.success("已加入导出队列", { description: "完成后将发送下载链接（演示）。" })}
-                    className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-gray-50"
+                    onClick={() =>
+                      toast.success("Added to export queue", {
+                        description: "You will get a download link when ready (demo).",
+                      })
+                    }
+                    className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-stone-50/95"
                   >
-                    <span className="text-[15px] text-gray-900">Export my data</span>
+                    <span className="text-[15px] text-zinc-900">Export my data</span>
                     <ChevronRight className="h-5 w-5 text-gray-300" />
                   </button>
                 </div>
@@ -871,19 +885,19 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             )}
             {settingsExtra === "help" && (
               <div className="space-y-2">
-                <p className="text-sm text-gray-500">需要协助时，可从以下入口开始。</p>
+                <p className="text-sm text-gray-500">When you need help, start from one of these.</p>
                 {[
-                  { label: "User guide", hint: "快速上手与常见问题" },
-                  { label: "Contact support", hint: "邮件 / 工单（演示）" },
-                  { label: "Rate Mind", hint: "App Store 评分引导" },
+                  { label: "User guide", hint: "Getting started and FAQs" },
+                  { label: "Contact support", hint: "Email / ticket (demo)" },
+                  { label: "Rate Mind", hint: "App Store rating prompt" },
                 ].map((row) => (
                   <button
                     key={row.label}
                     type="button"
                     onClick={() => toast.message(row.label, { description: row.hint })}
-                    className="flex w-full flex-col items-start rounded-xl border border-gray-100 bg-white px-4 py-3 text-left hover:bg-gray-50"
+                    className="flex w-full flex-col items-start rounded-xl border border-stone-100/85 bg-white px-4 py-3 text-left hover:bg-stone-50/95"
                   >
-                    <span className="text-[15px] font-medium text-gray-900">{row.label}</span>
+                    <span className="text-[15px] font-medium text-zinc-900">{row.label}</span>
                     <span className="mt-0.5 text-xs text-gray-500">{row.hint}</span>
                   </button>
                 ))}
@@ -895,13 +909,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
 
       {/* Preferences */}
       {showPreferences && (
-        <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
+        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
           {/* Top bar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white">
             <button onClick={() => setShowPreferences(false)} className="p-1">
               <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Preferences</h1>
+            <h1 className="text-lg font-semibold text-zinc-900">Preferences</h1>
             <div className="w-8" />
           </div>
 
@@ -910,19 +924,19 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             <div className="px-5 pt-6 pb-2">
               <div className="text-sm text-gray-400 mb-2">Transcription & summary</div>
             </div>
-            <div className="mx-5 bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden">
               <button
                 type="button"
                 onClick={() => {
                   setTranscribeLang((v) =>
-                    v === "Not set" ? "English" : v === "English" ? "简体中文" : "Not set"
+                    v === "Not set" ? "English" : v === "English" ? "Chinese (Simplified)" : "Not set"
                   )
-                  toast.success("已更新默认转写语言")
+                  toast.success("Default transcription language updated")
                 }}
-                className="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 text-left hover:bg-gray-50"
+                className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-4 text-left hover:bg-stone-50/95"
               >
                 <div>
-                  <div className="text-left text-[15px] text-gray-900">Transcription language</div>
+                  <div className="text-left text-[15px] text-zinc-900">Transcription language</div>
                   <div className="mt-1 text-left text-xs text-gray-400">Default language for overview, transcription, and summaries. You can override per recording.</div>
                 </div>
                 <div className="ml-4 flex shrink-0 items-center gap-1">
@@ -934,11 +948,11 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 type="button"
                 onClick={() => {
                   setAutoSpeaker((v) => !v)
-                  toast.success("已保存")
+                  toast.success("Saved")
                 }}
-                className="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 text-left hover:bg-gray-50"
+                className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-4 text-left hover:bg-stone-50/95"
               >
-                <span className="text-[15px] text-gray-900">Auto speaker labels</span>
+                <span className="text-[15px] text-zinc-900">Auto speaker labels</span>
                 <div className="flex items-center gap-1">
                   <span className="text-[15px] text-gray-400">{autoSpeaker ? "On" : "Off"}</span>
                   <ChevronRight className="h-5 w-5 text-gray-300" />
@@ -948,11 +962,11 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 type="button"
                 onClick={() => {
                   setCustomTerms((v) => !v)
-                  toast.success("已保存")
+                  toast.success("Saved")
                 }}
-                className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-gray-50"
+                className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-stone-50/95"
               >
-                <span className="text-[15px] text-gray-900">Custom vocabulary</span>
+                <span className="text-[15px] text-zinc-900">Custom vocabulary</span>
                 <div className="flex items-center gap-1">
                   <span className="text-[15px] text-gray-400">{customTerms ? "On" : "Off"}</span>
                   {!customTerms && <div className={cn("h-2 w-2 shrink-0 rounded-full", mx.warningDot)} />}
@@ -965,13 +979,17 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             <div className="px-5 pt-6 pb-2">
               <div className="text-sm text-gray-400 mb-2">Notifications</div>
             </div>
-            <div className="mx-5 bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden">
               <button
                 type="button"
-                onClick={() => toast.message("消息与提醒", { description: "将打开通知分类设置（演示）。" })}
-                className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-gray-50"
+                onClick={() =>
+                  toast.message("Messages & alerts", {
+                    description: "Would open notification categories (demo).",
+                  })
+                }
+                className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-stone-50/95"
               >
-                <span className="text-[15px] text-gray-900">Messages & alerts</span>
+                <span className="text-[15px] text-zinc-900">Messages & alerts</span>
                 <ChevronRight className="h-5 w-5 text-gray-300" />
               </button>
             </div>
@@ -980,17 +998,17 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             <div className="px-5 pt-6 pb-2">
               <div className="text-sm text-gray-400 mb-2">Security</div>
             </div>
-            <div className="mx-5 mb-6 overflow-hidden rounded-xl border border-gray-100 bg-white">
+            <div className="mx-5 mb-6 overflow-hidden rounded-xl border border-stone-100/85 bg-white">
               <button
                 type="button"
                 onClick={() => {
                   setAppLock((v) => !v)
-                  toast.success("已保存")
+                  toast.success("Saved")
                 }}
-                className="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 text-left hover:bg-gray-50"
+                className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-4 text-left hover:bg-stone-50/95"
               >
                 <div>
-                  <div className="text-left text-[15px] text-gray-900">App lock</div>
+                  <div className="text-left text-[15px] text-zinc-900">App lock</div>
                   <div className="mt-1 text-left text-xs text-gray-400">Unlock with Face ID, Touch ID, or device passcode</div>
                 </div>
                 <div className="ml-4 flex shrink-0 items-center gap-1">
@@ -1000,13 +1018,17 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               </button>
               <div className="flex w-full items-center justify-between px-4 py-4">
                 <div className="flex-1">
-                  <div className="text-left text-[15px] text-gray-900">Help improve AI</div>
+                  <div className="text-left text-[15px] text-zinc-900">Help improve AI</div>
                   <div className="mt-1 text-left text-xs text-gray-400">
                     Share limited diagnostics to improve transcription and summaries while protecting privacy.
                     <button
                       type="button"
                       className={cn("ml-1 underline underline-offset-2 decoration-slate-300", mx.citationLink)}
-                      onClick={() => toast.message("数据说明", { description: "仅上传匿名诊断信息（演示）。" })}
+                      onClick={() =>
+                        toast.message("About the data", {
+                          description: "Only anonymous diagnostics are uploaded (demo).",
+                        })
+                      }
                     >
                       Learn more
                     </button>
@@ -1032,8 +1054,8 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
 
       {/* Private cloud sync */}
       {showCloudSync && (
-        <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center px-4 py-3 bg-white border-b border-gray-100">
+        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center px-4 py-3 bg-white border-b border-stone-100/85">
             <button onClick={() => setShowCloudSync(false)} className="p-1">
               <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
             </button>
@@ -1046,7 +1068,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Private cloud sync</h1>
+              <h1 className="text-2xl font-bold text-zinc-900 mb-4">Private cloud sync</h1>
               <p className="text-gray-500 text-center leading-relaxed">
                 A secure space for your data. When enabled:<br/>
                 1. Automatic backups help prevent data loss<br/>
@@ -1055,9 +1077,9 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             </div>
 
             <div className="px-5 space-y-4">
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-                  <span className="text-[15px] text-gray-900">Enable private cloud sync</span>
+              <div className="bg-white rounded-xl border border-stone-100/85 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-4 border-b border-stone-100/85">
+                  <span className="text-[15px] text-zinc-900">Enable private cloud sync</span>
                   <button
                     onClick={() => setCloudSyncEnabled(!cloudSyncEnabled)}
                     className={cn(
@@ -1073,7 +1095,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 </div>
                 <div className="px-4 py-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[15px] text-gray-900">Sync on Wi‑Fi only</span>
+                    <span className="text-[15px] text-zinc-900">Sync on Wi‑Fi only</span>
                     <button
                       onClick={() => setWifiOnlySync(!wifiOnlySync)}
                       className={cn(
@@ -1091,13 +1113,17 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="bg-white rounded-xl border border-stone-100/85 overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => toast.message("存储管理", { description: "当前云端占用 16.62 MB（演示）。" })}
-                  className="flex w-full items-center justify-between px-4 py-4 border-b border-gray-100"
+                  onClick={() =>
+                    toast.message("Storage", {
+                      description: "Cloud usage is 16.62 MB (demo).",
+                    })
+                  }
+                  className="flex w-full items-center justify-between px-4 py-4 border-b border-stone-100/85"
                 >
-                  <span className="text-[15px] text-gray-900">Manage storage</span>
+                  <span className="text-[15px] text-zinc-900">Manage storage</span>
                   <div className="flex items-center gap-1">
                     <span className="text-[15px] text-gray-400">16.62 MB</span>
                     <ChevronRight className="w-5 h-5 text-gray-300" />
@@ -1106,13 +1132,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 <button
                   type="button"
                   onClick={() =>
-                    toast.warning("删除云端录音？", {
-                      description: "演示：未真正删除。正式版将二次确认。",
+                    toast.warning("Delete cloud recordings?", {
+                      description: "Demo: nothing was deleted. Production will ask again.",
                     })
                   }
                   className="flex w-full items-center justify-between px-4 py-4"
                 >
-                  <span className="text-[15px] text-gray-900">Delete cloud recordings</span>
+                  <span className="text-[15px] text-zinc-900">Delete cloud recordings</span>
                   <ChevronRight className="w-5 h-5 text-gray-300" />
                 </button>
               </div>
@@ -1123,12 +1149,12 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
 
       {/* Personalization */}
       {showPersonalization && (
-        <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white">
+        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white">
             <button onClick={() => setShowPersonalization(false)} className="p-1">
               <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Personalization</h1>
+            <h1 className="text-lg font-semibold text-zinc-900">Personalization</h1>
             <div className="w-8" />
           </div>
 
@@ -1139,15 +1165,15 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 setShowPersonalization(false)
                 setShowProfile(true)
               }}
-              className="w-full flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100"
+              className="w-full flex items-center justify-between px-5 py-4 bg-white border-b border-stone-100/85"
             >
-              <span className="text-[15px] text-gray-900">Profile</span>
+              <span className="text-[15px] text-zinc-900">Profile</span>
               <ChevronRight className="w-5 h-5 text-gray-300" />
             </button>
 
             {/* Content focus */}
-            <div className="px-5 pt-6 pb-4 bg-white border-b border-gray-100">
-              <h3 className="text-[15px] font-medium text-gray-900 mb-4">Focus areas</h3>
+            <div className="px-5 pt-6 pb-4 bg-white border-b border-stone-100/85">
+              <h3 className="text-[15px] font-medium text-zinc-900 mb-4">Focus areas</h3>
               <input
                 type="text"
                 placeholder="What should outputs emphasize?"
@@ -1158,7 +1184,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   <button
                     key={tag}
                     type="button"
-                    onClick={() => toast.success("已加入重点", { description: tag })}
+                    onClick={() => toast.success("Focus area saved", { description: tag })}
                     className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
                   >
                     {tag}
@@ -1168,8 +1194,8 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             </div>
 
             {/* Custom instructions */}
-            <div className="px-5 pt-6 pb-4 bg-white border-b border-gray-100">
-              <h3 className="text-[15px] font-medium text-gray-900 mb-4">Custom instructions</h3>
+            <div className="px-5 pt-6 pb-4 bg-white border-b border-stone-100/85">
+              <h3 className="text-[15px] font-medium text-zinc-900 mb-4">Custom instructions</h3>
               <input
                 type="text"
                 placeholder="Tone and style for explanations?"
@@ -1180,7 +1206,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   <button
                     key={tag}
                     type="button"
-                    onClick={() => toast.success("已应用风格提示", { description: tag })}
+                    onClick={() => toast.success("Style hint applied", { description: tag })}
                     className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
                   >
                     {tag}
@@ -1193,10 +1219,10 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             <div className="px-5 pt-6 pb-2">
               <div className="text-sm text-gray-400 mb-2">Memory</div>
             </div>
-            <div className="mx-5 bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
-              <div className="px-4 py-4 border-b border-gray-100">
+            <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden mb-6">
+              <div className="px-4 py-4 border-b border-stone-100/85">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[15px] text-gray-900">Use memory</span>
+                  <span className="text-[15px] text-zinc-900">Use memory</span>
                   <button
                     onClick={() => setUseMemory(!useMemory)}
                     className={cn(
@@ -1219,7 +1245,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               </div>
               <button className="w-full flex items-center justify-between px-4 py-4">
                 <div>
-                  <div className="text-[15px] text-gray-900 text-left">Manage memory</div>
+                  <div className="text-[15px] text-zinc-900 text-left">Manage memory</div>
                   <div className="text-xs text-gray-400 mt-1 text-left">View and edit saved context</div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-300" />
@@ -1231,8 +1257,8 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
 
       {/* Credits & plan purchase */}
       {showCreditsPlans && (
-        <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white shrink-0">
+        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white shrink-0">
             <button
               type="button"
               onClick={() => setShowCreditsPlans(false)}
@@ -1241,7 +1267,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             >
               <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Credits & plans</h1>
+            <h1 className="text-lg font-semibold text-zinc-900">Credits & plans</h1>
             <div className="w-8" />
           </div>
 
@@ -1267,7 +1293,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             </div>
 
             <div className="px-5 mt-6 mb-2">
-              <h2 className="text-sm font-semibold text-gray-900">Buy more credits</h2>
+              <h2 className="text-sm font-semibold text-zinc-900">Buy more credits</h2>
               <p className="text-xs text-gray-500 mt-1">
                 One-time packs. Credits apply to transcription, AI summaries, and agents.
               </p>
@@ -1279,13 +1305,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   key={plan.id}
                   className={cn(
                     "rounded-2xl border bg-white p-4 shadow-sm",
-                    plan.highlight ? mx.commercePopularRing : "border-gray-100"
+                    plan.highlight ? mx.commercePopularRing : "border-stone-100/85"
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900">{plan.name}</span>
+                        <span className="font-semibold text-zinc-900">{plan.name}</span>
                         {plan.highlight && (
                           <span
                             className={cn(
@@ -1303,7 +1329,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-lg font-bold text-gray-900">{plan.price}</div>
+                      <div className="text-lg font-bold text-zinc-900">{plan.price}</div>
                     </div>
                   </div>
                   <button
@@ -1329,22 +1355,24 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
 
       {/* Profile screen */}
       {showProfile && (
-        <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white">
+        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white">
             <button onClick={() => setShowProfile(false)} className="p-1">
               <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Profile</h1>
+            <h1 className="text-lg font-semibold text-zinc-900">Profile</h1>
             <div className="w-8" />
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <div className="px-5 py-4 bg-white border-b border-gray-100">
+            <div className="px-5 py-4 bg-white border-b border-stone-100/85">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[15px] text-gray-900">Profile</span>
+                <span className="text-[15px] text-zinc-900">Profile</span>
                 <button
                   type="button"
-                  onClick={() => toast.message("编辑资料", { description: "将打开资料表单（演示）。" })}
+                  onClick={() =>
+                    toast.message("Edit profile", { description: "Would open the profile form (demo)." })
+                  }
                   className="flex items-center gap-1 text-gray-500"
                 >
                   <span className="text-sm">Edit</span>
@@ -1354,29 +1382,29 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               <p className="text-xs text-gray-400">Tap Edit to update your work context</p>
             </div>
 
-            <div className="mx-5 mt-4 bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="px-4 py-4 border-b border-gray-100">
+            <div className="mx-5 mt-4 bg-white rounded-xl border border-stone-100/85 overflow-hidden">
+              <div className="px-4 py-4 border-b border-stone-100/85">
                 <div className="text-sm text-gray-400 mb-1">Role</div>
-                <div className="text-[15px] font-medium text-gray-900">Strategy / Ops / Data</div>
+                <div className="text-[15px] font-medium text-zinc-900">Strategy / Ops / Data</div>
               </div>
-              <div className="px-4 py-4 border-b border-gray-100">
+              <div className="px-4 py-4 border-b border-stone-100/85">
                 <div className="text-sm text-gray-400 mb-1">Industry</div>
-                <div className="text-[15px] font-medium text-gray-900">AI / Technology</div>
+                <div className="text-[15px] font-medium text-zinc-900">AI / Technology</div>
               </div>
-              <div className="px-4 py-4 border-b border-gray-100">
+              <div className="px-4 py-4 border-b border-stone-100/85">
                 <div className="text-sm text-gray-400 mb-1">Level</div>
-                <div className="text-[15px] font-medium text-gray-900">Manager / Lead</div>
+                <div className="text-[15px] font-medium text-zinc-900">Manager / Lead</div>
               </div>
               <div className="px-4 py-4">
                 <div className="text-sm text-gray-400 mb-1">Primary use</div>
-                <div className="text-[15px] font-medium text-gray-900">Personal</div>
+                <div className="text-[15px] font-medium text-zinc-900">Personal</div>
               </div>
             </div>
 
             <div className="px-5 pt-6 pb-2">
               <div className="text-sm text-gray-400 mb-2">Additional notes</div>
             </div>
-            <div className="mx-5 bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
+            <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden mb-6">
               <textarea
                 placeholder="Anything else we should know?"
                 rows={4}
@@ -1389,8 +1417,8 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
       )}
 
       {personalizedFeed && (
-        <div className="absolute inset-0 z-[65] bg-gray-50 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center px-4 py-3 border-b border-gray-100 bg-white shrink-0">
+        <div className="absolute inset-0 z-[65] bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center px-4 py-3 border-b border-stone-100/85 bg-white shrink-0">
             <div className="w-10 flex justify-start">
               <button
                 type="button"
@@ -1400,7 +1428,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                 <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
               </button>
             </div>
-            <h1 className="flex-1 text-center text-lg font-semibold text-gray-900 truncate px-2">
+            <h1 className="flex-1 text-center text-lg font-semibold text-zinc-900 truncate px-2">
               {personalizedFeed.type === "daily" ? "Daily review" : "AI insights"}
             </h1>
             <div className="w-10 flex justify-end">
@@ -1424,33 +1452,16 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-4">
-            <p className="text-xs font-medium text-gray-500 mb-3 pl-2 border-l-2 border-slate-400/80">
+            <p className="mb-3 border-l-2 border-sky-400/70 pl-2 text-xs font-medium text-sky-900/85 dark:text-sky-100/90">
               AI-generated · <span className={mx.citationMuted}>Personalized</span>
             </p>
-            <div className={cn("rounded-2xl p-4 shadow-sm bg-white", mx.citationBorder)}>
-              <p className="text-[15px] text-gray-700 leading-relaxed">
+            <div className={cn("rounded-2xl border border-sky-100/90 bg-white p-4 shadow-sm dark:border-sky-900/35 dark:bg-zinc-900")}>
+              <p className="text-[15px] leading-relaxed text-gray-700 dark:text-zinc-300">
                 {personalizedFeed.type === "daily"
                   ? PERSONALIZED_DAILY_REVIEW_LATEST
                   : PERSONALIZED_AI_INSIGHTS_LATEST}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const body =
-                  personalizedFeed.type === "daily"
-                    ? PERSONALIZED_DAILY_REVIEW_LATEST
-                    : PERSONALIZED_AI_INSIGHTS_LATEST
-                setInsightShareSheet({
-                  title: personalizedFeed.type === "daily" ? "Daily review" : "AI insights",
-                  preview: body.slice(0, 200) + (body.length > 200 ? "…" : ""),
-                })
-              }}
-              className="mt-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 bg-white text-gray-800 font-medium text-sm hover:bg-gray-50"
-            >
-              <Share2 className="w-4 h-4" />
-              Share
-            </button>
           </div>
         </div>
       )}
@@ -1463,13 +1474,13 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
           const sharePreview = heatmapDaySharePreview(d.date, d.value)
           const openDayShare = () => setInsightShareSheet({ title, preview: sharePreview })
           return (
-            <div className="absolute inset-0 z-[60] bg-gray-50 flex flex-col animate-in fade-in duration-150">
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white shrink-0">
+            <div className="absolute inset-0 z-[60] bg-stone-50/95 flex flex-col animate-in fade-in duration-150">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100/85 bg-white shrink-0">
                 <button type="button" onClick={() => setHeatmapDayDetail(null)} className="p-1 rounded-full hover:bg-gray-100">
                   <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
                 </button>
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-lg font-semibold text-gray-900 truncate">{title}</h1>
+                  <h1 className="text-lg font-semibold text-zinc-900 truncate">{title}</h1>
                   <p className="text-xs text-gray-500">
                     Activity {d.value === 0 ? "none" : `level ${d.value}`}
                   </p>
@@ -1485,8 +1496,8 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               </div>
 
               <div className="flex-1 overflow-y-auto px-5 py-4 pb-8">
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80 flex items-center justify-between gap-2">
+                <div className="bg-white rounded-2xl border border-stone-100/85 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-stone-100/85 bg-stone-50/95/80 flex items-center justify-between gap-2">
                     <span className="text-xs font-medium text-gray-600">This day · AI summary</span>
                     <button
                       type="button"
@@ -1498,14 +1509,14 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                     </button>
                   </div>
                   <div className="p-4 space-y-4">
-                    <p className="text-[15px] text-gray-900 leading-relaxed font-medium">
+                    <p className="text-[15px] text-zinc-900 leading-relaxed font-medium">
                       {getDayLeadLine(d.date, d.value)}
                     </p>
                     <p className="text-[15px] text-gray-700 leading-relaxed">
                       {getDailyReviewForDay(d.date, d.value)}
                     </p>
                     {uploads.length > 0 && (
-                      <div className="pt-2 border-t border-gray-100">
+                      <div className="pt-2 border-t border-stone-100/85">
                         <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-3">
                           Recorded
                         </p>
@@ -1515,11 +1526,11 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                               <button
                                 type="button"
                                 onClick={() =>
-                                  toast.message("打开录音", {
+                                  toast.message("Open recording", {
                                     description: `${item.title} · ${item.time}`,
                                   })
                                 }
-                                className="flex w-full gap-3 rounded-xl bg-gray-50 p-3 text-left transition-colors hover:bg-gray-100/80"
+                                className="flex w-full gap-3 rounded-xl bg-stone-50/95 p-3 text-left transition-colors hover:bg-gray-100/80"
                               >
                                 <div
                                   className={cn(
@@ -1530,7 +1541,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                                   <Mic className="w-4 h-4 text-slate-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-gray-900 text-sm">{item.title}</div>
+                                  <div className="font-medium text-zinc-900 text-sm">{item.title}</div>
                                   <div className="text-xs text-gray-500 mt-0.5">
                                     {item.time} · {item.source}
                                   </div>
@@ -1643,7 +1654,7 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
             <div className="px-5 pb-2">
-              <h3 className="text-lg font-semibold text-gray-900">Share</h3>
+              <h3 className="text-lg font-semibold text-zinc-900">Share</h3>
               <p className="text-sm font-medium text-gray-800 mt-1">{insightShareSheet.title}</p>
               <p className="text-sm text-gray-500 mt-2 line-clamp-4">{insightShareSheet.preview}</p>
             </div>

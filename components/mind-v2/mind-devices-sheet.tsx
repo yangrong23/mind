@@ -109,7 +109,9 @@ export function MindDevicesSheet({
               <button
                 type="button"
                 onClick={() => {
-                  toast.success("已开始同步", { description: "录音与元数据将上传到本机库（演示）。" })
+                  toast.success("Sync started", {
+                    description: "Recordings and metadata upload to this library (demo).",
+                  })
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-500 py-3 font-medium text-white hover:bg-zinc-600"
               >

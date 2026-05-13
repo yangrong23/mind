@@ -32,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-gradient-to-br from-stone-100 to-stone-200/90">
-      <body className="font-sans antialiased min-h-screen">
+    <html lang="en" suppressHydrationWarning className="min-h-screen bg-background">
+      <body className="font-sans antialiased min-h-screen bg-background text-foreground">
         <Providers>
           {children}
           {process.env.NODE_ENV === 'production' && <Analytics />}

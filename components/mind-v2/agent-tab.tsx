@@ -3,8 +3,9 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
-import { MOCK_KNOWLEDGE_BASES } from "@/components/mind-v2/knowledge-tab"
+import { mx } from "@/lib/medrix-design-tokens"
+import { MOCK_KNOWLEDGE_BASES, type KnowledgeBase } from "@/lib/mock-knowledge-bases"
+import { LibraryPlazaView } from "@/components/mind-v2/library-plaza-view"
 import { ContentFactoryModals, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import {
   normalizeStudioFromAgentHandoff,
@@ -16,21 +17,24 @@ import {
   Plus,
   ChevronRight,
   Sparkles,
-  Send,
-  Mic,
+  ArrowUp,
   Volume2,
   Eye,
-  Compass,
-  Factory,
+  LayoutDashboard,
+  LayoutGrid,
+  Store,
+  Atom,
+  Orbit,
+  FileStack,
 } from "lucide-react"
 
 const STUDIO_OUTPUTS: { id: FactoryModalKind; label: string; sub: string }[] = [
-  { id: "report", label: "Report", sub: "Structured write-up" },
-  { id: "audio", label: "Audio overview", sub: "Narrated recap" },
-  { id: "mindmap", label: "Mind map", sub: "Structure from sources" },
+  { id: "report", label: "Report", sub: "Structured doc" },
+  { id: "audio", label: "Audio", sub: "Narrated recap" },
+  { id: "mindmap", label: "Mind map", sub: "From sources" },
   { id: "flashcards", label: "Flashcards", sub: "Study deck" },
-  { id: "quiz", label: "Quiz", sub: "Check understanding" },
-  { id: "slides", label: "Slides", sub: "Outline to deck" },
+  { id: "quiz", label: "Quiz", sub: "Quick check" },
+  { id: "slides", label: "Slides", sub: "Outline → deck" },
   { id: "infographic", label: "Infographic", sub: "Visual summary" },
 ]
 
@@ -76,7 +80,7 @@ interface AgentTabProps {
 }
 
 function libraryLinkSummary(mode: StudioLibraryLinkMode, pickedKbIds: number[]): string {
-  if (mode === "all") return "All libraries"
+  if (mode === "all") return "All"
   if (mode === "auto") return "Auto"
   if (pickedKbIds.length === 0) return "Auto"
   const rows = pickedKbIds
@@ -97,8 +101,16 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
   const [showStudioMenu, setShowStudioMenu] = useState(false)
   const [agentHomeDraft, setAgentHomeDraft] = useState("")
   const [agentStudioSession, setAgentStudioSession] = useState<StudioFromAgentHandoff | null>(null)
+  const [libraryPlazaFromAgent, setLibraryPlazaFromAgent] = useState(false)
 
   const linkSummary = libraryLinkSummary(libraryLinkMode, pickedKbIds)
+
+  function handlePlazaPick(kb: KnowledgeBase) {
+    setLibraryLinkMode("pick")
+    setPickedKbIds((prev) => (prev.includes(kb.id) ? prev : [...prev, kb.id]))
+    toast.success("Library linked", { description: kb.name })
+    setLibraryPlazaFromAgent(false)
+  }
 
   function openStudioWithKind(factoryKind: FactoryModalKind) {
     const mode =
@@ -112,24 +124,24 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
   function submitAgentHomePrompt() {
     const q = agentHomeDraft.trim()
     if (!q) {
-      toast.error("请先描述任务或问题")
+      toast.error("Add a prompt first")
       return
     }
-    toast.success("已排队处理", { description: q.length > 100 ? `${q.slice(0, 100)}…` : q })
+    toast.success("Queued", { description: q.length > 100 ? `${q.slice(0, 100)}…` : q })
     setAgentHomeDraft("")
   }
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-[#f5f5f4] text-zinc-800">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#fafaf9] text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
       {/* Left drawer */}
       <div 
         className={cn(
-          "absolute inset-y-0 left-0 w-[75%] bg-white z-40 transition-transform duration-300 flex flex-col",
+          "absolute inset-y-0 left-0 z-40 flex w-[75%] flex-col bg-white transition-transform duration-300 dark:bg-zinc-900",
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Top actions */}
-        <div className="p-4 border-b border-gray-100">
+        <div className="border-b border-gray-100 p-4 dark:border-zinc-800">
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -148,7 +160,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-stone-100 py-3 text-sm font-medium text-zinc-800 hover:bg-stone-200/90"
             >
-              <Compass className="h-4 w-4" />
+              <LayoutDashboard className="h-4 w-4" strokeWidth={1.75} aria-hidden />
               Discover
             </button>
           </div>
@@ -164,25 +176,25 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
                 onAgentChat(agent)
                 setDrawerOpen(false)
               }}
-              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50"
+              className="flex w-full items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/60"
             >
               <span className="text-2xl">{agent.avatar}</span>
               <div className="flex-1 text-left">
-                <div className="text-[15px] text-gray-900">{agent.name}</div>
-                <div className="text-xs text-gray-400">{agent.description}</div>
+                <div className="text-[15px] text-gray-900 dark:text-zinc-100">{agent.name}</div>
+                <div className="text-xs text-gray-400 dark:text-zinc-500">{agent.description}</div>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-300" />
             </button>
           ))}
 
-          <div className="border-t border-gray-100 mt-4 pt-4 px-5">
+          <div className="mt-4 border-t border-gray-100 px-5 pt-4 dark:border-zinc-800">
             <div className="mb-3 text-sm text-zinc-400">Recent chats</div>
             {chatHistory.map((group) => (
               <div key={group.date} className="mb-4">
                 <div className="text-sm text-gray-400 mb-2">{group.date}</div>
                 {group.items.map((item) => (
                   <div key={item.id} className="mb-3">
-                    <div className="flex items-center gap-2 text-[15px] text-gray-900">
+                    <div className="flex items-center gap-2 text-[15px] text-gray-900 dark:text-zinc-100">
                       <span>{item.icon}</span>
                       <span className="truncate">{item.title}</span>
                     </div>
@@ -203,7 +215,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
             ))}
           </div>
 
-          <div className="px-5 py-4 text-center text-sm text-zinc-400">History is kept for 90 days</div>
+          <div className="px-5 py-4 text-center text-xs text-zinc-400">90-day history</div>
         </div>
       </div>
 
@@ -215,116 +227,156 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
         />
       )}
 
-      {/* Main surface */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-3">
-        <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="flex h-10 w-10 flex-col items-center justify-center gap-1 rounded-xl border border-stone-200 bg-white shadow-sm"
-            aria-label="Open menu"
-          >
-            <div className="h-0.5 w-5 rounded-full bg-zinc-500" />
-            <div className="h-0.5 w-5 rounded-full bg-zinc-500" />
-          </button>
-          <div className="max-w-[min(72%,20rem)] text-right">
-            <div className="text-[16px] font-semibold tracking-tight text-zinc-900">Minder</div>
-            <p className="mt-1 text-[11.5px] leading-snug text-zinc-500">
-              Go deep on what you saved—<span className="text-zinc-600">agents reason on it; Studio ships the output.</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="flex min-h-0 flex-1 flex-col items-stretch justify-center gap-4 py-2">
-          <p className="shrink-0 px-0.5 text-center text-[13px] leading-relaxed text-zinc-500">
-            Link <span className="font-medium text-zinc-700">libraries</span> so every answer traces back to a source. Open{" "}
-            <span className="font-medium text-zinc-700">agents</span> from the menu for focused threads, or{" "}
-            <span className="font-medium text-zinc-700">Studio</span> in the bar for recaps, decks, and other deliverables.
-          </p>
-
-          <div className="mx-auto w-full max-w-md shrink-0 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
-          <input
-            type="text"
-            value={agentHomeDraft}
-            onChange={(e) => setAgentHomeDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                submitAgentHomePrompt()
-              }
-            }}
-            placeholder="Describe a topic, task, or instruction…"
-            className="mb-3 w-full bg-transparent text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
+      {/* Main surface — centered composer, neutral backdrop */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center pt-4">
+          <div
+            className="aspect-[4/3] w-[min(100%,380px)] max-h-[48vh] bg-[radial-gradient(ellipse_70%_58%_at_50%_45%,rgba(24,24,27,0.06),transparent_68%)] dark:bg-[radial-gradient(ellipse_70%_58%_at_50%_45%,rgba(255,255,255,0.05),transparent_68%)]"
+            aria-hidden
           />
-          <div className="flex flex-wrap items-center gap-2">
+        </div>
+
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+          <div className="absolute left-3 top-2 z-20 sm:left-4">
             <button
               type="button"
-              onClick={() => {
-                setShowStudioMenu(false)
-                setShowKBSelect(true)
-              }}
-              className="flex max-w-[min(52%,11rem)] flex-col items-start gap-0 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-left hover:bg-stone-100"
+              onClick={() => setDrawerOpen(true)}
+              className="flex h-11 w-11 flex-col items-center justify-center gap-[5px] rounded-2xl text-zinc-500 transition-all duration-300 hover:bg-black/[0.04] hover:text-zinc-800 active:scale-95 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"
+              aria-label="Open menu"
             >
-              <span className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-700">
-                <Plus className="h-3.5 w-3.5 shrink-0" />
-                Libraries
-              </span>
-              <span className="w-full truncate pl-5 text-[10px] font-normal leading-tight text-zinc-500">
-                {linkSummary}
-              </span>
-            </button>
-            <div className="relative min-w-0 flex-1 sm:flex-initial">
-              <button
-                type="button"
-                onClick={() => setShowStudioMenu((v) => !v)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-[12px] font-medium text-zinc-700 hover:bg-stone-100 sm:w-auto"
-              >
-                <Factory className="h-3.5 w-3.5 shrink-0" />
-                Studio
-              </button>
-              {showStudioMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowStudioMenu(false)} />
-                  <div className="absolute bottom-full left-0 z-50 mb-2 w-[min(100vw-2rem,18rem)] rounded-xl border border-stone-200 bg-white py-1.5 shadow-lg">
-                    <p className="px-3 pb-1 pt-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
-                      Content factory
-                    </p>
-                    {STUDIO_OUTPUTS.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => {
-                          setShowStudioMenu(false)
-                          openStudioWithKind(item.id)
-                        }}
-                        className="w-full px-3 py-2.5 text-left hover:bg-stone-50"
-                      >
-                        <span className="block text-[14px] font-medium text-zinc-900">{item.label}</span>
-                        <span className="block text-[11px] text-zinc-500">{item.sub}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => toast.message("语音输入", { description: "按住说话（演示）。" })}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-100 text-zinc-600 hover:bg-stone-200"
-              aria-label="Voice input"
-            >
-              <Mic className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={submitAgentHomePrompt}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-md shadow-sky-600/25 hover:bg-sky-700"
-              aria-label="Send"
-            >
-              <Send className="h-5 w-5" />
+              <div className="h-[2px] w-[18px] rounded-full bg-current opacity-80" />
+              <div className="h-[2px] w-[18px] rounded-full bg-current opacity-80" />
             </button>
           </div>
-        </div>
+
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-8 pt-12">
+            <div className="flex w-full max-w-md flex-col items-stretch">
+              <div className="mb-7 flex flex-col items-center">
+                <div className="flex items-end gap-2.5">
+                  <img
+                    src="/minder-agent-mark.png"
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="h-10 w-10 shrink-0 object-contain drop-shadow-sm dark:opacity-90"
+                  />
+                  <div className="flex flex-col pb-0.5">
+                    <span className="text-[24px] font-semibold leading-none tracking-tight text-zinc-900 lowercase dark:text-zinc-50">
+                      minder
+                    </span>
+                    <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.42em] text-zinc-400 dark:text-zinc-500">
+                      copilot
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1.75rem] bg-white/92 p-4 shadow-[0_16px_48px_-20px_rgba(15,23,42,0.14),0_2px_12px_-4px_rgba(15,23,42,0.06)] backdrop-blur-md dark:bg-zinc-900/72 dark:shadow-[0_20px_50px_-24px_rgba(0,0,0,0.55)]">
+                <input
+                  type="text"
+                  value={agentHomeDraft}
+                  onChange={(e) => setAgentHomeDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      submitAgentHomePrompt()
+                    }
+                  }}
+                  placeholder="Message or hold to speak"
+                  className="w-full bg-transparent text-[16px] leading-relaxed text-zinc-900 placeholder:text-zinc-400/90 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                />
+                <div className="mt-3.5 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowStudioMenu(false)
+                        setShowKBSelect(true)
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-sky-50 hover:text-sky-700 active:scale-95 dark:text-zinc-400 dark:hover:bg-sky-950/40 dark:hover:text-sky-300"
+                      aria-label="Library scope — choose linked knowledge bases"
+                      title="All, Auto, or pick libraries that feed this chat"
+                    >
+                      <Atom className="h-5 w-5" strokeWidth={1.65} aria-hidden />
+                    </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowStudioMenu((v) => !v)}
+                        className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 active:scale-95 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                        aria-label="Studio"
+                        aria-expanded={showStudioMenu}
+                      >
+                        <LayoutGrid className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                      </button>
+                      {showStudioMenu && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowStudioMenu(false)} />
+                          <div className="absolute bottom-full left-0 z-50 mb-2 w-[min(100vw-2rem,18rem)] overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/98 py-1 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-lg dark:border-zinc-700 dark:bg-zinc-900/98">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowStudioMenu(false)
+                                toast.message("Attach files", { description: "Demo — pick a file." })
+                              }}
+                              className="flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/90"
+                            >
+                              <FileStack className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-[14px] font-medium text-zinc-900 dark:text-zinc-100">Attach files</span>
+                                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">Upload documents to this thread (demo)</span>
+                              </span>
+                            </button>
+                            <div className="mx-3 border-t border-zinc-100 dark:border-zinc-800" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowStudioMenu(false)
+                                setShowKBSelect(true)
+                              }}
+                              className="flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/90"
+                            >
+                              <Orbit className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" strokeWidth={2} aria-hidden />
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-[14px] font-medium text-zinc-900 dark:text-zinc-100">Libraries</span>
+                                <span className="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">{linkSummary}</span>
+                              </span>
+                            </button>
+                            <div className="mx-3 border-t border-zinc-100 dark:border-zinc-800" />
+                            <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                              Outputs
+                            </p>
+                            {STUDIO_OUTPUTS.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  setShowStudioMenu(false)
+                                  openStudioWithKind(item.id)
+                                }}
+                                className="w-full px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/90"
+                              >
+                                <span className="block text-[14px] font-medium text-zinc-900 dark:text-zinc-100">{item.label}</span>
+                                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">{item.sub}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={submitAgentHomePrompt}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white transition-colors hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    aria-label="Send"
+                  >
+                    <ArrowUp className="h-5 w-5" strokeWidth={2.15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -354,112 +406,144 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
         />
       )}
 
-      {/* Library picker modal */}
+      {/* Library scope — one scrollable sheet */}
       {showKBSelect && (
-        <div className="absolute inset-0 z-50">
-          <div 
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowKBSelect(false)}
+        <div className="absolute inset-0 z-50 flex min-h-0 flex-col">
+          <button
+            type="button"
+            className="min-h-0 flex-1 bg-black/40"
+            aria-label="Close"
+            onClick={() => {
+              setLibraryPlazaFromAgent(false)
+              setShowKBSelect(false)
+            }}
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl animate-in slide-in-from-bottom duration-300">
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+          <div className="flex max-h-[90vh] w-full shrink-0 flex-col overflow-hidden rounded-t-3xl bg-white shadow-[0_-12px_48px_-12px_rgba(0,0,0,0.2)] dark:bg-zinc-900">
+            <div className="flex shrink-0 justify-center pb-2 pt-3">
+              <div className="h-1 w-10 rounded-full bg-stone-200 dark:bg-zinc-600" />
             </div>
-            <div className="px-5 pb-3">
-              <h3 className="text-lg font-semibold text-gray-900">Link libraries</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Studio and replies use this scope. Pick <span className="font-medium text-zinc-700">All</span>, let Mind
-                choose with <span className="font-medium text-zinc-700">Auto</span>, or shortlist libraries.
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-8 [scrollbar-gutter:stable]">
+              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Libraries</h3>
+              <p className="mt-1 text-[13px] leading-snug text-zinc-500 dark:text-zinc-400">
+                Scope for Studio and replies.
               </p>
-            </div>
-            <div className="px-5 pb-4 space-y-2">
+
               <button
                 type="button"
-                onClick={() => {
-                  setLibraryLinkMode("all")
-                  setPickedKbIds([])
-                }}
-                className={cn(
-                  "w-full rounded-xl border-2 px-3 py-2.5 text-left transition-colors",
-                  libraryLinkMode === "all"
-                    ? "border-zinc-500 bg-zinc-50"
-                    : "border-transparent bg-gray-50"
-                )}
+                onClick={() => setLibraryPlazaFromAgent(true)}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-sky-200/90 bg-sky-50/60 py-3 text-[14px] font-medium text-sky-900 shadow-sm shadow-sky-900/5 transition-colors hover:bg-sky-50 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-100 dark:hover:bg-sky-950/55"
               >
-                <div className="font-medium text-gray-900">All libraries</div>
-                <div className="text-xs text-gray-500">Use every linked base when generating</div>
+                <Store className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                Library plaza
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setLibraryLinkMode("auto")
-                  setPickedKbIds([])
-                }}
-                className={cn(
-                  "w-full rounded-xl border-2 px-3 py-2.5 text-left transition-colors",
-                  libraryLinkMode === "auto"
-                    ? "border-zinc-500 bg-zinc-50"
-                    : "border-transparent bg-gray-50"
-                )}
-              >
-                <div className="font-medium text-gray-900">Auto</div>
-                <div className="text-xs text-gray-500">Mind picks matching libraries per run</div>
-              </button>
-            </div>
-            <div className="px-5 pb-1 text-xs font-medium uppercase tracking-wide text-zinc-400">Or choose</div>
-            <div className="px-5 pb-6 max-h-52 overflow-y-auto">
-              {MOCK_KNOWLEDGE_BASES.map((kb) => {
-                const selected = pickedKbIds.includes(kb.id)
-                const KbIcon = knowledgeBaseIconForTitle(kb.name, kb.description)
-                return (
-                  <button
-                    key={kb.id}
-                    type="button"
-                    onClick={() => {
-                      setLibraryLinkMode("pick")
-                      setPickedKbIds((prev) =>
-                        prev.includes(kb.id) ? prev.filter((id) => id !== kb.id) : [...prev, kb.id]
-                      )
-                    }}
-                    className={cn(
-                      "mb-2 flex w-full items-center gap-3 rounded-xl p-3 transition-colors",
-                      selected ? "border-2 border-zinc-500 bg-zinc-50" : "border-2 border-transparent bg-gray-50"
-                    )}
-                  >
-                    <div
+
+              <div className="mt-5 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLibraryLinkMode("all")
+                    setPickedKbIds([])
+                  }}
+                  className={cn(
+                    "w-full rounded-xl border-2 px-3 py-2.5 text-left transition-colors",
+                    libraryLinkMode === "all"
+                      ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/50"
+                      : "border-transparent bg-sky-50/20 dark:bg-zinc-800/40"
+                  )}
+                >
+                  <div className="font-medium text-zinc-900 dark:text-zinc-100">All libraries</div>
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Use everything linked</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLibraryLinkMode("auto")
+                    setPickedKbIds([])
+                  }}
+                  className={cn(
+                    "w-full rounded-xl border-2 px-3 py-2.5 text-left transition-colors",
+                    libraryLinkMode === "auto"
+                      ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/50"
+                      : "border-transparent bg-sky-50/20 dark:bg-zinc-800/40"
+                  )}
+                >
+                  <div className="font-medium text-zinc-900 dark:text-zinc-100">Auto</div>
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Mind picks per run</div>
+                </button>
+              </div>
+
+              <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                Or choose
+              </p>
+              <div className="mt-2 space-y-2">
+                {MOCK_KNOWLEDGE_BASES.map((kb) => {
+                  const selected = pickedKbIds.includes(kb.id)
+                  return (
+                    <button
+                      key={kb.id}
+                      type="button"
+                      onClick={() => {
+                        setLibraryLinkMode("pick")
+                        setPickedKbIds((prev) =>
+                          prev.includes(kb.id) ? prev.filter((id) => id !== kb.id) : [...prev, kb.id]
+                        )
+                      }}
                       className={cn(
-                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br",
-                        kb.color
+                        "flex w-full items-center gap-3 rounded-xl p-3 transition-colors",
+                        selected
+                          ? "border-2 border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/45"
+                          : "border-2 border-transparent bg-sky-50/15 dark:bg-zinc-800/40"
                       )}
                     >
-                      <KbIcon className="h-5 w-5 text-white" strokeWidth={2} aria-hidden />
-                    </div>
-                    <div className="min-w-0 flex-1 text-left">
-                      <div className="font-medium text-gray-900">{kb.name}</div>
-                      <div className="truncate text-xs text-gray-500">
-                        {kb.count} items · {kb.description}
+                      <img
+                        src={kb.coverImage}
+                        alt=""
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
+                      />
+                      <div className="min-w-0 flex-1 text-left">
+                        <div className="font-medium text-zinc-900 dark:text-zinc-100">{kb.name}</div>
+                        <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                          {kb.count} items · {kb.description}
+                        </div>
                       </div>
-                    </div>
-                    {selected && (
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-500">
-                        <span className="text-sm text-white">✓</span>
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="px-5 pb-6">
+                      {selected && (
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white dark:bg-sky-500">
+                          <span className="text-sm">✓</span>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
               <button
                 type="button"
-                onClick={() => setShowKBSelect(false)}
-                className="w-full rounded-xl bg-gray-900 py-3 font-medium text-white"
+                onClick={() => {
+                  setLibraryPlazaFromAgent(false)
+                  setShowKBSelect(false)
+                }}
+                className={cn(
+                  "mt-8 w-full rounded-xl py-3 text-[15px] font-semibold text-white",
+                  mx.brandCta
+                )}
               >
                 Done
                 {libraryLinkMode === "pick" && pickedKbIds.length > 0 ? ` (${pickedKbIds.length})` : ""}
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {showKBSelect && libraryPlazaFromAgent && (
+        <div className="absolute inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-white dark:bg-zinc-950">
+          <LibraryPlazaView
+            onBack={() => setLibraryPlazaFromAgent(false)}
+            onPickLibrary={handlePlazaPick}
+            subtitle="Tap a library to add it to this chat’s knowledge scope."
+          />
         </div>
       )}
 
@@ -481,13 +565,13 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
   const [persona, setPersona] = useState("")
 
   return (
-    <div className="absolute inset-0 z-50 bg-gray-50 flex flex-col animate-in slide-in-from-bottom duration-200">
+    <div className="absolute inset-0 z-50 flex flex-col animate-in slide-in-from-bottom duration-200 bg-gray-50 dark:bg-zinc-950">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-        <button type="button" onClick={onClose} className="text-[15px] text-gray-600">
+      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+        <button type="button" onClick={onClose} className="text-[15px] text-gray-600 dark:text-zinc-400">
           Cancel
         </button>
-        <h1 className="text-lg font-semibold text-gray-900">New agent</h1>
+        <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">New agent</h1>
         <button type="button" className="text-[15px] font-medium text-sky-600">
           Save
         </button>
@@ -518,23 +602,23 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
         </div>
 
         {/* Name */}
-        <div className="mx-5 mb-4 bg-white rounded-xl p-4">
+        <div className="mx-5 mb-4 rounded-xl bg-white p-4 dark:bg-zinc-900">
           <div className="flex items-center gap-3">
-            <span className="text-[15px] font-medium text-gray-900">Name</span>
+            <span className="text-[15px] font-medium text-gray-900 dark:text-zinc-100">Name</span>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. English coach"
-              className="flex-1 text-[15px] text-gray-900 placeholder-gray-400 focus:outline-none"
+              className="flex-1 text-[15px] text-gray-900 placeholder-gray-400 focus:outline-none dark:bg-transparent dark:text-zinc-100 dark:placeholder:text-zinc-500"
             />
           </div>
         </div>
 
         {/* Instructions */}
-        <div className="mx-5 mb-4 bg-white rounded-xl p-4">
+        <div className="mx-5 mb-4 rounded-xl bg-white p-4 dark:bg-zinc-900">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[15px] font-medium text-gray-900">Instructions</span>
+            <span className="text-[15px] font-medium text-gray-900 dark:text-zinc-100">Instructions</span>
             <button type="button" className="flex items-center gap-1 text-sm text-sky-600">
               <Sparkles className="h-4 w-4" />
               Polish
@@ -545,31 +629,31 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
             onChange={(e) => setPersona(e.target.value)}
             placeholder="How should this agent sound and behave?"
             rows={4}
-            className="w-full text-[15px] text-gray-500 placeholder-gray-400 focus:outline-none resize-none leading-relaxed"
+            className="w-full resize-none text-[15px] leading-relaxed text-gray-500 placeholder-gray-400 focus:outline-none dark:bg-transparent dark:text-zinc-300 dark:placeholder:text-zinc-500"
           />
         </div>
 
         {/* Voice */}
-        <div className="mx-5 mb-4 bg-white rounded-xl">
+        <div className="mx-5 mb-4 rounded-xl bg-white dark:bg-zinc-900">
           <button className="w-full flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
                 <Volume2 className="w-5 h-5 text-zinc-700" />
               </div>
-              <span className="text-[15px] text-gray-900">Voice</span>
+              <span className="text-[15px] text-gray-900 dark:text-zinc-100">Voice</span>
             </div>
             <div className="flex items-center gap-2 text-gray-400">
               <span className="text-sm">Edit</span>
               <ChevronRight className="w-5 h-5" />
             </div>
           </button>
-          <div className="border-t border-gray-100" />
+          <div className="border-t border-gray-100 dark:border-zinc-800" />
           <button className="w-full flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
                 <Eye className="w-5 h-5 text-zinc-600" />
               </div>
-              <span className="text-[15px] text-gray-900">Public · anyone can chat</span>
+              <span className="text-[15px] text-gray-900 dark:text-zinc-100">Public · anyone can chat</span>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />
           </button>
@@ -587,9 +671,9 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
         <div className="mx-5 mb-8">
           <button 
             onClick={onExplore}
-            className="w-full flex items-center justify-center gap-2 py-4 bg-gray-100 rounded-xl text-gray-600 hover:bg-gray-200 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 py-4 text-gray-600 transition-colors hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
           >
-            <Compass className="w-5 h-5" />
+            <LayoutDashboard className="h-5 w-5" strokeWidth={1.75} aria-hidden />
             <span className="text-[15px] font-medium">Browse gallery</span>
           </button>
         </div>
@@ -617,17 +701,17 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
   }
 
   return (
-    <div className="absolute inset-0 z-50 bg-white flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="absolute inset-0 z-50 flex flex-col animate-in slide-in-from-right duration-200 bg-white dark:bg-zinc-950">
       {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-        <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
+      <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-zinc-800">
+        <button onClick={onClose} className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-zinc-800">
           <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
         </button>
-        <h1 className="text-lg font-semibold text-gray-900">Agent gallery</h1>
+        <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Gallery</h1>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-100">
+      <div className="border-b border-gray-100 dark:border-zinc-800">
         <div className="flex overflow-x-auto px-4 py-3 gap-6 scrollbar-hide">
           {tabs.map((tab) => (
             <button
@@ -636,8 +720,8 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
               className={cn(
                 "text-[15px] font-medium whitespace-nowrap pb-1 border-b-2 transition-colors",
                 activeTab === tab
-                  ? "text-gray-900 border-gray-900"
-                  : "text-gray-400 border-transparent"
+                  ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
+                  : "border-transparent text-gray-400 dark:text-zinc-500"
               )}
             >
               {tab}
@@ -651,7 +735,7 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
         {exploreAgents.map((agent) => (
           <div 
             key={agent.id}
-            className="flex items-start gap-3 px-5 py-4 border-b border-gray-50"
+            className="flex items-start gap-3 border-b border-gray-50 px-5 py-4 dark:border-zinc-800/80"
           >
             <img 
               src={agent.avatar} 
@@ -660,14 +744,14 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-gray-900">{agent.name}</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{agent.name}</h3>
                 {agent.isOfficial && (
                   <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
                     Official
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500 mb-1.5 line-clamp-2">{agent.description}</p>
+              <p className="mb-1.5 line-clamp-2 text-sm text-gray-500 dark:text-zinc-400">{agent.description}</p>
               <div className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
                 <span>{agent.chatCount}</span>
                 {agent.author && (
@@ -698,7 +782,7 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
       </div>
 
       {/* Bottom CTA */}
-      <div className="p-5 border-t border-gray-100">
+      <div className="border-t border-gray-100 p-5 dark:border-zinc-800">
         <button
           onClick={onCreate}
           className="w-full py-4 bg-zinc-500 text-white rounded-xl font-medium text-[15px] flex items-center justify-center gap-2"
@@ -748,29 +832,46 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        placeholder={entryHint ? "Ask something that needs depth in your library…" : "Message…"}
-        className="min-w-0 flex-1 px-4 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none"
+        placeholder={entryHint ? "Turn saved knowledge into an outcome…" : "Message…"}
+        className="min-w-0 flex-1 rounded-xl bg-zinc-100 px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300/60 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-600/50"
       />
-      <button type="button" className="p-2 hover:bg-gray-100 rounded-full" aria-label="Voice input" onClick={() => toast.message("语音输入", { description: "按住说话（演示）。" })}>
-        <Mic className="w-5 h-5 text-gray-500" />
+      <button
+        type="button"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        aria-label="Upload file"
+        onClick={() => toast.message("Attach file", { description: "Demo — pick a file." })}
+      >
+        <FileStack className="h-5 w-5" strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        aria-label="Studio"
+        onClick={() =>
+          toast.message("Studio", {
+            description: "Open a knowledge base and use Studio outputs there (demo).",
+          })
+        }
+      >
+        <LayoutGrid className="h-5 w-5" strokeWidth={1.75} />
       </button>
       <button
         type="button"
         onClick={handleSend}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-600 hover:bg-zinc-700"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
         aria-label="Send"
       >
-        <Send className="w-5 h-5 text-white" />
+        <ArrowUp className="h-5 w-5" strokeWidth={2.15} />
       </button>
     </div>
   )
 
   return (
-    <div className="flex h-full flex-col bg-gray-50">
+    <div className="flex h-full flex-col bg-gray-50 dark:bg-zinc-950">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 bg-white px-4 py-3">
-        <button type="button" onClick={onBack} className="-ml-2 rounded-full p-2 hover:bg-gray-100">
-          <ChevronRight className="h-6 w-6 rotate-180 text-gray-700" />
+      <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+        <button type="button" onClick={onBack} className="-ml-2 rounded-full p-2 hover:bg-gray-100 dark:hover:bg-zinc-800">
+          <ChevronRight className="h-6 w-6 rotate-180 text-gray-700 dark:text-zinc-200" />
         </button>
         <div
           className={cn(
@@ -785,14 +886,14 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-gray-900">{agent.name}</h3>
-          <p className="line-clamp-1 text-xs text-gray-500">{agent.description}</p>
+          <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{agent.name}</h3>
+          <p className="line-clamp-1 text-xs text-gray-500 dark:text-zinc-400">{agent.description}</p>
         </div>
       </div>
 
       {entryHint ? (
-        <div className="shrink-0 border-b border-violet-100/90 bg-violet-50/90 px-4 py-2.5">
-          <p className="text-[13px] leading-snug text-violet-950/90">{entryHint}</p>
+        <div className="shrink-0 border-b border-zinc-200/90 bg-zinc-50/95 px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/60">
+          <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">{entryHint}</p>
         </div>
       ) : null}
 
@@ -810,13 +911,15 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
               avatar || "·"
             )}
           </div>
-          <h3 className="mb-1 text-center font-semibold text-gray-900">Hi, I&apos;m {agent.name}</h3>
-          <p className="mb-8 max-w-[280px] text-center text-sm text-gray-500">
+          <h3 className="mb-1 text-center font-semibold text-gray-900 dark:text-zinc-100">Hi, I&apos;m {agent.name}</h3>
+          <p className="mb-8 max-w-[280px] text-center text-sm text-gray-500 dark:text-zinc-400">
             {entryHint
-              ? "Your library is the context—ask layered questions and I’ll stay grounded in your sources."
+              ? "Flexible AI on your sources—toward concrete outcomes."
               : "Send a message to start"}
           </p>
-          <div className="w-full max-w-md rounded-2xl border border-gray-200/90 bg-white p-3 shadow-sm">{composer}</div>
+          <div className="w-full max-w-md rounded-2xl border border-gray-200/90 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            {composer}
+          </div>
         </div>
       ) : (
         <>
@@ -828,7 +931,7 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
                     "max-w-[80%] rounded-2xl px-4 py-3",
                     msg.role === "user"
                       ? "rounded-br-md bg-zinc-600 text-white"
-                      : "rounded-bl-md bg-white text-gray-800 shadow-sm"
+                      : "rounded-bl-md bg-white text-gray-800 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
                   )}
                 >
                   <p className="text-sm">{msg.content}</p>
@@ -836,7 +939,7 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
               </div>
             ))}
           </div>
-          <div className="shrink-0 border-t border-gray-100 bg-white p-4">{composer}</div>
+          <div className="shrink-0 border-t border-gray-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">{composer}</div>
         </>
       )}
     </div>

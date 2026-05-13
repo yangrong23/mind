@@ -1,5 +1,5 @@
 import type { FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
-import { MOCK_KNOWLEDGE_BASES } from "@/components/mind-v2/knowledge-tab"
+import { MOCK_KNOWLEDGE_BASES } from "@/lib/mock-knowledge-bases"
 
 /** How Agent links libraries when opening Studio / content factory */
 export type StudioLibraryLinkMode = "all" | "auto" | "pick"

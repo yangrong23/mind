@@ -14,6 +14,8 @@ import {
   HelpCircle,
   BarChart3,
   Presentation,
+  FolderInput,
+  Check,
 } from "lucide-react"
 
 export type FactoryJobStatus = "generating" | "complete" | "failed"
@@ -130,12 +132,39 @@ export function mockTitleForFactoryKind(kind: FactoryModalKind): string {
   }
 }
 
+export function factoryKindShortLabel(kind: FactoryModalKind): string {
+  switch (kind) {
+    case "report":
+      return "Report"
+    case "audio":
+      return "Audio"
+    case "mindmap":
+      return "Mind map"
+    case "flashcards":
+      return "Flashcards"
+    case "quiz":
+      return "Quiz"
+    case "infographic":
+      return "Infographic"
+    case "slides":
+      return "Slides"
+    default:
+      return "Studio"
+  }
+}
+
 export interface StudioFactoryJobsInlineProps {
   userJobs: FactoryJob[]
   showQuotaBanner?: boolean
   onDismissQuotaBanner?: () => void
   toastFailedJobId: string | null
   onRetryJob: (jobId: string) => void
+  /** When set, completed rows show “archive to library” and jump into Hub after save (demo). */
+  onArchiveToLibrary?: (job: FactoryJob) => void
+  /** Shown in archive CTA for context, e.g. current notebook name */
+  archiveTargetLabel?: string
+  /** Job ids already archived (hide repeat CTA). */
+  archivedJobIds?: ReadonlySet<string> | string[]
 }
 
 /**
@@ -148,10 +177,22 @@ export function StudioFactoryJobsInline({
   onDismissQuotaBanner,
   toastFailedJobId,
   onRetryJob,
+  onArchiveToLibrary,
+  archiveTargetLabel,
+  archivedJobIds,
 }: StudioFactoryJobsInlineProps) {
   const generating = userJobs.filter((j) => j.status === "generating")
   const completed = userJobs.filter((j) => j.status === "complete")
   const showFeed = showQuotaBanner || generating.length > 0 || completed.length > 0 || toastFailedJobId
+
+  const archivedSet =
+    archivedJobIds == null
+      ? null
+      : archivedJobIds instanceof Set
+        ? archivedJobIds
+        : new Set(archivedJobIds)
+
+  const isArchived = (id: string) => archivedSet?.has(id) ?? false
 
   if (!showFeed) return null
 
@@ -215,15 +256,44 @@ export function StudioFactoryJobsInline({
           <ul className="divide-y divide-stone-100 px-0">
             {completed.map((job) => {
               const tc = mx.factoryTone[job.kind]
+              const archived = isArchived(job.id)
               return (
-                <li key={job.id} className="flex items-start gap-3 px-3 py-3.5">
-                  <div className={cn("mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tc.well)}>
-                    <span className={cn(tc.icon, "[&>svg]:h-[1.15rem] [&>svg]:w-[1.15rem]")}>{iconForFactoryKind(job.kind)}</span>
+                <li key={job.id}>
+                  <div className="flex items-start gap-3 px-3 py-3.5">
+                    <div className={cn("mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tc.well)}>
+                      <span className={cn(tc.icon, "[&>svg]:h-[1.15rem] [&>svg]:w-[1.15rem]")}>{iconForFactoryKind(job.kind)}</span>
+                    </div>
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="text-[15px] font-medium leading-snug text-zinc-900">{job.title}</p>
+                      {job.meta ? <p className="mt-1 text-[12px] text-zinc-500">{job.meta}</p> : null}
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1 pr-2">
-                    <p className="text-[15px] font-medium leading-snug text-zinc-900">{job.title}</p>
-                    {job.meta ? <p className="mt-1 text-[12px] text-zinc-500">{job.meta}</p> : null}
-                  </div>
+                  {onArchiveToLibrary ? (
+                    <div className="flex items-center justify-end gap-2 border-t border-stone-100/90 bg-stone-50/40 px-3 py-2 dark:bg-zinc-900/40">
+                      {archived ? (
+                        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 dark:text-zinc-400">
+                          <Check className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" strokeWidth={2.5} aria-hidden />
+                          In Hub
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onArchiveToLibrary(job)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
+                            mx.accentBlue,
+                            mx.accentBlueHover,
+                            "hover:bg-sky-50/90 dark:hover:bg-sky-950/40"
+                          )}
+                        >
+                          <FolderInput className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
+                          {archiveTargetLabel
+                            ? `Archive to “${archiveTargetLabel}”`
+                            : "Archive to library"}
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
                 </li>
               )
             })}

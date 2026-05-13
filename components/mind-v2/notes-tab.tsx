@@ -24,7 +24,7 @@ export interface Note {
   source?: string
   /** Multimodal badge, e.g. highlight count */
   highlightCount?: number
-  /** Local folder (存入文件夹); color comes from folder definition */
+  /** Local folder; color comes from folder definition */
   folderId?: string | null
   /** Swipe-right archive / save to library (demo: hide from list) */
   archived?: boolean
@@ -88,17 +88,17 @@ export const mockNotes: Note[] = [
 
 function NoteCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm space-y-3 animate-pulse" aria-hidden>
+    <div className="rounded-2xl border border-stone-200/85 bg-white p-4 shadow-sm space-y-3 animate-pulse" aria-hidden>
       <div className="flex justify-between gap-3">
-        <div className="h-6 flex-1 rounded-md bg-gray-300" />
-        <div className="h-5 w-16 rounded-md bg-gray-200" />
+        <div className="h-6 flex-1 rounded-md bg-stone-200/90" />
+        <div className="h-5 w-16 rounded-md bg-stone-100" />
       </div>
-      <div className="h-3 w-40 rounded bg-gray-200" />
+        <div className="h-3 w-40 rounded bg-stone-100" />
       <div className="space-y-2">
-        <div className="h-3 w-full rounded bg-gray-200" />
-        <div className="h-3 w-4/5 rounded bg-gray-200" />
+        <div className="h-3 w-full rounded bg-stone-100" />
+        <div className="h-3 w-4/5 rounded bg-stone-100" />
       </div>
-      <p className="text-[11px] text-gray-500">Minder is still polishing this one—almost there.</p>
+      <p className="text-[11px] text-zinc-500">Minder is still polishing this one—almost there.</p>
     </div>
   )
 }
@@ -144,17 +144,17 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
     <div className="relative overflow-hidden rounded-2xl">
       {/* Swipe right: add to library */}
       <div
-        className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-zinc-600 text-white rounded-l-2xl"
+        className="absolute inset-y-0 left-0 flex w-24 items-center justify-center rounded-l-2xl bg-sky-700 text-white"
         style={{ opacity: dx > 0 ? Math.min(1, dx / 72) : 0 }}
       >
-        <Library className="w-6 h-6" strokeWidth={1.75} />
+        <Library className="h-6 w-6" strokeWidth={1.65} />
       </div>
       {/* Swipe left: delete */}
       <div
         className="absolute inset-y-0 right-0 flex w-24 items-center justify-center bg-red-600 text-white rounded-r-2xl"
         style={{ opacity: dx < 0 ? Math.min(1, -dx / 72) : 0 }}
       >
-        <Trash2 className="w-6 h-6" strokeWidth={1.75} />
+        <Trash2 className="h-6 w-6" strokeWidth={1.65} />
       </div>
 
       <div
@@ -174,23 +174,23 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
         className="relative z-10 w-full cursor-pointer select-none text-left"
         style={{ transform: `translateX(${dx}px)`, transition: dragging.current ? "none" : "transform 0.2s ease-out" }}
       >
-        <div className="rounded-2xl border border-gray-200/90 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+        <div className="rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm transition-shadow hover:border-stone-200 hover:shadow-md">
           <div className="mb-2 flex items-start justify-between gap-2">
-            <h3 className="text-[19px] font-semibold leading-snug tracking-tight text-gray-900 line-clamp-2">
+            <h3 className="text-[19px] font-semibold leading-snug tracking-tight text-zinc-900 line-clamp-2">
               {note.title}
             </h3>
             {note.highlightCount != null && note.highlightCount > 0 && (
-              <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+              <span className="shrink-0 rounded-full bg-sky-100/95 px-2 py-0.5 text-[11px] font-medium text-sky-900">
                 💡 {note.highlightCount} highlights
               </span>
             )}
           </div>
-          <p className="mb-3 line-clamp-2 text-[15px] leading-relaxed text-gray-600">{note.preview}</p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-gray-500">
+          <p className="mb-3 line-clamp-2 text-[15px] leading-relaxed text-zinc-600">{note.preview}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-500">
             <span>{note.date}</span>
             {note.duration && (
               <>
-                <span className="text-gray-400">·</span>
+                <span className="text-zinc-400">·</span>
                 <span>{note.duration}</span>
               </>
             )}
@@ -198,14 +198,14 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
               {note.type === "hardware" ? (
                 <Mic className={cn("h-3.5 w-3.5", mx.navActiveIcon)} strokeWidth={2} />
               ) : (
-                <Smartphone className="h-3.5 w-3.5 text-gray-500" strokeWidth={2} />
+                <Smartphone className="h-3.5 w-3.5 text-zinc-500" strokeWidth={2} />
               )}
             </span>
           </div>
           {folder && FolderIcon && (
-            <div className="mt-2 flex items-center gap-1.5 text-[12px] text-gray-600">
+            <div className="mt-2 flex items-center gap-1.5 text-[12px] text-zinc-600">
               <FolderIcon className="h-4 w-4 shrink-0" style={{ color: folder.color }} strokeWidth={2} aria-hidden />
-              <span className="truncate font-medium text-gray-700">{folder.name}</span>
+              <span className="truncate font-medium text-zinc-700">{folder.name}</span>
             </div>
           )}
         </div>
@@ -235,7 +235,7 @@ export function NotesTab({
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [showRecordOptions, setShowRecordOptions] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
-  /** 筛选：全部 / 手机 / 设备 / 回收站；与「文件夹」互斥 */
+  /** Filter: all / phone / device / trash; mutually exclusive with folder pick */
   const [fileScope, setFileScope] = useState<"all" | "phone" | "device" | "trash">("all")
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [showFilterSortSheet, setShowFilterSortSheet] = useState(false)
@@ -267,32 +267,32 @@ export function NotesTab({
   })()
 
   return (
-    <div className="relative flex h-full flex-col bg-[#ebebe8]">
-      <div className="border-b border-gray-300/90 bg-white">
+    <div className={cn("relative flex h-full flex-col", mx.shellCanvas)}>
+      <div className={cn("border-b bg-white/90 backdrop-blur-sm", mx.shellHairline)}>
         <div className="flex items-center justify-between px-5 py-3">
           <button
             type="button"
             onClick={() => setShowDeviceSheet(true)}
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-xl py-1 pl-0.5 pr-2 text-left transition-colors hover:bg-gray-50 active:bg-gray-100/80"
-            aria-label="设备与录音机"
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-xl py-1 pl-0.5 pr-2 text-left transition-colors hover:bg-sky-50/50 active:bg-sky-50/70 dark:hover:bg-zinc-800/60"
+            aria-label="Recorder and devices"
           >
             <div
               className={cn(
                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                isDeviceConnected ? "bg-sky-600" : "bg-gray-400"
+                isDeviceConnected ? "bg-sky-600" : "bg-zinc-300 dark:bg-zinc-600"
               )}
             >
               <Bluetooth className="h-4 w-4 text-white" />
             </div>
             <div className="min-w-0 text-left">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-gray-900">Mind</span>
+                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Mind</span>
                 <span
                   className={cn(
                     "rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-tight",
                     activeAccount.kind === "work"
-                      ? cn(mx.accentWorkSoft, mx.accentWorkIcon)
-                      : cn(mx.accentPersonalSoft, "text-emerald-800")
+                      ? "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-100"
+                      : "bg-sky-50 text-sky-800 dark:bg-sky-950/35 dark:text-sky-100"
                   )}
                 >
                   {accountSpaceLabel(activeAccount.kind)}
@@ -300,25 +300,25 @@ export function NotesTab({
                 <div
                   className={cn(
                     "h-1.5 w-1.5 rounded-full",
-                    isDeviceConnected ? "bg-sky-300" : "bg-gray-400"
+                    isDeviceConnected ? "bg-sky-300" : "bg-zinc-300 dark:bg-zinc-500"
                   )}
                 />
               </div>
-              <p className="text-[11px] text-gray-500">Recorder status · use mic button for devices</p>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Recorder status · use mic button for devices</p>
             </div>
           </button>
 
           <button
             type="button"
             onClick={() =>
-              toast.message("智能搜索", {
-                description: "在全部文件中搜索（演示）。后续可接入全文检索与向量检索。",
+              toast.message("Smart search", {
+                description: "Search across all captures (demo).",
               })
             }
-            className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-200"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-sky-50/60 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
             aria-label="Smart search"
           >
-            <SmartSearchIcon className="h-5 w-5 text-gray-700" />
+            <SmartSearchIcon className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
           </button>
         </div>
       </div>
@@ -328,13 +328,13 @@ export function NotesTab({
           <button
             type="button"
             onClick={() => setShowFilesMenu((v) => !v)}
-            className="flex items-center gap-1 text-[15px] font-semibold text-gray-900"
+            className="flex items-center gap-1 text-[15px] font-semibold text-zinc-900"
             aria-haspopup="listbox"
             aria-expanded={showFilesMenu}
           >
-            {listScope === "all" ? "全部文件" : "未归档"}
+            {listScope === "all" ? "All files" : "Active"}
             <ChevronDown
-              className={cn("h-4 w-4 text-gray-500 transition-transform", showFilesMenu && "rotate-180")}
+              className={cn("h-4 w-4 text-zinc-500 transition-transform", showFilesMenu && "rotate-180")}
               strokeWidth={2}
               aria-hidden
             />
@@ -342,11 +342,11 @@ export function NotesTab({
           {showFilesMenu && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowFilesMenu(false)} />
-              <div className="absolute left-0 top-full z-50 mt-1 min-w-[10rem] overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+              <div className="absolute left-0 top-full z-50 mt-1 min-w-[10rem] overflow-hidden rounded-xl border border-stone-200/85 bg-white py-1 shadow-lg">
                 {(
                   [
-                    { id: "all" as const, label: "全部文件" },
-                    { id: "active" as const, label: "未归档" },
+                    { id: "all" as const, label: "All files" },
+                    { id: "active" as const, label: "Active" },
                   ] as const
                 ).map((opt) => (
                   <button
@@ -355,16 +355,16 @@ export function NotesTab({
                     onClick={() => {
                       setListScope(opt.id)
                       setShowFilesMenu(false)
-                      toast.message("列表范围已更新", { description: opt.label })
+                      toast.message("List scope updated", { description: opt.label })
                     }}
                     className={cn(
-                      "flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-gray-100",
-                      listScope === opt.id ? "font-medium text-gray-900" : "text-gray-700"
+                      "flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-stone-100/85",
+                      listScope === opt.id ? "font-medium text-zinc-900" : "text-zinc-700"
                     )}
                   >
                     {opt.label}
                     {listScope === opt.id && (
-                      <svg className="h-4 w-4 text-gray-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg className="h-4 w-4 text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     )}
@@ -380,13 +380,13 @@ export function NotesTab({
             onClick={() => setShowFilterSortSheet(true)}
             className="text-left"
           >
-            <h1 className="text-[28px] font-bold tracking-tight text-gray-900">Notes</h1>
+            <h1 className="text-[28px] font-bold tracking-tight text-zinc-900">Notes</h1>
           </button>
           <button
             type="button"
             onClick={() => setShowFilterSortSheet(true)}
-            className="relative flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-gray-700 hover:bg-white"
-            aria-label="筛选和排序"
+            className="relative flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-zinc-700 hover:bg-white"
+            aria-label="Filter and sort"
           >
             <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="4" y1="6" x2="20" y2="6" />
@@ -394,14 +394,14 @@ export function NotesTab({
               <line x1="4" y1="18" x2="12" y2="18" />
             </svg>
             {(fileScope !== "all" || selectedFolderId) && (
-              <span className="max-w-[5.5rem] truncate font-medium text-gray-900">
+              <span className="max-w-[5.5rem] truncate font-medium text-zinc-900">
                 {selectedFolderId
-                  ? folders.find((f) => f.id === selectedFolderId)?.name ?? "文件夹"
+                  ? folders.find((f) => f.id === selectedFolderId)?.name ?? "Folder"
                   : fileScope === "phone"
-                    ? "手机"
+                    ? "Phone"
                     : fileScope === "device"
-                      ? "设备"
-                      : "回收站"}
+                      ? "Device"
+                      : "Trash"}
               </span>
             )}
           </button>
@@ -411,13 +411,13 @@ export function NotesTab({
       <div className="flex-1 overflow-y-auto px-4 pb-28 pt-2">
         {filteredNotes.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <p className="max-w-[280px] text-[17px] leading-relaxed text-gray-700">
+            <p className="max-w-[280px] text-[17px] leading-relaxed text-zinc-700">
               Put on your Medrix Mind and capture your first spark in the real world.
             </p>
             <button
               type="button"
               onClick={() => setShowRecordOptions(true)}
-              className="mt-6 rounded-full bg-zinc-600 px-6 py-3 text-[15px] font-medium text-white hover:bg-zinc-700"
+              className={cn("mt-6 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-sm", mx.brandCta)}
             >
               Start recording
             </button>
@@ -434,8 +434,8 @@ export function NotesTab({
                   folders={folders}
                   onOpen={() => onNoteClick(note)}
                   onArchive={() => {
-                    toast.success("已加入知识库", {
-                      description: `「${note.title.length > 40 ? `${note.title.slice(0, 40)}…` : note.title}」`,
+                    toast.success("Saved to library", {
+                      description: note.title.length > 40 ? `${note.title.slice(0, 40)}…` : note.title,
                     })
                     onNotesChange(notes.map((n) => (n.id === note.id ? { ...n, archived: true } : n)))
                   }}
@@ -453,8 +453,8 @@ export function NotesTab({
         className="absolute bottom-7 right-6 z-30 flex items-center justify-center"
         aria-label="Recording options"
       >
-        <div className="flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full bg-gradient-to-br from-zinc-400 via-zinc-500 to-stone-600 text-white shadow-[0_10px_28px_-6px_rgba(63,63,70,0.35)] ring-[3px] ring-white/95 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-95">
-          <Mic className="h-7 w-7" strokeWidth={2.25} />
+        <div className="flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-[0_12px_32px_-8px_rgba(14,165,233,0.45)] ring-[3px] ring-white/90 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-95 dark:ring-zinc-900/80">
+          <Mic className="h-7 w-7" strokeWidth={1.85} />
         </div>
       </button>
 
@@ -468,11 +468,11 @@ export function NotesTab({
           />
           <div className="absolute bottom-0 left-0 right-0 animate-in slide-in-from-bottom rounded-t-3xl bg-white duration-300">
             <div className="flex justify-center pb-2 pt-3">
-              <div className="h-1 w-10 rounded-full bg-gray-300" />
+              <div className="h-1 w-10 rounded-full bg-stone-200/90" />
             </div>
             <div className="px-5 pb-2">
-              <h3 className="text-lg font-semibold text-gray-900">Record</h3>
-              <p className="mt-1 text-sm text-gray-500">Start a capture or open device details</p>
+              <h3 className="text-lg font-semibold text-zinc-900">Record</h3>
+              <p className="mt-1 text-sm text-zinc-500">Start a capture or open device details</p>
             </div>
             <div className="space-y-2 px-5 pb-6">
               <button
@@ -481,7 +481,10 @@ export function NotesTab({
                   setShowRecordOptions(false)
                   onStartRecording()
                 }}
-                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-gray-900 py-3.5 pl-4 pr-3 text-left text-white"
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl border border-stone-200/85 py-3.5 pl-4 pr-3 text-left text-white shadow-sm",
+                  mx.brandCta
+                )}
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
                   <Mic className="h-5 w-5" strokeWidth={2.25} />
@@ -498,21 +501,21 @@ export function NotesTab({
                   setShowRecordOptions(false)
                   setShowDeviceSheet(true)
                 }}
-                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white py-3.5 pl-4 pr-3 text-left hover:bg-gray-50"
+                className="flex w-full items-center gap-3 rounded-xl border border-stone-200/85 bg-white py-3.5 pl-4 pr-3 text-left hover:bg-sky-50/50"
               >
                 <div
                   className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                    isDeviceConnected ? "bg-sky-600" : "bg-gray-400"
+                    isDeviceConnected ? "bg-sky-600" : "bg-zinc-300 dark:bg-zinc-600"
                   )}
                 >
                   <Bluetooth className="h-5 w-5 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[15px] font-semibold text-gray-900">Source & devices</div>
-                  <div className="text-[12px] text-gray-500">Battery, storage, firmware, pairing</div>
+                  <div className="text-[15px] font-semibold text-zinc-900">Source & devices</div>
+                  <div className="text-[12px] text-zinc-500">Battery, storage, firmware, pairing</div>
                 </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-gray-300" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
               </button>
             </div>
           </div>
@@ -524,18 +527,18 @@ export function NotesTab({
           <button
             type="button"
             className="absolute inset-0 bg-black/40"
-            aria-label="关闭筛选"
+            aria-label="Close filters"
             onClick={() => setShowFilterSortSheet(false)}
           />
           <div className="relative max-h-[85vh] overflow-hidden rounded-t-[1.35rem] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.12)]">
             <div className="flex max-h-[85vh] flex-col">
-              <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4">
-                <h2 className="text-[18px] font-bold text-gray-900">筛选和排序</h2>
+              <div className="flex shrink-0 items-center justify-between border-b border-stone-100/80 px-5 py-4">
+                <h2 className="text-[18px] font-bold text-zinc-900">Filter & sort</h2>
                 <button
                   type="button"
                   onClick={() => setShowFilterSortSheet(false)}
-                  className="rounded-full p-2 text-gray-500 hover:bg-gray-100"
-                  aria-label="关闭"
+                  className="rounded-full p-2 text-zinc-500 hover:bg-stone-100/85"
+                  aria-label="Close"
                 >
                   <X className="h-5 w-5" strokeWidth={2} />
                 </button>
@@ -543,40 +546,40 @@ export function NotesTab({
               <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 pt-1">
                 <button
                   type="button"
-                  onClick={() => toast.message("排序", { description: "按创建时间排序（演示）。" })}
-                  className="mb-4 flex w-full items-center justify-between rounded-xl py-2 text-left text-[15px] text-gray-800"
+                  onClick={() => toast.message("Sort", { description: "Sorted by created time (demo)." })}
+                  className="mb-4 flex w-full items-center justify-between rounded-xl py-2 text-left text-[15px] text-zinc-800"
                 >
-                  <span>创建时间</span>
-                  <ArrowUpDown className="h-4 w-4 text-gray-400" strokeWidth={2} />
+                  <span>Created time</span>
+                  <ArrowUpDown className="h-4 w-4 text-zinc-400" strokeWidth={2} />
                 </button>
 
-                <div className="space-y-0.5 border-b border-gray-100 pb-4">
+                <div className="space-y-0.5 border-b border-stone-100/80 pb-4">
                   {(
                     [
                       {
                         id: "all" as const,
-                        label: "全部文件",
+                        label: "All files",
                         count: notes.filter((n) => inListScope(n)).length,
                         icon: Folder,
                         active: fileScope === "all" && !selectedFolderId,
                       },
                       {
                         id: "phone" as const,
-                        label: "手机",
+                        label: "Phone",
                         count: phoneCount,
                         icon: Smartphone,
                         active: fileScope === "phone" && !selectedFolderId,
                       },
                       {
                         id: "device" as const,
-                        label: "设备",
+                        label: "Device",
                         count: deviceCount,
                         icon: Package,
                         active: fileScope === "device" && !selectedFolderId,
                       },
                       {
                         id: "trash" as const,
-                        label: "回收站",
+                        label: "Trash",
                         count: archivedCount,
                         icon: Trash2,
                         active: fileScope === "trash",
@@ -590,58 +593,58 @@ export function NotesTab({
                         setSelectedFolderId(null)
                         setFileScope(row.id)
                         setShowFilterSortSheet(false)
-                        toast.message("已应用筛选", { description: `${row.label}（${row.count}）` })
+                        toast.message("Filter applied", { description: `${row.label} (${row.count})` })
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 pr-2 text-left hover:bg-gray-50"
+                      className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 pr-2 text-left hover:bg-sky-50/50"
                     >
-                      <row.icon className="h-5 w-5 shrink-0 text-gray-500" strokeWidth={1.75} />
-                      <span className="flex-1 text-[15px] text-gray-900">
+                      <row.icon className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
+                      <span className="flex-1 text-[15px] text-zinc-900">
                         {row.label}{" "}
-                        <span className="text-gray-400">({row.count})</span>
+                        <span className="text-zinc-400">({row.count})</span>
                       </span>
-                      {row.active ? <Check className="h-5 w-5 shrink-0 text-gray-900" strokeWidth={2.5} /> : null}
+                      {row.active ? <Check className="h-5 w-5 shrink-0 text-zinc-900" strokeWidth={2.5} /> : null}
                     </button>
                   ))}
                 </div>
 
-                <div className="mt-4 flex items-center justify-between border-b border-gray-100 pb-2">
-                  <span className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">文件夹</span>
+                <div className="mt-4 flex items-center justify-between border-b border-stone-100/80 pb-2">
+                  <span className="text-[13px] font-semibold uppercase tracking-wide text-zinc-400">Folders</span>
                   <button
                     type="button"
-                    onClick={() => toast.message("新建文件夹", { description: "在更多入口创建文件夹（演示）。" })}
-                    className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100"
-                    aria-label="添加文件夹"
+                    onClick={() => toast.message("New folder", { description: "Create from the overflow menu (demo)." })}
+                    className="rounded-full p-1.5 text-zinc-500 hover:bg-stone-100/85"
+                    aria-label="Add folder"
                   >
                     <Plus className="h-5 w-5" strokeWidth={2} />
                   </button>
                 </div>
-                <div className="space-y-0.5 border-b border-gray-100 pb-4 pt-1">
+                <div className="space-y-0.5 border-b border-stone-100/80 pb-4 pt-1">
                   {folders.map((f) => {
                     const cnt = notes.filter((n) => inListScope(n) && n.folderId === f.id).length
                     const Fi = folderIconComponent(f.iconKey)
                     return (
-                      <div key={f.id} className="flex items-center gap-2 rounded-xl py-2 pl-1 pr-1 hover:bg-gray-50">
+                      <div key={f.id} className="flex items-center gap-2 rounded-xl py-2 pl-1 pr-1 hover:bg-sky-50/50">
                         <button
                           type="button"
                           onClick={() => {
                             setFileScope("all")
                             setSelectedFolderId(f.id)
                             setShowFilterSortSheet(false)
-                            toast.message("已筛选文件夹", { description: f.name })
+                            toast.message("Folder filter", { description: f.name })
                           }}
                           className="flex min-w-0 flex-1 items-center gap-3 py-2 text-left"
                         >
                           <Fi className="h-5 w-5 shrink-0" style={{ color: f.color }} strokeWidth={1.75} />
-                          <span className="truncate text-[15px] text-gray-900">
+                          <span className="truncate text-[15px] text-zinc-900">
                             {f.name}{" "}
-                            <span className="text-gray-400">({cnt})</span>
+                            <span className="text-zinc-400">({cnt})</span>
                           </span>
                         </button>
                         <button
                           type="button"
-                          className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                          aria-label="更多"
-                          onClick={() => toast.message(f.name, { description: "重命名 / 删除（演示）。" })}
+                          className="shrink-0 rounded-lg p-2 text-zinc-400 hover:bg-stone-100/85 hover:text-zinc-600"
+                          aria-label="More"
+                          onClick={() => toast.message(f.name, { description: "Rename or delete (demo)." })}
                         >
                           <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
                         </button>
@@ -650,32 +653,32 @@ export function NotesTab({
                   })}
                 </div>
 
-                <p className="mt-4 text-[13px] font-semibold uppercase tracking-wide text-gray-400">来自</p>
+                <p className="mt-4 text-[13px] font-semibold uppercase tracking-wide text-zinc-400">From</p>
                 <div className="mt-1 space-y-0.5">
                   <button
                     type="button"
                     onClick={() =>
-                      toast.message("笔记 · 对话模式", {
-                        description: `共 ${textDialogCount} 条与对话相关的笔记（演示筛选）。`,
+                      toast.message("Chat-style notes", {
+                        description: `${textDialogCount} items (demo filter).`,
                       })
                     }
-                    className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 text-left hover:bg-gray-50"
+                    className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 text-left hover:bg-sky-50/50"
                   >
-                    <FileText className="h-5 w-5 shrink-0 text-gray-500" strokeWidth={1.75} />
-                    <span className="text-[15px] text-gray-900">
-                      笔记 · 对话模式 <span className="text-gray-400">({textDialogCount})</span>
+                    <FileText className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
+                    <span className="text-[15px] text-zinc-900">
+                      Chat-style notes <span className="text-zinc-400">({textDialogCount})</span>
                     </span>
                   </button>
                   <button
                     type="button"
                     onClick={() =>
-                      toast.message("导入", { description: `共 ${importCount} 条导入类录音（演示）。` })
+                      toast.message("Imports", { description: `${importCount} imported captures (demo).` })
                     }
-                    className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 text-left hover:bg-gray-50"
+                    className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 text-left hover:bg-sky-50/50"
                   >
-                    <FileInput className="h-5 w-5 shrink-0 text-gray-500" strokeWidth={1.75} />
-                    <span className="text-[15px] text-gray-900">
-                      导入 <span className="text-gray-400">({importCount})</span>
+                    <FileInput className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
+                    <span className="text-[15px] text-zinc-900">
+                      Imports <span className="text-zinc-400">({importCount})</span>
                     </span>
                   </button>
                 </div>

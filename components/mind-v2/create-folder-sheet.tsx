@@ -17,9 +17,9 @@ export interface CreateFolderSheetProps {
 }
 
 const ICON_OPTIONS: { key: FolderIconKey; label: string }[] = [
-  { key: "folder", label: "文件夹" },
-  { key: "folderOpen", label: "打开" },
-  { key: "folderKanban", label: "看板" },
+  { key: "folder", label: "Folder" },
+  { key: "folderOpen", label: "Open" },
+  { key: "folderKanban", label: "Board" },
 ]
 
 export function CreateFolderSheet({ open, onClose, onCreate }: CreateFolderSheetProps) {
@@ -50,41 +50,39 @@ export function CreateFolderSheet({ open, onClose, onCreate }: CreateFolderSheet
 
   return (
     <div className="absolute inset-0 z-[55]">
-      <button type="button" className="absolute inset-0 bg-zinc-900/35" aria-label="关闭" onClick={onClose} />
+      <button type="button" className="absolute inset-0 bg-zinc-900/35" aria-label="Close" onClick={onClose} />
       <div className="absolute bottom-0 left-0 right-0 flex max-h-[min(88vh,780px)] flex-col rounded-t-3xl bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.12)] animate-in slide-in-from-bottom duration-300">
         <div className="flex justify-center pb-2 pt-3">
           <div className="h-1 w-10 rounded-full bg-zinc-300" />
         </div>
         <div className="flex items-start justify-between border-b border-zinc-100 px-5 pb-4">
-          <h2 className="text-[20px] font-bold tracking-tight text-zinc-900">创建新文件夹</h2>
+          <h2 className="text-[20px] font-bold tracking-tight text-zinc-900">New folder</h2>
           <button
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-zinc-100"
-            aria-label="关闭"
+            aria-label="Close"
           >
             <X className="h-5 w-5 text-zinc-500" strokeWidth={2} />
           </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {/* 名称 */}
           <div className="flex items-center gap-4 border-b border-zinc-100 py-4">
-            <span className="w-12 shrink-0 text-[15px] text-zinc-900">名称</span>
+            <span className="w-12 shrink-0 text-[15px] text-zinc-900">Name</span>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="必填"
+              placeholder="Required"
               className="min-w-0 flex-1 border-0 bg-transparent py-1 text-[15px] text-zinc-900 outline-none placeholder:text-zinc-400"
               autoFocus
             />
           </div>
 
-          {/* 颜色 */}
           <div className="border-b border-zinc-100 py-4">
             <div className="mb-3 flex items-center gap-4">
-              <span className="w-12 shrink-0 text-[15px] text-zinc-900">颜色</span>
+              <span className="w-12 shrink-0 text-[15px] text-zinc-900">Color</span>
             </div>
             <div className="flex flex-wrap gap-3 pl-[3.25rem]">
               {FOLDER_COLOR_SWATCHES.map((sw) => (
@@ -97,20 +95,19 @@ export function CreateFolderSheet({ open, onClose, onCreate }: CreateFolderSheet
                     color === sw.hex ? "ring-zinc-900 scale-105" : "ring-transparent hover:ring-zinc-200"
                   )}
                   style={{ backgroundColor: sw.hex }}
-                  aria-label={`颜色 ${sw.id}`}
+                  aria-label={`Color ${sw.id}`}
                 />
               ))}
             </div>
           </div>
 
-          {/* 图标 */}
           <div className="py-2">
             <button
               type="button"
               onClick={() => setShowIconPicker((v) => !v)}
               className="flex w-full items-center gap-4 py-4 text-left"
             >
-              <span className="w-12 shrink-0 text-[15px] text-zinc-900">图标</span>
+              <span className="w-12 shrink-0 text-[15px] text-zinc-900">Icon</span>
               <span className="min-w-0 flex-1" />
               <SelectedIcon className="h-6 w-6 shrink-0" style={{ color }} strokeWidth={1.75} aria-hidden />
               <ChevronRight
@@ -155,7 +152,7 @@ export function CreateFolderSheet({ open, onClose, onCreate }: CreateFolderSheet
               canSubmit ? "bg-zinc-900 text-white hover:bg-zinc-800" : "cursor-not-allowed bg-zinc-200 text-zinc-400"
             )}
           >
-            创建
+            Create
           </button>
         </div>
       </div>
