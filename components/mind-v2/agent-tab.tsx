@@ -132,7 +132,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
   }
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#fafaf9] text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#fafaf9] font-sans text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
       {/* Left drawer */}
       <div 
         className={cn(
@@ -141,7 +141,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
         )}
       >
         {/* Top actions */}
-        <div className="border-b border-gray-100 p-4 dark:border-zinc-800">
+        <div className="border-b border-stone-100 p-4 dark:border-zinc-800">
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -176,30 +176,30 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
                 onAgentChat(agent)
                 setDrawerOpen(false)
               }}
-              className="flex w-full items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-zinc-800/60"
+              className="flex w-full items-center gap-3 px-5 py-3 hover:bg-stone-50 dark:hover:bg-zinc-800/60"
             >
               <span className="text-2xl">{agent.avatar}</span>
               <div className="flex-1 text-left">
-                <div className="text-[15px] text-gray-900 dark:text-zinc-100">{agent.name}</div>
-                <div className="text-xs text-gray-400 dark:text-zinc-500">{agent.description}</div>
+                <div className="text-[15px] text-zinc-900 dark:text-zinc-100">{agent.name}</div>
+                <div className="text-xs text-zinc-400 dark:text-zinc-500">{agent.description}</div>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-300" />
+              <ChevronRight className="w-5 h-5 text-zinc-300" />
             </button>
           ))}
 
-          <div className="mt-4 border-t border-gray-100 px-5 pt-4 dark:border-zinc-800">
+          <div className="mt-4 border-t border-stone-100 px-5 pt-4 dark:border-zinc-800">
             <div className="mb-3 text-sm text-zinc-400">Recent chats</div>
             {chatHistory.map((group) => (
               <div key={group.date} className="mb-4">
-                <div className="text-sm text-gray-400 mb-2">{group.date}</div>
+                <div className="text-sm text-zinc-400 mb-2">{group.date}</div>
                 {group.items.map((item) => (
                   <div key={item.id} className="mb-3">
-                    <div className="flex items-center gap-2 text-[15px] text-gray-900 dark:text-zinc-100">
+                    <div className="flex items-center gap-2 text-[15px] text-zinc-900 dark:text-zinc-100">
                       <span>{item.icon}</span>
                       <span className="truncate">{item.title}</span>
                     </div>
                     {item.subItems?.map((sub, i) => (
-                      <div key={i} className="flex items-center gap-2 ml-6 mt-1 text-sm text-gray-500">
+                      <div key={i} className="flex items-center gap-2 ml-6 mt-1 text-sm text-zinc-500">
                         <span className={cn(
                           "w-4 h-4 rounded flex items-center justify-center text-[10px]",
                           sub.type === "note" ? "bg-zinc-100 text-zinc-700" : "bg-stone-100 text-stone-800"
@@ -252,7 +252,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-8 pt-12">
             <div className="flex w-full max-w-md flex-col items-stretch">
               <div className="mb-7 flex flex-col items-center">
-                <div className="flex items-end gap-2.5">
+                <div className="flex items-end gap-2.5" aria-label="Minder">
                   <img
                     src="/minder-agent-mark.png"
                     alt=""
@@ -260,12 +260,12 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
                     height={40}
                     className="h-10 w-10 shrink-0 object-contain drop-shadow-sm dark:opacity-90"
                   />
-                  <div className="flex flex-col pb-0.5">
-                    <span className="text-[24px] font-semibold leading-none tracking-tight text-zinc-900 lowercase dark:text-zinc-50">
-                      minder
+                  <div className="flex flex-col pb-0.5 font-sans">
+                    <span className="text-[22px] font-bold leading-none tracking-tight text-zinc-900 dark:text-zinc-50">
+                      inder
                     </span>
-                    <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.42em] text-zinc-400 dark:text-zinc-500">
-                      copilot
+                    <span className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+                      Copilot
                     </span>
                   </div>
                 </div>
@@ -283,7 +283,7 @@ export function AgentTab({ onAgentChat }: AgentTabProps) {
                     }
                   }}
                   placeholder="Message or hold to speak"
-                  className="w-full bg-transparent text-[16px] leading-relaxed text-zinc-900 placeholder:text-zinc-400/90 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                  className="w-full bg-transparent text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400/90 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-500"
                 />
                 <div className="mt-3.5 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-0.5">
@@ -565,10 +565,10 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
   const [persona, setPersona] = useState("")
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col animate-in slide-in-from-bottom duration-200 bg-gray-50 dark:bg-zinc-950">
+    <div className="absolute inset-0 z-50 flex flex-col animate-in slide-in-from-bottom duration-200 bg-stone-50 font-sans dark:bg-zinc-950">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-        <button type="button" onClick={onClose} className="text-[15px] text-gray-600 dark:text-zinc-400">
+      <div className="flex items-center justify-between border-b border-stone-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+        <button type="button" onClick={onClose} className="text-[15px] text-zinc-600 dark:text-zinc-400">
           Cancel
         </button>
         <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">New agent</h1>
@@ -583,11 +583,11 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
           <div className="relative">
             <div className="w-32 h-32 rounded-full bg-zinc-100 flex items-center justify-center">
               <div className="flex gap-2">
-                <div className="w-2 h-2 rounded-full bg-gray-400" />
-                <div className="w-2 h-2 rounded-full bg-gray-400" />
+                <div className="h-2 w-2 rounded-full bg-zinc-400" />
+                <div className="h-2 w-2 rounded-full bg-zinc-400" />
               </div>
             </div>
-            <button className="absolute bottom-0 right-0 w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">
+            <button className="absolute bottom-0 right-0 w-10 h-10 bg-zinc-900 rounded-full flex items-center justify-center">
               <Plus className="w-5 h-5 text-white" />
             </button>
           </div>
@@ -604,13 +604,13 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
         {/* Name */}
         <div className="mx-5 mb-4 rounded-xl bg-white p-4 dark:bg-zinc-900">
           <div className="flex items-center gap-3">
-            <span className="text-[15px] font-medium text-gray-900 dark:text-zinc-100">Name</span>
+            <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Name</span>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. English coach"
-              className="flex-1 text-[15px] text-gray-900 placeholder-gray-400 focus:outline-none dark:bg-transparent dark:text-zinc-100 dark:placeholder:text-zinc-500"
+              className="flex-1 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none dark:bg-transparent dark:text-zinc-100 dark:placeholder:text-zinc-500"
             />
           </div>
         </div>
@@ -618,7 +618,7 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
         {/* Instructions */}
         <div className="mx-5 mb-4 rounded-xl bg-white p-4 dark:bg-zinc-900">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[15px] font-medium text-gray-900 dark:text-zinc-100">Instructions</span>
+            <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Instructions</span>
             <button type="button" className="flex items-center gap-1 text-sm text-sky-600">
               <Sparkles className="h-4 w-4" />
               Polish
@@ -629,7 +629,7 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
             onChange={(e) => setPersona(e.target.value)}
             placeholder="How should this agent sound and behave?"
             rows={4}
-            className="w-full resize-none text-[15px] leading-relaxed text-gray-500 placeholder-gray-400 focus:outline-none dark:bg-transparent dark:text-zinc-300 dark:placeholder:text-zinc-500"
+            className="w-full resize-none text-[15px] leading-relaxed text-zinc-500 placeholder:text-zinc-400 focus:outline-none dark:bg-transparent dark:text-zinc-300 dark:placeholder:text-zinc-500"
           />
         </div>
 
@@ -640,22 +640,22 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
               <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
                 <Volume2 className="w-5 h-5 text-zinc-700" />
               </div>
-              <span className="text-[15px] text-gray-900 dark:text-zinc-100">Voice</span>
+              <span className="text-[15px] text-zinc-900 dark:text-zinc-100">Voice</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-400">
+            <div className="flex items-center gap-2 text-zinc-400">
               <span className="text-sm">Edit</span>
               <ChevronRight className="w-5 h-5" />
             </div>
           </button>
-          <div className="border-t border-gray-100 dark:border-zinc-800" />
+          <div className="border-t border-stone-100 dark:border-zinc-800" />
           <button className="w-full flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
                 <Eye className="w-5 h-5 text-zinc-600" />
               </div>
-              <span className="text-[15px] text-gray-900 dark:text-zinc-100">Public · anyone can chat</span>
+              <span className="text-[15px] text-zinc-900 dark:text-zinc-100">Public · anyone can chat</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
+            <ChevronRight className="w-5 h-5 text-zinc-400" />
           </button>
         </div>
 
@@ -671,7 +671,7 @@ function CreateAgentSheet({ onClose, onExplore }: { onClose: () => void; onExplo
         <div className="mx-5 mb-8">
           <button 
             onClick={onExplore}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 py-4 text-gray-600 transition-colors hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-stone-100 py-4 text-zinc-600 transition-colors hover:bg-stone-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
           >
             <LayoutDashboard className="h-5 w-5" strokeWidth={1.75} aria-hidden />
             <span className="text-[15px] font-medium">Browse gallery</span>
@@ -701,17 +701,17 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
   }
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col animate-in slide-in-from-right duration-200 bg-white dark:bg-zinc-950">
+    <div className="absolute inset-0 z-50 flex flex-col animate-in slide-in-from-right duration-200 bg-white font-sans dark:bg-zinc-950">
       {/* Top bar */}
-      <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-zinc-800">
-        <button onClick={onClose} className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-zinc-800">
-          <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+      <div className="flex items-center gap-3 border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
+        <button onClick={onClose} className="rounded-full p-1 hover:bg-stone-100 dark:hover:bg-zinc-800">
+          <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
         </button>
         <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Gallery</h1>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-100 dark:border-zinc-800">
+      <div className="border-b border-stone-100 dark:border-zinc-800">
         <div className="flex overflow-x-auto px-4 py-3 gap-6 scrollbar-hide">
           {tabs.map((tab) => (
             <button
@@ -720,8 +720,8 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
               className={cn(
                 "text-[15px] font-medium whitespace-nowrap pb-1 border-b-2 transition-colors",
                 activeTab === tab
-                  ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
-                  : "border-transparent text-gray-400 dark:text-zinc-500"
+                  ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
+                  : "border-transparent text-zinc-400 dark:text-zinc-500"
               )}
             >
               {tab}
@@ -735,7 +735,7 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
         {exploreAgents.map((agent) => (
           <div 
             key={agent.id}
-            className="flex items-start gap-3 border-b border-gray-50 px-5 py-4 dark:border-zinc-800/80"
+            className="flex items-start gap-3 border-b border-stone-100/70 px-5 py-4 dark:border-zinc-800/80"
           >
             <img 
               src={agent.avatar} 
@@ -744,15 +744,15 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{agent.name}</h3>
+                <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{agent.name}</h3>
                 {agent.isOfficial && (
                   <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
                     Official
                   </span>
                 )}
               </div>
-              <p className="mb-1.5 line-clamp-2 text-sm text-gray-500 dark:text-zinc-400">{agent.description}</p>
-              <div className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
+              <p className="mb-1.5 line-clamp-2 text-sm text-zinc-500 dark:text-zinc-400">{agent.description}</p>
+              <div className="flex flex-wrap items-center gap-1 text-xs text-zinc-400">
                 <span>{agent.chatCount}</span>
                 {agent.author && (
                   <>
@@ -768,7 +768,7 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
                 "w-8 h-8 rounded-full flex items-center justify-center transition-colors shrink-0",
                 selectedAgents.includes(agent.id)
                   ? "bg-zinc-100 text-zinc-700"
-                  : "bg-gray-100 text-gray-600"
+                  : "bg-stone-100 text-zinc-600"
               )}
             >
               {selectedAgents.includes(agent.id) ? (
@@ -782,7 +782,7 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
       </div>
 
       {/* Bottom CTA */}
-      <div className="border-t border-gray-100 p-5 dark:border-zinc-800">
+      <div className="border-t border-stone-100 p-5 dark:border-zinc-800">
         <button
           onClick={onCreate}
           className="w-full py-4 bg-zinc-500 text-white rounded-xl font-medium text-[15px] flex items-center justify-center gap-2"
@@ -867,11 +867,11 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
   )
 
   return (
-    <div className="flex h-full flex-col bg-gray-50 dark:bg-zinc-950">
+    <div className="flex h-full flex-col bg-stone-50 font-sans dark:bg-zinc-950">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-        <button type="button" onClick={onBack} className="-ml-2 rounded-full p-2 hover:bg-gray-100 dark:hover:bg-zinc-800">
-          <ChevronRight className="h-6 w-6 rotate-180 text-gray-700 dark:text-zinc-200" />
+      <div className="flex shrink-0 items-center gap-3 border-b border-stone-200/90 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+        <button type="button" onClick={onBack} className="-ml-2 rounded-full p-2 hover:bg-stone-100 dark:hover:bg-zinc-800">
+          <ChevronRight className="h-6 w-6 rotate-180 text-zinc-700 dark:text-zinc-200" />
         </button>
         <div
           className={cn(
@@ -886,8 +886,8 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{agent.name}</h3>
-          <p className="line-clamp-1 text-xs text-gray-500 dark:text-zinc-400">{agent.description}</p>
+          <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{agent.name}</h3>
+          <p className="line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">{agent.description}</p>
         </div>
       </div>
 
@@ -911,13 +911,15 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
               avatar || "·"
             )}
           </div>
-          <h3 className="mb-1 text-center font-semibold text-gray-900 dark:text-zinc-100">Hi, I&apos;m {agent.name}</h3>
-          <p className="mb-8 max-w-[280px] text-center text-sm text-gray-500 dark:text-zinc-400">
+          <h3 className="mb-1 text-center text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+            Hi, I&apos;m {agent.name}
+          </h3>
+          <p className="mb-8 max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
             {entryHint
               ? "Flexible AI on your sources—toward concrete outcomes."
               : "Send a message to start"}
           </p>
-          <div className="w-full max-w-md rounded-2xl border border-gray-200/90 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="w-full max-w-md rounded-2xl border border-stone-200/90 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
             {composer}
           </div>
         </div>
@@ -931,7 +933,7 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
                     "max-w-[80%] rounded-2xl px-4 py-3",
                     msg.role === "user"
                       ? "rounded-br-md bg-zinc-600 text-white"
-                      : "rounded-bl-md bg-white text-gray-800 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
+                      : "rounded-bl-md border border-stone-200/90 bg-white text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                   )}
                 >
                   <p className="text-sm">{msg.content}</p>
@@ -939,7 +941,7 @@ export function AgentChat({ agent, onBack, entryHint }: AgentChatProps) {
               </div>
             ))}
           </div>
-          <div className="shrink-0 border-t border-gray-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">{composer}</div>
+          <div className="shrink-0 border-t border-stone-200/90 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">{composer}</div>
         </>
       )}
     </div>

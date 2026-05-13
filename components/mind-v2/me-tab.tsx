@@ -138,9 +138,16 @@ interface MeTabProps {
   onSettingsClick?: () => void
   activeAccountId: MindAccountId
   onActiveAccountChange: (id: MindAccountId) => void
+  /** When provided, Sign out in the account sheet ends the demo session (guest gate). */
+  onSessionSignOut?: () => void
 }
 
-export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange }: MeTabProps) {
+export function MeTab({
+  onSettingsClick,
+  activeAccountId,
+  onActiveAccountChange,
+  onSessionSignOut,
+}: MeTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
   const [heatmapDayDetail, setHeatmapDayDetail] = useState<{ date: string; value: number } | null>(null)
   const [insightShareSheet, setInsightShareSheet] = useState<{ title: string; preview: string } | null>(null)
@@ -518,8 +525,12 @@ export function MeTab({ onSettingsClick, activeAccountId, onActiveAccountChange 
                   mx.accentBlueHover
                 )}
                 onClick={() => {
-                  toast.success("Signed out", { description: "Demo: local data is not cleared." })
                   setShowAccountSwitcher(false)
+                  if (onSessionSignOut) {
+                    onSessionSignOut()
+                    return
+                  }
+                  toast.success("Signed out", { description: "Demo: local data is not cleared." })
                 }}
               >
                 <LogOut className="h-4 w-4" aria-hidden />

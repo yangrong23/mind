@@ -4,7 +4,7 @@ import { useState, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { getMindAccount, accountSpaceLabel, type MindAccountId } from "@/lib/mind-accounts"
 import { mx } from "@/lib/medrix-design-tokens"
-import { Mic, Bluetooth, Smartphone, Library, Trash2, ChevronRight, ChevronDown, X, Folder, Package, Plus, MoreHorizontal, ArrowUpDown, FileText, FileInput, Check } from "lucide-react"
+import { Mic, Bluetooth, Smartphone, Library, Trash2, ChevronRight, ChevronDown, X, Folder, Package, Plus, MoreHorizontal, ArrowUpDown, FileText, FileInput, Check, LayoutList, LayoutGrid } from "lucide-react"
 import { toast } from "sonner"
 import type { NoteFolder } from "@/lib/note-folders"
 import { folderIconComponent } from "@/lib/note-folders"
@@ -214,6 +214,83 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
   )
 }
 
+function NoteThumbnailSkeleton() {
+  return (
+    <div
+      className="flex aspect-[4/5] flex-col rounded-xl border border-stone-200/70 bg-stone-50/80 p-2 animate-pulse"
+      aria-hidden
+    >
+      <div className="h-9 rounded-lg bg-stone-200/90" />
+      <div className="mt-2 flex-1 rounded-md bg-stone-100/90" />
+      <div className="mt-1.5 h-2 w-2/3 rounded bg-stone-100" />
+    </div>
+  )
+}
+
+function NoteThumbnailCell({
+  note,
+  folders,
+  onOpen,
+  trashView,
+}: {
+  note: Note
+  folders: NoteFolder[]
+  onOpen: () => void
+  trashView?: boolean
+}) {
+  const folder = note.folderId ? folders.find((f) => f.id === note.folderId) : undefined
+
+  if (note.status === "pending") {
+    return <NoteThumbnailSkeleton />
+  }
+
+  const TypeIcon = note.type === "hardware" ? Mic : note.type === "phone" ? Smartphone : FileText
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        "group flex aspect-[4/5] flex-col rounded-xl border bg-white p-1.5 text-left shadow-sm transition-all active:scale-[0.98]",
+        trashView
+          ? "border-zinc-200/80 opacity-90 hover:border-zinc-300"
+          : "border-stone-200/80 hover:border-sky-200/90 hover:shadow-md"
+      )}
+    >
+      <div
+        className={cn(
+          "relative flex shrink-0 items-center justify-center rounded-lg py-2",
+          trashView ? "bg-zinc-100 dark:bg-zinc-800/80" : "bg-sky-50 dark:bg-sky-950/40"
+        )}
+      >
+        <TypeIcon
+          className={cn("h-5 w-5", trashView ? "text-zinc-600" : "text-sky-700 dark:text-sky-300")}
+          strokeWidth={1.85}
+          aria-hidden
+        />
+        {folder ? (
+          <span
+            className="absolute right-1 top-1 h-2 w-2 rounded-full ring-2 ring-white dark:ring-zinc-900"
+            style={{ backgroundColor: folder.color }}
+            title={folder.name}
+          />
+        ) : null}
+      </div>
+      <p className="mt-1 line-clamp-3 min-h-0 flex-1 px-0.5 text-[10px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
+        {note.title}
+      </p>
+      <div className="mt-auto flex items-center justify-between gap-0.5 px-0.5 pt-0.5 text-[9px] text-zinc-400 dark:text-zinc-500">
+        <span className="min-w-0 truncate">{note.duration ?? note.date}</span>
+        {note.highlightCount != null && note.highlightCount > 0 ? (
+          <span className="shrink-0 rounded bg-sky-100 px-1 text-[8px] font-semibold text-sky-800 dark:bg-sky-900/60 dark:text-sky-200">
+            {note.highlightCount}
+          </span>
+        ) : null}
+      </div>
+    </button>
+  )
+}
+
 interface NotesTabProps {
   activeAccountId: MindAccountId
   notes: Note[]
@@ -241,6 +318,7 @@ export function NotesTab({
   const [showFilterSortSheet, setShowFilterSortSheet] = useState(false)
   const [showFilesMenu, setShowFilesMenu] = useState(false)
   const [listScope, setListScope] = useState<"all" | "active">("all")
+  const [notesViewMode, setNotesViewMode] = useState<"list" | "thumbnails">("list")
 
   const inListScope = (n: Note) => (listScope === "active" ? !n.archived : true)
   const nonArchived = notes.filter((n) => !n.archived)
@@ -375,17 +453,18 @@ export function NotesTab({
           )}
         </div>
         <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1 text-left">
+            <button type="button" onClick={() => setShowFilterSortSheet(true)} className="text-left">
+              <h1 className="text-[28px] font-bold tracking-tight text-zinc-900">Notes</h1>
+            </button>
+            {notesViewMode === "thumbnails" ? (
+              <p className="mt-0.5 text-[12px] font-medium text-sky-700 dark:text-sky-300">Thumbnail view · dense grid</p>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={() => setShowFilterSortSheet(true)}
-            className="text-left"
-          >
-            <h1 className="text-[28px] font-bold tracking-tight text-zinc-900">Notes</h1>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowFilterSortSheet(true)}
-            className="relative flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-zinc-700 hover:bg-white"
+            className="relative flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-zinc-700 hover:bg-white"
             aria-label="Filter and sort"
           >
             <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -421,6 +500,18 @@ export function NotesTab({
             >
               Start recording
             </button>
+          </div>
+        ) : notesViewMode === "thumbnails" ? (
+          <div className="grid grid-cols-3 gap-2 pb-2">
+            {filteredNotes.map((note) => (
+              <NoteThumbnailCell
+                key={note.id}
+                note={note}
+                folders={folders}
+                trashView={fileScope === "trash"}
+                onOpen={() => onNoteClick(note)}
+              />
+            ))}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -552,6 +643,46 @@ export function NotesTab({
                   <span>Created time</span>
                   <ArrowUpDown className="h-4 w-4 text-zinc-400" strokeWidth={2} />
                 </button>
+
+                <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-zinc-400">View</p>
+                <div className="mb-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotesViewMode("list")
+                      setShowFilterSortSheet(false)
+                      toast.success("List view", { description: "Comfortable rows with previews." })
+                    }}
+                    className={cn(
+                      "flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-colors",
+                      notesViewMode === "list"
+                        ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/45"
+                        : "border-transparent bg-stone-50/80 hover:bg-stone-100/90 dark:bg-zinc-800/40"
+                    )}
+                  >
+                    <LayoutList className="h-5 w-5 text-zinc-600 dark:text-zinc-300" strokeWidth={1.75} aria-hidden />
+                    <span className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100">List</span>
+                    <span className="text-[11px] leading-snug text-zinc-500">Rows with excerpt</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotesViewMode("thumbnails")
+                      setShowFilterSortSheet(false)
+                      toast.success("Thumbnail view", { description: "Dense grid for quick scanning." })
+                    }}
+                    className={cn(
+                      "flex flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition-colors",
+                      notesViewMode === "thumbnails"
+                        ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/45"
+                        : "border-transparent bg-stone-50/80 hover:bg-stone-100/90 dark:bg-zinc-800/40"
+                    )}
+                  >
+                    <LayoutGrid className="h-5 w-5 text-zinc-600 dark:text-zinc-300" strokeWidth={1.75} aria-hidden />
+                    <span className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100">Thumbnails</span>
+                    <span className="text-[11px] leading-snug text-zinc-500">Small tiles, more on screen</span>
+                  </button>
+                </div>
 
                 <div className="space-y-0.5 border-b border-stone-100/80 pb-4">
                   {(
