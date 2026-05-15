@@ -14,6 +14,13 @@ import {
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
 import {
+  MeCollectedPersonalInfoPanel,
+  MePrivacyGuideSummaryPanel,
+  MePrivacySettingsPanel,
+  MeStorageSpacePanel,
+  MeThirdPartySharingPanel,
+} from "@/components/mind-v2/me-settings-panels"
+import {
   MIND_FONT_ZOOM_MAX,
   MIND_FONT_ZOOM_MIN,
   clampFontZoomPercent,
@@ -25,8 +32,6 @@ import {
   User,
   Bell,
   HelpCircle,
-  Shield,
-  Palette,
   Globe,
   Smartphone,
   Award,
@@ -49,6 +54,8 @@ import {
   Bluetooth,
   Sun,
   Moon,
+  Cpu,
+  HardDrive,
 } from "lucide-react"
 
 // Heatmap sample data
@@ -133,7 +140,7 @@ function DisplayThemeSegment() {
         )}
       >
         <Sun className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-        白天
+        Light
       </button>
       <button
         type="button"
@@ -146,7 +153,7 @@ function DisplayThemeSegment() {
         )}
       >
         <Moon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-        夜间
+        Dark
       </button>
     </div>
   )
@@ -232,9 +239,15 @@ export function MeTab({
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
-  const [settingsExtra, setSettingsExtra] = useState<
-    null | "display" | "notifications" | "privacy" | "help"
+  const [settingsExtra, setSettingsExtra] = useState<null | "display" | "notifications" | "help">(null)
+  const [showStorageSpace, setShowStorageSpace] = useState(false)
+  const [privacyDetail, setPrivacyDetail] = useState<
+    null | "guide" | "thirdParty" | "collected" | "privacySettings"
   >(null)
+  const [frontierInsights, setFrontierInsights] = useState(true)
+  const themeForHub = useTheme()
+  const [themeHubMounted, setThemeHubMounted] = useState(false)
+  useEffect(() => setThemeHubMounted(true), [])
   const [notifCaptureReady, setNotifCaptureReady] = useState(true)
   const [notifDigest, setNotifDigest] = useState(false)
   const [privacyCrashReports, setPrivacyCrashReports] = useState(true)
@@ -277,23 +290,13 @@ export function MeTab({
     },
   ] as const
 
-  const settingsMenuItems = [
-    {
-      icon: Palette,
-      label: "界面设置",
-      desc: "白天 / 夜间模式与字体大小",
-      action: () => {
-        setShowSettingsHub(false)
-        setSettingsExtra("display")
-      },
-    },
-    { icon: User, label: "Personalization", desc: "Preferences and custom instructions", action: () => { setShowSettingsHub(false); setShowPersonalization(true) } },
-    { icon: Cloud, label: "Cloud sync", desc: "Private cloud backup and storage", action: () => { setShowSettingsHub(false); setShowCloudSync(true) } },
-    { icon: Bell, label: "Notifications", desc: "Push and reminders", action: () => { setShowSettingsHub(false); setSettingsExtra("notifications") } },
-    { icon: Smartphone, label: "Devices", desc: "Recorder, pairing, lexicon, offline", action: () => { setShowSettingsHub(false); setShowDeviceSheet(true) } },
-    { icon: Shield, label: "Privacy & security", desc: "Data protection", action: () => { setShowSettingsHub(false); setSettingsExtra("privacy") } },
-    { icon: HelpCircle, label: "Help & feedback", desc: "Guides and support", action: () => { setShowSettingsHub(false); setSettingsExtra("help") } },
-  ]
+  const appearanceLabel =
+    !themeHubMounted || !themeForHub.resolvedTheme
+      ? "…"
+      : themeForHub.resolvedTheme === "dark"
+        ? "Dark"
+        : "Light"
+  const notifStatusLabel = notifCaptureReady || notifDigest ? "On" : "Off"
 
   return (
     <div className={cn("relative flex h-full min-h-0 flex-col", mx.pageBg)}>
@@ -795,35 +798,266 @@ export function MeTab({
       {showSettingsHub && (
         <div className="absolute inset-0 z-50 flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
           <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <button type="button" onClick={() => setShowSettingsHub(false)} className="p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setShowSettingsHub(false)
+                setPrivacyDetail(null)
+                setShowStorageSpace(false)
+              }}
+              className="p-1"
+            >
               <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
             </button>
             <h1 className="text-lg font-semibold text-zinc-900">Settings</h1>
             <div className="w-8" />
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5">
-            <div className="bg-white rounded-2xl border border-stone-100/85 overflow-hidden">
-              {settingsMenuItems.map((item, i) => (
+          <div className="flex-1 overflow-y-auto p-5 pb-10">
+            <div className="mb-5">
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                General
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
                 <button
-                  key={item.label}
                   type="button"
-                  onClick={item.action}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-stone-50/95 transition-colors",
-                    i !== settingsMenuItems.length - 1 && "border-b border-stone-100/85"
-                  )}
+                  onClick={() => {
+                    setShowSettingsHub(false)
+                    setSettingsExtra("display")
+                  }}
+                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-zinc-600" />
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Display</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm text-zinc-500">{appearanceLabel}</span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-zinc-900">{item.label}</div>
-                    <div className="text-xs text-zinc-500">{item.desc}</div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-zinc-400 shrink-0" />
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettingsHub(false)
+                    setSettingsExtra("display")
+                  }}
+                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+                >
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Text size</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm tabular-nums text-zinc-500">{fontZoomPercent}%</span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowStorageSpace(true)}
+                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100 dark:bg-zinc-800">
+                      <HardDrive className="h-5 w-5 text-zinc-600" />
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <div className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Storage space</div>
+                      <div className="text-xs text-zinc-500">Notes & knowledge base</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast.success("Cache cleared", { description: "Freed 7.7 MB (demo)." })
+                  }
+                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+                >
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Clear cache</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm tabular-nums text-zinc-500">7.7 MB</span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettingsHub(false)
+                    setSettingsExtra("notifications")
+                  }}
+                  className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:hover:bg-zinc-800/50"
+                >
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Notifications</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm text-zinc-500">{notifStatusLabel}</span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                Features
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast.message("Model settings", {
+                      description: "Custom models and routing would open here (demo).",
+                    })
+                  }
+                  className="flex w-full items-center gap-3 border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100 dark:bg-zinc-800">
+                    <Cpu className="h-5 w-5 text-zinc-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Model settings</div>
+                    <div className="text-xs text-zinc-500">Supports custom models</div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                </button>
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div className="min-w-0 pr-3">
+                    <div className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Frontier insights</div>
+                    <div className="mt-0.5 text-xs leading-snug text-zinc-500">
+                      When on, the Frontier insights card appears on the home tab by default.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={frontierInsights}
+                    onClick={() => {
+                      setFrontierInsights((v) => !v)
+                      toast.success("Saved")
+                    }}
+                    className={cn(
+                      "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
+                      frontierInsights ? "bg-emerald-600" : cn(mx.toggleTrackOff)
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
+                        frontierInsights ? "translate-x-5" : "translate-x-0"
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                Privacy
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                <button
+                  type="button"
+                  onClick={() => setPrivacyDetail("guide")}
+                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+                >
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">
+                    Privacy protection guide (summary)
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrivacyDetail("privacySettings")}
+                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+                >
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Privacy settings</span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrivacyDetail("collected")}
+                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
+                >
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">
+                    Personal information collected
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrivacyDetail("thirdParty")}
+                  className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:hover:bg-zinc-800/50"
+                >
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">
+                    Personal information shared with third parties
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-2">
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                More
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+                {(
+                  [
+                    {
+                      icon: User,
+                      label: "Personalization",
+                      desc: "Preferences and custom instructions",
+                      onClick: () => {
+                        setShowSettingsHub(false)
+                        setShowPersonalization(true)
+                      },
+                    },
+                    {
+                      icon: Cloud,
+                      label: "Cloud sync",
+                      desc: "Private cloud backup and storage",
+                      onClick: () => {
+                        setShowSettingsHub(false)
+                        setShowCloudSync(true)
+                      },
+                    },
+                    {
+                      icon: Smartphone,
+                      label: "Devices",
+                      desc: "Recorder, pairing, lexicon, offline",
+                      onClick: () => {
+                        setShowSettingsHub(false)
+                        setShowDeviceSheet(true)
+                      },
+                    },
+                    {
+                      icon: HelpCircle,
+                      label: "Help & feedback",
+                      desc: "Guides and support",
+                      onClick: () => {
+                        setShowSettingsHub(false)
+                        setSettingsExtra("help")
+                      },
+                    },
+                  ] as const
+                ).map((item, i, arr) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={item.onClick}
+                    className={cn(
+                      "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/95 dark:hover:bg-zinc-800/50",
+                      i !== arr.length - 1 && "border-b border-stone-100/85 dark:border-zinc-800"
+                    )}
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100 dark:bg-zinc-800">
+                      <item.icon className="h-5 w-5 text-zinc-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-zinc-900 dark:text-zinc-100">{item.label}</div>
+                      <div className="text-xs text-zinc-500">{item.desc}</div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -844,9 +1078,8 @@ export function MeTab({
               <ChevronRight className="h-6 w-6 rotate-180 text-zinc-600" />
             </button>
             <h1 className="text-lg font-semibold text-zinc-900">
-              {settingsExtra === "display" && "界面设置"}
+              {settingsExtra === "display" && "Display"}
               {settingsExtra === "notifications" && "Notifications"}
-              {settingsExtra === "privacy" && "Privacy & security"}
               {settingsExtra === "help" && "Help & feedback"}
             </h1>
           </div>
@@ -854,20 +1087,20 @@ export function MeTab({
             {settingsExtra === "display" && (
               <>
                 <p className="text-sm text-zinc-500">
-                  在此切换配色与整体缩放。状态栏右侧的图标仍可快速切换夜间模式。
+                  Switch theme and overall scale here. You can still toggle dark mode quickly from the status bar icon.
                 </p>
                 <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
                   <div className="border-b border-stone-100/85 px-4 py-4">
-                    <p className="text-[15px] font-medium text-zinc-900">外观</p>
-                    <p className="mt-1 text-xs text-zinc-500">选择白天或夜间界面</p>
+                    <p className="text-[15px] font-medium text-zinc-900">Appearance</p>
+                    <p className="mt-1 text-xs text-zinc-500">Choose light or dark interface</p>
                     <DisplayThemeSegment />
                   </div>
                   <div className="px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[15px] font-medium text-zinc-900">字体大小</p>
+                        <p className="text-[15px] font-medium text-zinc-900">Text size</p>
                         <p className="mt-1 text-xs text-zinc-500">
-                          缩放手机内整个界面（正文、列表与按钮一并变化）
+                          Scale the entire phone preview (body text, lists, and controls together).
                         </p>
                       </div>
                       <span className="shrink-0 tabular-nums text-[17px] font-semibold text-sky-800 dark:text-sky-300">
@@ -887,12 +1120,12 @@ export function MeTab({
                       aria-valuemin={MIND_FONT_ZOOM_MIN}
                       aria-valuemax={MIND_FONT_ZOOM_MAX}
                       aria-valuenow={fontZoomPercent}
-                      aria-label="字体大小"
+                      aria-label="Text size"
                     />
                     <div className="mt-1 flex justify-between text-[11px] text-zinc-400">
-                      <span>较小</span>
-                      <span>默认</span>
-                      <span>较大</span>
+                      <span>Smaller</span>
+                      <span>Default</span>
+                      <span>Larger</span>
                     </div>
                   </div>
                 </div>
@@ -956,53 +1189,6 @@ export function MeTab({
                       />
                     </button>
                   </div>
-                </div>
-              </>
-            )}
-            {settingsExtra === "privacy" && (
-              <>
-                <p className="text-sm text-zinc-500">
-                  Manage privacy options for this demo app.
-                </p>
-                <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
-                  <div className="flex items-center justify-between px-4 py-4 border-b border-stone-100/85">
-                    <div>
-                      <div className="text-[15px] text-zinc-900">Share crash reports</div>
-                      <div className="mt-1 text-xs text-zinc-400">Helps fix bugs faster (no raw audio)</div>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={privacyCrashReports}
-                      onClick={() => {
-                        setPrivacyCrashReports((v) => !v)
-                        toast.success("Saved")
-                      }}
-                      className={cn(
-                        "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                        privacyCrashReports ? "bg-sky-600" : cn(mx.toggleTrackOff)
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
-                          privacyCrashReports ? "translate-x-5" : "translate-x-0"
-                        )}
-                      />
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toast.success("Added to export queue", {
-                        description: "You will get a download link when ready (demo).",
-                      })
-                    }
-                    className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-stone-50/95"
-                  >
-                    <span className="text-[15px] text-zinc-900">Export my data</span>
-                    <ChevronRight className="h-5 w-5 text-zinc-300" />
-                  </button>
                 </div>
               </>
             )}
@@ -1799,6 +1985,18 @@ export function MeTab({
             </div>
           </div>
         </div>
+      )}
+
+      {showStorageSpace && <MeStorageSpacePanel onBack={() => setShowStorageSpace(false)} />}
+      {privacyDetail === "guide" && <MePrivacyGuideSummaryPanel onBack={() => setPrivacyDetail(null)} />}
+      {privacyDetail === "thirdParty" && <MeThirdPartySharingPanel onBack={() => setPrivacyDetail(null)} />}
+      {privacyDetail === "collected" && <MeCollectedPersonalInfoPanel onBack={() => setPrivacyDetail(null)} />}
+      {privacyDetail === "privacySettings" && (
+        <MePrivacySettingsPanel
+          onBack={() => setPrivacyDetail(null)}
+          crashReportsEnabled={privacyCrashReports}
+          onCrashReportsChange={setPrivacyCrashReports}
+        />
       )}
     </div>
   )
