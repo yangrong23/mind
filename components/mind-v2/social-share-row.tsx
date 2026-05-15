@@ -11,7 +11,7 @@ import {
 
 function SocialGlyph({ id }: { id: SocialShareRowId }) {
   if (id === "copy") {
-    return <Link2 className="w-6 h-6 text-gray-600" strokeWidth={2} aria-hidden />
+    return <Link2 className="w-6 h-6 text-zinc-600" strokeWidth={2} aria-hidden />
   }
   const c = "text-white"
   switch (id) {
@@ -94,7 +94,7 @@ export function SocialShareRow({
           >
             <SocialGlyph id={action.id} />
           </div>
-          <span className="text-xs text-gray-600 text-center leading-tight max-w-[72px]">{action.label}</span>
+          <span className="text-xs text-zinc-600 text-center leading-tight max-w-[72px]">{action.label}</span>
         </button>
       ))}
     </div>

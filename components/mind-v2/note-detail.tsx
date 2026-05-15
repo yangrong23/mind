@@ -42,6 +42,7 @@ import { SocialShareRow } from "./social-share-row"
 import type { Note } from "./notes-tab"
 import { toast } from "sonner"
 import type { NoteFolder } from "@/lib/note-folders"
+import type { KBCategory } from "@/lib/mock-knowledge-bases"
 
 const knowledgeBases = [
   { id: 2, name: "Tech docs", category: "Team", count: 89, recent: true, color: "from-zinc-500 to-stone-600", description: "Playbooks and internal docs" },
@@ -54,7 +55,12 @@ const recommendedKBs = [
   { id: 2, name: "Tech docs", category: "Team", count: 89, match: 72, reason: "Contains implementation notes", description: "Playbooks and internal docs", color: "from-zinc-500 to-stone-600" },
 ]
 
-export type MovedLibraryMeta = { name: string; color: string; description?: string }
+export type MovedLibraryMeta = {
+  name: string
+  color: string
+  description?: string
+  category?: KBCategory
+}
 
 interface NoteDetailProps {
   note?: Note | null
@@ -186,6 +192,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
           name: kbMeta.name,
           color: kbMeta.color,
           description: "description" in kbMeta ? kbMeta.description : undefined,
+          category: kbMeta.category === "Personal" ? "mine" : "team",
         })
         setShowKBSheet(false)
         setTransferComplete(false)
@@ -195,7 +202,11 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
   }
 
   useEffect(() => {
-    if (!isPlaying) return
+    if (segment === "note") setIsPlaying(false)
+  }, [segment])
+
+  useEffect(() => {
+    if (!isPlaying || segment !== "source") return
     const id = window.setInterval(() => {
       setPlayheadPct((p) => {
         const n = p + 0.0045
@@ -207,7 +218,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
       })
     }, 100)
     return () => window.clearInterval(id)
-  }, [isPlaying])
+  }, [isPlaying, segment])
 
   const activeTranscriptIdx = Math.min(
     TRANSCRIPT_BLOCKS.length - 1,
@@ -217,56 +228,40 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
   return (
     <div className="relative flex h-full min-w-0 flex-col overflow-x-hidden bg-white">
       {/* Top bar: Source | Note + actions */}
-      <div className="flex items-center gap-1 border-b border-gray-100 px-2 py-2.5 sm:px-3">
-        <button type="button" onClick={onBack} className="shrink-0 rounded-full p-2 hover:bg-gray-100" aria-label="Back">
-          <ChevronLeft className="h-6 w-6 text-gray-700" />
+      <div className="flex items-center gap-1 border-b border-stone-100 px-2 py-2.5 sm:px-3">
+        <button type="button" onClick={onBack} className="shrink-0 rounded-full p-2 hover:bg-stone-100" aria-label="Back">
+          <ChevronLeft className="h-6 w-6 text-zinc-700" />
         </button>
         <div className="flex min-w-0 flex-1 items-center justify-center gap-6 sm:gap-10">
-          {(["source", "note"] as const).map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setSegment(id)}
-              className={cn(
-                "relative pb-1 text-[16px] font-medium tracking-tight transition-colors",
-                segment === id ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
-              )}
-            >
-              {id === "source" ? "Source" : "Note"}
-              {segment === id && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] rounded-full bg-zinc-800" aria-hidden />
-              )}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => setSegment("source")}
+            className={cn(
+              "relative pb-1 tracking-tight transition-colors",
+              segment === "source" ? "text-[16px] font-semibold text-zinc-900" : "text-[15px] font-medium text-zinc-400 hover:text-zinc-600"
+            )}
+          >
+            Source
+          </button>
+          <button
+            type="button"
+            onClick={() => setSegment("note")}
+            className={cn(
+              "relative pb-1 tracking-tight transition-colors",
+              segment === "note" ? "text-[18px] font-semibold text-zinc-900" : "text-[17px] font-medium text-zinc-400 hover:text-zinc-600"
+            )}
+          >
+            Note
+          </button>
         </div>
         <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-          <button
-            type="button"
-            onClick={openMoveToLibrary}
-            className={cn(
-              "hidden rounded-full px-2.5 py-1.5 text-[11px] font-semibold tracking-tight active:scale-[0.98] sm:flex sm:items-center sm:gap-1 sm:px-3",
-              mx.brandCta
-            )}
-            aria-label="Move to library"
-          >
-            <Library className="h-3.5 w-3.5 opacity-90" strokeWidth={2} />
-            <span>Library</span>
-          </button>
-          <button
-            type="button"
-            onClick={openMoveToLibrary}
-            className={cn("flex h-9 w-9 items-center justify-center rounded-full sm:hidden", mx.brandCta)}
-            aria-label="Move to library"
-          >
-            <Library className="h-4 w-4 text-white" strokeWidth={2} />
-          </button>
           <button
             type="button"
             onClick={() => {
               setShowToolsMenu(false)
               setShowShareOptions(true)
             }}
-            className="rounded-full p-2 hover:bg-gray-100"
+            className="rounded-full p-2 hover:bg-stone-100"
             aria-label="Share"
           >
             <Share2 className="h-5 w-5 text-zinc-600" strokeWidth={1.75} />
@@ -277,7 +272,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               setShowShareOptions(false)
               setShowToolsMenu((v) => !v)
             }}
-            className="rounded-full p-2 hover:bg-gray-100"
+            className="rounded-full p-2 hover:bg-stone-100"
             aria-label="More"
           >
             <MoreHorizontal className="h-5 w-5 text-zinc-600" strokeWidth={1.75} />
@@ -285,36 +280,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
         </div>
       </div>
 
-      {/* Source: transcript only */}
+      {/* Source: recording playback + transcript */}
       {segment === "source" && (
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto w-full min-w-0 max-w-prose px-5 py-5">
-            <p className="mb-6 text-center text-[12px] leading-relaxed text-zinc-400">
-              Transcript synced with playback (demo)
-            </p>
-            <div className="space-y-6">
-              {TRANSCRIPT_BLOCKS.map((block, i) => (
-                <div key={i} className="space-y-1.5">
-                  <span className="font-mono text-[12px] tabular-nums text-zinc-400">{block.t}</span>
-                  <p
-                    className={cn(
-                      "break-words text-[17px] leading-[1.65] tracking-[-0.01em] transition-colors duration-200",
-                      i === activeTranscriptIdx ? "font-normal text-zinc-900" : "text-zinc-500"
-                    )}
-                  >
-                    {block.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Note: player + Marks / Summary */}
-      {segment === "note" && (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="border-b border-gray-100 bg-gradient-to-b from-stone-50/80 to-white px-5 py-4">
+          <div className="shrink-0 border-b border-stone-100 bg-gradient-to-b from-stone-50/80 to-white px-5 py-4">
             <div className="relative mb-3 flex h-12 items-end justify-center gap-[2px] px-1">
               {Array.from({ length: 72 }).map((_, i) => {
                 const h = 0.28 + Math.sin(i * 0.35) * 0.22 + ((i * 17) % 9) * 0.02
@@ -342,12 +311,12 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
             </div>
             <div className="mb-4 flex items-center justify-between text-sm">
               <span className="font-medium text-zinc-700">07:23</span>
-              <span className="text-gray-400">23:45</span>
+              <span className="text-zinc-400">23:45</span>
             </div>
             <div className="flex items-center justify-center gap-4">
               <button
                 type="button"
-                className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100"
               >
                 <span className="text-xs font-semibold">-15</span>
               </button>
@@ -364,53 +333,76 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               </button>
               <button
                 type="button"
-                className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100"
               >
                 <span className="text-xs font-semibold">+15</span>
               </button>
               <button
                 type="button"
-                className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100"
               >
                 <span className="text-xs font-semibold">1x</span>
               </button>
             </div>
           </div>
-
-          <div className="flex items-stretch justify-between gap-2 border-b border-stone-100 px-4 sm:px-5">
-            <div className="flex min-w-0 gap-6 sm:gap-8">
-              {(
-                [
-                  { id: "marks" as const, label: "Marks" },
-                  { id: "summary" as const, label: "Summary", showChevron: true },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setNoteSub(tab.id)}
-                  className={cn(
-                    "flex items-center gap-0.5 py-3.5 text-[15px] font-medium tracking-tight transition-colors -mb-px border-b-[2.5px]",
-                    noteSub === tab.id
-                      ? "border-zinc-500 text-zinc-900"
-                      : "border-transparent text-zinc-400 hover:text-zinc-600"
-                  )}
-                >
-                  {tab.label}
-                  {"showChevron" in tab && tab.showChevron ? (
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" strokeWidth={2.5} aria-hidden />
-                  ) : null}
-                </button>
-              ))}
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="mx-auto w-full min-w-0 max-w-prose px-5 py-5">
+              <p className="mb-6 text-center text-[12px] leading-relaxed text-zinc-400">
+                View and play the recording here; the transcript highlights track playback (demo).
+              </p>
+              <div className="space-y-6">
+                {TRANSCRIPT_BLOCKS.map((block, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <span className="font-mono text-[12px] tabular-nums text-zinc-400">{block.t}</span>
+                    <p
+                      className={cn(
+                        "break-words text-[17px] leading-[1.65] tracking-[-0.01em] transition-colors duration-200",
+                        i === activeTranscriptIdx ? "font-normal text-zinc-900" : "text-zinc-500"
+                      )}
+                    >
+                      {block.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex shrink-0 items-center pb-px">
+          </div>
+        </div>
+      )}
+
+      {/* Note: Marks / Summary only — playback lives under Source */}
+      {segment === "note" && (
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex items-stretch gap-6 px-4 sm:gap-8 sm:px-5">
+            <button
+              type="button"
+              onClick={() => setNoteSub("marks")}
+              className={cn(
+                "flex items-center gap-0.5 py-3.5 text-[14px] font-medium tracking-tight transition-colors",
+                noteSub === "marks" ? "font-semibold text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
+              )}
+            >
+              Marks
+            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setNoteSub("summary")}
+                className={cn(
+                  "flex items-center gap-0.5 py-3.5 text-[14px] font-medium tracking-tight transition-colors",
+                  noteSub === "summary" ? "font-semibold text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
+                )}
+              >
+                Summary
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" strokeWidth={2.5} aria-hidden />
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   closeAllOverlays()
                   setShowTemplatePage(true)
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:bg-stone-100"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 hover:bg-stone-100"
                 aria-label="Templates"
                 title="Templates"
               >
@@ -532,14 +524,14 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                 <p className="min-w-0 break-words text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">Thanks for using Mind—enjoy exploring.</p>
                 <div className="-mx-1 overflow-x-auto pb-0.5 pt-0.5">
                   <div className="flex min-w-max items-stretch gap-1.5 px-1 sm:gap-2">
-                    <span className="shrink-0 self-center rounded-xl bg-violet-100 px-2.5 py-2 text-[11px] font-semibold leading-snug text-violet-900 sm:px-3 sm:py-2.5 sm:text-[12px]">
+                    <span className="shrink-0 self-center rounded-xl bg-sky-100 px-2.5 py-2 text-[11px] font-semibold leading-snug text-sky-900 sm:px-3 sm:py-2.5 sm:text-[12px]">
                       How to use Mind?
                     </span>
                     {[
                       { label: "Recording", bg: "bg-sky-100 text-sky-900" },
-                      { label: "Multimodal input", bg: "bg-amber-100 text-amber-900" },
+                      { label: "Multimodal input", bg: "bg-cyan-100 text-cyan-900" },
                       { label: "Files UI", bg: "bg-emerald-100 text-emerald-900" },
-                      { label: "Ask Mind", bg: "bg-rose-100 text-rose-900" },
+                      { label: "Ask Mind", bg: "bg-blue-100 text-blue-900" },
                       { label: "Export & share", bg: "bg-indigo-100 text-indigo-900" },
                     ].map((b) => (
                       <span
@@ -573,7 +565,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   onClick={() => setSummaryFeedback((v) => (v === "down" ? null : "down"))}
                   className={cn(
                     "flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 rounded-xl border-2 border-stone-200 bg-white px-2 py-2.5 text-[13px] font-medium text-zinc-700 transition-colors sm:gap-2 sm:py-3 sm:text-[14px]",
-                    summaryFeedback === "down" && "border-orange-300 bg-orange-50 text-orange-900"
+                    summaryFeedback === "down" && "border-stone-400 bg-stone-100 text-zinc-800"
                   )}
                 >
                   <ThumbsDown className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={1.85} aria-hidden />
@@ -583,7 +575,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
 
               <section className="min-w-0 space-y-2 sm:space-y-2.5">
                 <h3 className="flex items-center gap-1.5 text-[14px] font-semibold text-zinc-900 sm:gap-2 sm:text-[15px]">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-500 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-sky-600 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
                   Mind insights
                 </h3>
                 <div className="space-y-2 sm:space-y-2.5">
@@ -620,8 +612,17 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
           />
           <div
             role="menu"
-            className="absolute right-3 top-[108px] z-[47] w-[min(280px,calc(100%-24px))] overflow-hidden rounded-xl border border-stone-200/95 bg-white py-1 shadow-xl shadow-stone-900/12"
+            className="absolute right-3 top-[56px] z-[47] w-[min(280px,calc(100%-24px))] overflow-hidden rounded-xl border border-stone-200/95 bg-white py-1 shadow-xl shadow-stone-900/12"
           >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={openMoveToLibrary}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
+            >
+              <Library className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
+              Add to knowledge library
+            </button>
             {note != null && onAssignNoteToNewFolder != null && (
               <button
                 type="button"
@@ -693,7 +694,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
       )}
 
       {/* Bottom bar */}
-      <div className="p-4 border-t border-gray-100 space-y-3">
+      <div className="p-4 border-t border-stone-100 space-y-3">
         <div className="relative">
           <span className="absolute left-3 top-0 z-10 -translate-y-1/2 rounded bg-sky-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-800">
             Beta
@@ -714,7 +715,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
           <button
             type="button"
             onClick={submitAskAboutNote}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-500 hover:bg-sky-50 hover:text-sky-700"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-500 hover:bg-sky-50 hover:text-sky-700"
             aria-label="Send question"
           >
             <MessageSquare className="w-5 h-5" />
@@ -724,9 +725,9 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
 
       {/* Template picker (fullscreen) */}
       {showTemplatePage && (
-        <div className="absolute inset-0 z-50 flex flex-col bg-[#f7f7f8] animate-in slide-in-from-right duration-200">
+        <div className="absolute inset-0 z-50 flex flex-col bg-stone-50 animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
           {/* Top bar */}
-          <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
+          <div className="flex items-center justify-between border-b border-stone-100 bg-white px-4 py-3">
             <button
               type="button"
               onClick={() => {
@@ -734,16 +735,16 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                 setShowTemplateConfirm(false)
                 setShowTemplatePage(false)
               }}
-              className="-ml-2 rounded-full p-2 hover:bg-gray-100"
+              className="-ml-2 rounded-full p-2 hover:bg-stone-100"
             >
-              <ChevronLeft className="h-6 w-6 text-gray-700" />
+              <ChevronLeft className="h-6 w-6 text-zinc-700" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Choose template</h1>
+            <h1 className="text-lg font-semibold text-zinc-900">Choose template</h1>
             <div className="w-10" />
           </div>
 
           {/* Tabs */}
-          <div className="border-b border-gray-100 bg-white px-5 py-3">
+          <div className="border-b border-stone-100 bg-white px-5 py-3">
             <div className="flex gap-6">
               {[
                 { id: "mine" as const, label: "Mine" },
@@ -755,10 +756,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   type="button"
                   onClick={() => setTemplateTab(tab.id)}
                   className={cn(
-                    "border-b-2 pb-1 text-[15px] font-medium transition-colors",
+                    "py-1 text-[15px] font-medium transition-colors",
                     templateTab === tab.id
-                      ? "border-zinc-800 text-zinc-900"
-                      : "border-transparent text-gray-400"
+                      ? "font-semibold text-zinc-900"
+                      : "text-zinc-400 hover:text-zinc-600"
                   )}
                 >
                   {tab.label}
@@ -773,8 +774,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
             {templateTab === "mine" && (
               <div className="p-5 pb-28">
                 <div className="mb-4 flex items-center gap-2">
-                  <h2 className="text-base font-bold text-gray-900">Recently used</h2>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                  <h2 className="text-base font-bold text-zinc-900">Recently used</h2>
+                  <ChevronRight className="h-5 w-5 text-zinc-400" />
                 </div>
                 <div className="mb-8">
                   <button
@@ -788,31 +789,31 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                     }
                     className={cn(
                       "relative w-full max-w-[220px] rounded-xl border bg-white p-4 text-left shadow-sm",
-                      selectedTemplate?.id === "smart-summary" ? "border-zinc-600 ring-1 ring-zinc-200" : "border-gray-200"
+                      selectedTemplate?.id === "smart-summary" ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
                     )}
                   >
                     <span className="absolute right-2 top-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
                       Last used
                     </span>
                     <div className="mb-2 flex items-start justify-between gap-2 pr-16">
-                      <span className="text-violet-500" aria-hidden>
+                      <span className="text-sky-600" aria-hidden>
                         ✦✦
                       </span>
-                      <span className="text-gray-400" aria-hidden>
+                      <span className="text-zinc-400" aria-hidden>
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
                         </svg>
                       </span>
                     </div>
-                    <div className="mb-1 font-semibold text-gray-900">Smart summary</div>
-                    <div className="text-xs leading-relaxed text-gray-500">Adaptive summaries across contexts</div>
-                    <div className="mt-4 text-xs text-gray-400">Plaud</div>
+                    <div className="mb-1 font-semibold text-zinc-900">Smart summary</div>
+                    <div className="text-xs leading-relaxed text-zinc-500">Adaptive summaries across contexts</div>
+                    <div className="mt-4 text-xs text-zinc-400">Plaud</div>
                   </button>
                 </div>
 
                 <div className="mb-4 flex items-center gap-2">
-                  <h2 className="text-base font-bold text-gray-900">My templates</h2>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                  <h2 className="text-base font-bold text-zinc-900">My templates</h2>
+                  <ChevronRight className="h-5 w-5 text-zinc-400" />
                 </div>
                 <div className="mb-6 flex flex-wrap gap-3">
                   {customTemplates.map((t) => (
@@ -824,41 +825,41 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       }
                       className={cn(
                         "w-full max-w-[200px] rounded-xl border bg-white p-4 text-left shadow-sm",
-                        selectedTemplate?.id === t.id ? "border-zinc-600 ring-1 ring-zinc-200" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
                       )}
                     >
-                      <div className="mb-2 flex items-center gap-2 text-violet-500">
+                      <div className="mb-2 flex items-center gap-2 text-sky-600">
                         <Pencil className="h-4 w-4" />
                       </div>
-                      <div className="mb-1 font-semibold text-gray-900">{t.name}</div>
-                      <div className="line-clamp-2 text-xs text-gray-500">{t.desc}</div>
+                      <div className="mb-1 font-semibold text-zinc-900">{t.name}</div>
+                      <div className="line-clamp-2 text-xs text-zinc-500">{t.desc}</div>
                     </button>
                   ))}
                   <button
                     type="button"
                     onClick={() => setShowCreateTemplateSheet(true)}
-                    className="flex aspect-[4/5] w-full max-w-[200px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-white transition-colors hover:border-gray-400"
+                    className="flex aspect-[4/5] w-full max-w-[200px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-300 bg-white transition-colors hover:border-stone-400"
                   >
-                    <Pencil className="h-8 w-8 text-gray-400" strokeWidth={1.5} />
-                    <span className="text-sm text-gray-500">New template</span>
+                    <Pencil className="h-8 w-8 text-zinc-400" strokeWidth={1.5} />
+                    <span className="text-sm text-zinc-500">New template</span>
                   </button>
                 </div>
 
-                <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <div className="mb-6 overflow-hidden rounded-xl border border-stone-200 bg-white">
                   <button
                     type="button"
                     onClick={() =>
                       setTemplateLanguage((v) => (v === "Auto" ? "English" : v === "English" ? "Spanish" : "Auto"))
                     }
-                    className="flex w-full items-center justify-between border-b border-gray-100 px-4 py-3.5 text-left"
+                    className="flex w-full items-center justify-between border-b border-stone-100 px-4 py-3.5 text-left"
                   >
-                    <span className="flex items-center gap-2 text-[15px] text-gray-900">
-                      <Languages className="h-5 w-5 text-gray-400" />
+                    <span className="flex items-center gap-2 text-[15px] text-zinc-900">
+                      <Languages className="h-5 w-5 text-zinc-400" />
                       Language
                     </span>
-                    <span className="flex items-center gap-1 text-[15px] text-gray-500">
+                    <span className="flex items-center gap-1 text-[15px] text-zinc-500">
                       {templateLanguage}
-                      <ChevronRight className="h-4 w-4 text-gray-300" />
+                      <ChevronRight className="h-4 w-4 text-zinc-300" />
                     </span>
                   </button>
                   <button
@@ -866,13 +867,13 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                     onClick={() => setTemplateModel((v) => (v === "Auto" ? "GPT-4o" : v === "GPT-4o" ? "Claude" : "Auto"))}
                     className="flex w-full items-center justify-between px-4 py-3.5 text-left"
                   >
-                    <span className="flex items-center gap-2 text-[15px] text-gray-900">
-                      <Cpu className="h-5 w-5 text-gray-400" />
+                    <span className="flex items-center gap-2 text-[15px] text-zinc-900">
+                      <Cpu className="h-5 w-5 text-zinc-400" />
                       AI model
                     </span>
-                    <span className="flex items-center gap-1 text-[15px] text-gray-500">
+                    <span className="flex items-center gap-1 text-[15px] text-zinc-500">
                       {templateModel}
-                      <ChevronRight className="h-4 w-4 text-gray-300" />
+                      <ChevronRight className="h-4 w-4 text-zinc-300" />
                     </span>
                   </button>
                 </div>
@@ -884,8 +885,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               <div className="p-5">
                 {/* Popular */}
                 <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Popular</h2>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <h2 className="text-xl font-bold text-zinc-900">Popular</h2>
+                  <ChevronRight className="w-5 h-5 text-zinc-400" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 mb-8">
                   {[
@@ -897,7 +898,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-zinc-500" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
                       )}
                     >
                       <div className={cn(
@@ -920,9 +921,9 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                           </svg>
                         )}
                       </div>
-                      <div className="font-semibold text-gray-900 text-sm mb-1">{t.name}</div>
-                      <div className="text-xs text-gray-500 leading-relaxed mb-4">{t.desc}</div>
-                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <div className="font-semibold text-zinc-900 text-sm mb-1">{t.name}</div>
+                      <div className="text-xs text-zinc-500 leading-relaxed mb-4">{t.desc}</div>
+                      <div className="flex items-center gap-2 text-xs text-zinc-400">
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <rect x="2" y="3" width="20" height="14" rx="2" />
                           <line x1="8" y1="21" x2="16" y2="21" />
@@ -936,8 +937,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
 
                 {/* Inspiration */}
                 <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Inspiration</h2>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <h2 className="text-xl font-bold text-zinc-900">Inspiration</h2>
+                  <ChevronRight className="w-5 h-5 text-zinc-400" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {[
@@ -949,7 +950,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-zinc-500" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
                       )}
                     >
                       <div className={cn(
@@ -967,9 +968,9 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                           <span className="text-zinc-600 font-bold text-lg">99</span>
                         )}
                       </div>
-                      <div className="font-semibold text-gray-900 text-sm mb-1">{t.name}</div>
-                      <div className="text-xs text-gray-500 leading-relaxed mb-4">{t.desc}</div>
-                      <div className="text-xs text-gray-400">{t.author}</div>
+                      <div className="font-semibold text-zinc-900 text-sm mb-1">{t.name}</div>
+                      <div className="text-xs text-zinc-500 leading-relaxed mb-4">{t.desc}</div>
+                      <div className="text-xs text-zinc-400">{t.author}</div>
                     </button>
                   ))}
                 </div>
@@ -981,8 +982,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               <div className="p-5">
                 {/* General */}
                 <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">General</h2>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <h2 className="text-xl font-bold text-zinc-900">General</h2>
+                  <ChevronRight className="w-5 h-5 text-zinc-400" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 mb-8">
                   {[
@@ -994,7 +995,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-zinc-500" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
                       )}
                     >
                       <div className="flex items-start justify-between mb-3">
@@ -1016,21 +1017,21 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                             </svg>
                           )}
                         </div>
-                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M7 17L17 7M17 7H7M17 7V17" />
                         </svg>
                       </div>
-                      <div className="font-semibold text-gray-900 text-sm mb-1">{t.name}</div>
-                      <div className="text-xs text-gray-500 leading-relaxed mb-4">{t.desc}</div>
-                      <div className="text-xs text-gray-400">{t.author}</div>
+                      <div className="font-semibold text-zinc-900 text-sm mb-1">{t.name}</div>
+                      <div className="text-xs text-zinc-500 leading-relaxed mb-4">{t.desc}</div>
+                      <div className="text-xs text-zinc-400">{t.author}</div>
                     </button>
                   ))}
                 </div>
 
                 {/* Meetings */}
                 <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Meetings</h2>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <h2 className="text-xl font-bold text-zinc-900">Meetings</h2>
+                  <ChevronRight className="w-5 h-5 text-zinc-400" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {[
@@ -1042,7 +1043,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-zinc-500" : "border-gray-200"
+                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
                       )}
                     >
                       <div className="flex items-start justify-between mb-3">
@@ -1063,13 +1064,13 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                             </svg>
                           )}
                         </div>
-                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M7 17L17 7M17 7H7M17 7V17" />
                         </svg>
                       </div>
-                      <div className="font-semibold text-gray-900 text-sm mb-1">{t.name}</div>
-                      <div className="text-xs text-gray-500 leading-relaxed mb-4">{t.desc}</div>
-                      <div className="text-xs text-gray-400">{t.author}</div>
+                      <div className="font-semibold text-zinc-900 text-sm mb-1">{t.name}</div>
+                      <div className="text-xs text-zinc-500 leading-relaxed mb-4">{t.desc}</div>
+                      <div className="text-xs text-zinc-400">{t.author}</div>
                     </button>
                   ))}
                 </div>
@@ -1077,9 +1078,9 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
             )}
           </div>
 
-          <div className="border-t border-gray-100 bg-white p-5">
+          <div className="border-t border-stone-100 bg-white p-5">
             {templateTab === "mine" && (
-              <p className="mb-3 flex items-center justify-center gap-1.5 text-center text-[12px] text-gray-500">
+              <p className="mb-3 flex items-center justify-center gap-1.5 text-center text-[12px] text-zinc-500">
                 <Languages className="h-3.5 w-3.5 shrink-0 opacity-70" />
                 Translated. View original
               </p>
@@ -1097,8 +1098,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               className={cn(
                 "w-full rounded-xl py-4 text-base font-medium transition-colors",
                 selectedTemplate
-                  ? "bg-zinc-900 text-white hover:bg-zinc-800"
-                  : "bg-gray-200 text-gray-400"
+                  ? cn("text-white", mx.brandCta)
+                  : "bg-stone-200 text-zinc-400"
               )}
             >
               Generate note
@@ -1115,15 +1116,15 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                 onClick={() => setShowCreateTemplateSheet(false)}
               />
               <div className="relative max-h-[55%] rounded-t-[1.25rem] bg-white px-4 pb-6 pt-3 shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom duration-300">
-                <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="mb-3 flex items-center justify-between border-b border-stone-100 pb-3">
                   <span className="text-base font-semibold text-zinc-900">Create template</span>
                   <button
                     type="button"
                     onClick={() => setShowCreateTemplateSheet(false)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
+                    className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-stone-100"
                     aria-label="Close"
                   >
-                    <X className="h-5 w-5 text-gray-500" />
+                    <X className="h-5 w-5 text-zinc-500" />
                   </button>
                 </div>
                 <button
@@ -1136,20 +1137,20 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                     )
                     setShowTemplateConfirm(true)
                   }}
-                  className="flex w-full items-center gap-3 border-b border-gray-100 py-4 text-left"
+                  className="flex w-full items-center gap-3 border-b border-stone-100 py-4 text-left"
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-violet-500 text-white shadow-sm">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-sm">
                     <ImageIcon className="h-5 w-5" strokeWidth={1.75} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="bg-gradient-to-r from-teal-600 to-emerald-600 bg-clip-text text-[16px] font-semibold text-transparent">
                       Photo to template
                     </div>
-                    <p className="mt-0.5 text-[13px] leading-snug text-gray-500">
+                    <p className="mt-0.5 text-[13px] leading-snug text-zinc-500">
                       Take or upload a photo; AI builds a template for you
                     </p>
                   </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-300" />
+                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
                 </button>
                 <button
                   type="button"
@@ -1161,14 +1162,14 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   }}
                   className="flex w-full items-center gap-3 py-4 text-left"
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-stone-200 bg-white">
                     <Pencil className="h-5 w-5 text-zinc-700" strokeWidth={1.75} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[16px] font-semibold text-zinc-900">Write template prompt</div>
-                    <p className="mt-0.5 text-[13px] leading-snug text-gray-500">Define your own template in your words</p>
+                    <p className="mt-0.5 text-[13px] leading-snug text-zinc-500">Define your own template in your words</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-300" />
+                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
                 </button>
               </div>
             </div>
@@ -1196,10 +1197,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   <button
                     type="button"
                     onClick={() => setShowTemplateConfirm(false)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
+                    className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-stone-100"
                     aria-label="Close"
                   >
-                    <X className="h-5 w-5 text-gray-500" />
+                    <X className="h-5 w-5 text-zinc-500" />
                   </button>
                 </div>
                 <label className="mb-1.5 block text-[15px] font-semibold text-zinc-900">Template name</label>
@@ -1207,7 +1208,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   value={templateDraftName}
                   onChange={(e) => setTemplateDraftName(e.target.value)}
                   placeholder="Enter a template name"
-                  className="mb-4 w-full rounded-xl border border-gray-200 px-3 py-3 text-[15px] text-zinc-900 placeholder:text-gray-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100"
+                  className="mb-4 w-full rounded-xl border border-stone-200 px-3 py-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100"
                 />
                 <label className="mb-1.5 block text-[15px] font-semibold text-zinc-900">Prompt</label>
                 <div className="relative mb-5">
@@ -1216,10 +1217,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                     onChange={(e) => setTemplateDraftPrompt(e.target.value)}
                     placeholder="How should recordings be summarized?"
                     rows={5}
-                    className="w-full resize-y rounded-xl border border-gray-200 px-3 py-3 pr-8 text-[15px] text-zinc-900 placeholder:text-gray-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100"
+                    className="w-full resize-y rounded-xl border border-stone-200 px-3 py-3 pr-8 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100"
                   />
                   <span
-                    className="pointer-events-none absolute bottom-2 right-2 text-gray-300"
+                    className="pointer-events-none absolute bottom-2 right-2 text-zinc-300"
                     aria-hidden
                   >
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1278,10 +1279,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
             <div className="flex-1 overflow-y-auto px-5 py-4 pb-8">
               <div className="mb-5">
                 <h3 className="text-[13px] font-semibold text-zinc-900 mb-2">Share</h3>
-                <div className="rounded-xl border border-zinc-200/90 divide-y divide-zinc-100 overflow-hidden bg-white">
+                <div className="flex flex-col gap-1.5">
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
                     onClick={() => {
                       setShareLinkStep("options")
                       setShareLinkPick({
@@ -1303,10 +1304,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
 
               <div className="mb-5">
                 <h3 className="text-[13px] font-semibold text-zinc-900 mb-2">Copy to clipboard</h3>
-                <div className="rounded-xl border border-zinc-200/90 divide-y divide-zinc-100 overflow-hidden bg-white">
+                <div className="flex flex-col gap-1.5">
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
                     onClick={() => setShowShareOptions(false)}
                   >
                     <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
@@ -1315,7 +1316,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   </button>
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
                     onClick={() => setShowShareOptions(false)}
                   >
                     <Flag className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
@@ -1324,7 +1325,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   </button>
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
                     onClick={() => setShowShareOptions(false)}
                   >
                     <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
@@ -1336,10 +1337,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
 
               <div className="mb-2">
                 <h3 className="text-[13px] font-semibold text-zinc-900 mb-2">Export file</h3>
-                <div className="rounded-xl border border-zinc-200/90 divide-y divide-zinc-100 overflow-hidden bg-white">
+                <div className="flex flex-col gap-1.5">
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
                     onClick={() => setShowShareOptions(false)}
                   >
                     <Mic className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
@@ -1348,7 +1349,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   </button>
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
                     onClick={() => setShowShareOptions(false)}
                   >
                     <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
@@ -1357,7 +1358,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   </button>
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
                     onClick={() => setShowShareOptions(false)}
                   >
                     <Flag className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
@@ -1535,16 +1536,16 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
           
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[70%] flex flex-col animate-in slide-in-from-bottom duration-300">
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              <div className="w-10 h-1 bg-stone-300 rounded-full" />
             </div>
             
-            <div className="px-5 pb-4 flex items-center justify-between border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Choose library</h3>
+            <div className="px-5 pb-4 flex items-center justify-between border-b border-stone-100">
+              <h3 className="text-lg font-semibold text-zinc-900">Choose library</h3>
               <button 
                 onClick={() => !isTransferring && setShowKBSheet(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-zinc-500" />
               </button>
             </div>
             
@@ -1552,8 +1553,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               {/* Suggested */}
               <div className="flex items-center gap-2 text-sm mb-3">
                 <Sparkles className="w-4 h-4 text-zinc-500" />
-                <span className="text-gray-900 font-medium">Suggested</span>
-                <span className="text-xs text-gray-400">Matched from content</span>
+                <span className="text-zinc-900 font-medium">Suggested</span>
+                <span className="text-xs text-zinc-400">Matched from content</span>
               </div>
               <div className="space-y-2 mb-6">
                 {recommendedKBs.map((kb) => {
@@ -1577,10 +1578,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                     </div>
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{kb.name}</span>
+                        <span className="font-medium text-zinc-900">{kb.name}</span>
                         <span className="px-1.5 py-0.5 bg-stone-200/90 text-zinc-700 text-[10px] rounded font-medium">{kb.match}% match</span>
                       </div>
-                      <div className="text-xs text-gray-500">{kb.reason}</div>
+                      <div className="text-xs text-zinc-500">{kb.reason}</div>
                     </div>
                     {selectedKB === kb.id && (
                       <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
@@ -1593,7 +1594,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               </div>
 
               {/* Recent */}
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+              <div className="flex items-center gap-2 text-sm text-zinc-500 mb-3">
                 <Clock className="w-4 h-4" />
                 <span>Recent</span>
               </div>
@@ -1608,7 +1609,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
                       selectedKB === kb.id
                         ? "border-zinc-500 bg-zinc-50/40"
-                        : "border-gray-100 hover:border-zinc-200/60"
+                        : "border-stone-100 hover:border-zinc-200/60"
                     )}
                   >
                     <div className={cn(
@@ -1618,8 +1619,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       <KbIcon className="w-5 h-5 text-white" strokeWidth={2} aria-hidden />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">{kb.name}</div>
-                      <div className="text-xs text-gray-500">{kb.category} · {kb.count} items</div>
+                      <div className="font-medium text-zinc-900">{kb.name}</div>
+                      <div className="text-xs text-zinc-500">{kb.category} · {kb.count} items</div>
                     </div>
                     {selectedKB === kb.id && (
                       <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
@@ -1631,7 +1632,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                 })}
               </div>
 
-              <div className="text-sm text-gray-500 mb-3">All libraries</div>
+              <div className="text-sm text-zinc-500 mb-3">All libraries</div>
               <div className="space-y-2">
                 {knowledgeBases.filter(kb => !kb.recent).map((kb) => {
                   const KbIcon = knowledgeBaseIconForTitle(kb.name, kb.category)
@@ -1643,7 +1644,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
                       selectedKB === kb.id
                         ? "border-zinc-500 bg-zinc-50/40"
-                        : "border-gray-100 hover:border-zinc-200/60"
+                        : "border-stone-100 hover:border-zinc-200/60"
                     )}
                   >
                     <div className={cn(
@@ -1653,8 +1654,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       <KbIcon className="w-5 h-5 text-white" strokeWidth={2} aria-hidden />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">{kb.name}</div>
-                      <div className="text-xs text-gray-500">{kb.category} · {kb.count} items</div>
+                      <div className="font-medium text-zinc-900">{kb.name}</div>
+                      <div className="text-xs text-zinc-500">{kb.category} · {kb.count} items</div>
                     </div>
                     {selectedKB === kb.id && (
                       <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
@@ -1667,11 +1668,11 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               </div>
             </div>
             
-            <div className="p-5 border-t border-gray-100 flex gap-3">
+            <div className="p-5 border-t border-stone-100 flex gap-3">
               <button
                 onClick={() => setShowKBSheet(false)}
                 disabled={isTransferring}
-                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium"
+                className="flex-1 py-3 rounded-xl border border-stone-200 text-zinc-700 font-medium"
               >
                 Cancel
               </button>
@@ -1684,7 +1685,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                     ? "bg-zinc-500 text-white hover:bg-zinc-600"
                     : transferComplete
                     ? "bg-zinc-600 text-white"
-                    : "bg-gray-200 text-gray-400"
+                    : "bg-stone-200 text-zinc-400"
                 )}
               >
                 {isTransferring ? (

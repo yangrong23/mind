@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { mx, mxHeatmapCell, mxHeatmapCellTiny } from "@/lib/medrix-design-tokens"
@@ -12,6 +13,11 @@ import {
 } from "@/lib/mind-accounts"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
+import {
+  MIND_FONT_ZOOM_MAX,
+  MIND_FONT_ZOOM_MIN,
+  clampFontZoomPercent,
+} from "@/lib/mind-display-prefs"
 import {
   Settings,
   ChevronRight,
@@ -41,6 +47,8 @@ import {
   ChevronsUpDown,
   LogOut,
   Bluetooth,
+  Sun,
+  Moon,
 } from "lucide-react"
 
 // Heatmap sample data
@@ -104,6 +112,46 @@ function getDailyReviewForDay(isoDate: string, activity: number) {
   return flavors[h % flavors.length]
 }
 
+function DisplayThemeSegment() {
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!mounted) {
+    return <div className="mt-3 h-11 rounded-xl bg-stone-100/90" aria-hidden />
+  }
+  const isDark = resolvedTheme === "dark"
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => setTheme("light")}
+        className={cn(
+          "flex items-center justify-center gap-2 rounded-xl border py-2.5 text-[14px] font-medium transition-colors",
+          !isDark
+            ? "border-sky-400 bg-sky-50 text-sky-900 shadow-sm"
+            : "border-stone-200 bg-stone-50/80 text-zinc-600 hover:bg-stone-100"
+        )}
+      >
+        <Sun className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+        白天
+      </button>
+      <button
+        type="button"
+        onClick={() => setTheme("dark")}
+        className={cn(
+          "flex items-center justify-center gap-2 rounded-xl border py-2.5 text-[14px] font-medium transition-colors",
+          isDark
+            ? "border-sky-500 bg-sky-950/40 text-sky-100 shadow-sm"
+            : "border-stone-200 bg-stone-50/80 text-zinc-600 hover:bg-stone-100"
+        )}
+      >
+        <Moon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+        夜间
+      </button>
+    </div>
+  )
+}
+
 function getDayLeadLine(isoDate: string, activity: number) {
   const n = getDayUploads(isoDate, activity).length
   if (n === 0) {
@@ -140,6 +188,9 @@ interface MeTabProps {
   onActiveAccountChange: (id: MindAccountId) => void
   /** When provided, Sign out in the account sheet ends the demo session (guest gate). */
   onSessionSignOut?: () => void
+  /** Shell text scale (85–130%). Controlled by parent so the device chrome updates live. */
+  fontZoomPercent?: number
+  onFontZoomPercentChange?: (pct: number) => void
 }
 
 export function MeTab({
@@ -147,6 +198,8 @@ export function MeTab({
   activeAccountId,
   onActiveAccountChange,
   onSessionSignOut,
+  fontZoomPercent = 100,
+  onFontZoomPercentChange,
 }: MeTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
   const [heatmapDayDetail, setHeatmapDayDetail] = useState<{ date: string; value: number } | null>(null)
@@ -179,7 +232,9 @@ export function MeTab({
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
-  const [settingsExtra, setSettingsExtra] = useState<null | "notifications" | "privacy" | "help">(null)
+  const [settingsExtra, setSettingsExtra] = useState<
+    null | "display" | "notifications" | "privacy" | "help"
+  >(null)
   const [notifCaptureReady, setNotifCaptureReady] = useState(true)
   const [notifDigest, setNotifDigest] = useState(false)
   const [privacyCrashReports, setPrivacyCrashReports] = useState(true)
@@ -223,6 +278,15 @@ export function MeTab({
   ] as const
 
   const settingsMenuItems = [
+    {
+      icon: Palette,
+      label: "界面设置",
+      desc: "白天 / 夜间模式与字体大小",
+      action: () => {
+        setShowSettingsHub(false)
+        setSettingsExtra("display")
+      },
+    },
     { icon: User, label: "Personalization", desc: "Preferences and custom instructions", action: () => { setShowSettingsHub(false); setShowPersonalization(true) } },
     { icon: Cloud, label: "Cloud sync", desc: "Private cloud backup and storage", action: () => { setShowSettingsHub(false); setShowCloudSync(true) } },
     { icon: Bell, label: "Notifications", desc: "Push and reminders", action: () => { setShowSettingsHub(false); setSettingsExtra("notifications") } },
@@ -551,8 +615,8 @@ export function MeTab({
             <div className="w-full max-w-[340px] bg-white rounded-3xl p-6 shadow-xl mb-6">
               {/* User row */}
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                  <User className="w-6 h-6 text-gray-500" />
+                <div className="w-12 h-12 rounded-full bg-stone-200 flex items-center justify-center">
+                  <User className="w-6 h-6 text-zinc-500" />
                 </div>
                 <span className="text-lg font-semibold text-zinc-900">{activeAccount.displayName}</span>
               </div>
@@ -577,8 +641,8 @@ export function MeTab({
 
               {/* Heatmap */}
               <div className="mb-6">
-                <div className="text-sm text-gray-400 mb-1">Last 12 months activity</div>
-                <p className="text-[10px] text-gray-400 mb-2">Tap a square for that day</p>
+                <div className="text-sm text-zinc-400 mb-1">Last 12 months activity</div>
+                <p className="text-[10px] text-zinc-400 mb-2">Tap a square for that day</p>
                 <div className="grid grid-cols-26 gap-[2px]">
                   {heatmapData.slice(-52).map((day, i) => (
                     <button
@@ -599,14 +663,14 @@ export function MeTab({
               <div className="flex items-center justify-between pt-4 border-t border-stone-100/85">
                 <div>
                   <div className="text-lg font-bold text-zinc-900">Mind Notes</div>
-                  <div className="text-xs text-gray-400">Scan to try Mind Notes</div>
+                  <div className="text-xs text-zinc-400">Scan to try Mind Notes</div>
                 </div>
-                <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="w-20 h-20 bg-stone-100 rounded-lg flex items-center justify-center">
                   <div className="grid grid-cols-5 gap-[2px]">
                     {Array(25).fill(0).map((_, i) => (
                       <div key={i} className={cn(
                         "w-3 h-3",
-                        Math.random() > 0.5 ? "bg-gray-800" : "bg-white"
+                        Math.random() > 0.5 ? "bg-zinc-800" : "bg-white"
                       )} />
                     ))}
                   </div>
@@ -627,20 +691,20 @@ export function MeTab({
                       <path d="M8.5 14.5c0 1.93 1.57 3.5 3.5 3.5 1.93 0 3.5-1.57 3.5-3.5M12 9c-1.93 0-3.5 1.57-3.5 3.5h7c0-1.93-1.57-3.5-3.5-3.5zM3 12a9 9 0 1118 0 9 9 0 01-18 0z"/>
                     </svg>
                   </div>
-                  <span className="text-xs text-gray-600">WeChat</span>
+                  <span className="text-xs text-zinc-600">WeChat</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => toast.success("Share opened", { description: "Moments (demo)" })}
                   className="flex flex-col items-center gap-2"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-600">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-600">
                     <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="12" cy="12" r="3"/>
                       <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/>
                     </svg>
                   </div>
-                  <span className="text-xs text-gray-600">Moments</span>
+                  <span className="text-xs text-zinc-600">Moments</span>
                 </button>
                 <button
                   type="button"
@@ -649,12 +713,12 @@ export function MeTab({
                   }
                   className="flex flex-col items-center gap-2"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                    <svg className="h-6 w-6 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
+                    <svg className="h-6 w-6 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                     </svg>
                   </div>
-                  <span className="text-xs text-gray-600">Save image</span>
+                  <span className="text-xs text-zinc-600">Save image</span>
                 </button>
                 <button
                   type="button"
@@ -663,19 +727,19 @@ export function MeTab({
                   }
                   className="flex flex-col items-center gap-2"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                    <svg className="h-6 w-6 text-gray-600" viewBox="0 0 24 24" fill="currentColor">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
+                    <svg className="h-6 w-6 text-zinc-600" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="5" cy="12" r="2"/>
                       <circle cx="12" cy="12" r="2"/>
                       <circle cx="19" cy="12" r="2"/>
                     </svg>
                   </div>
-                  <span className="text-xs text-gray-600">More</span>
+                  <span className="text-xs text-zinc-600">More</span>
                 </button>
               </div>
               <button
                 onClick={() => setShowShareCard(false)}
-                className="w-full py-3 bg-gray-100 rounded-xl text-gray-600 font-medium"
+                className="w-full py-3 bg-stone-100 rounded-xl text-zinc-600 font-medium"
               >
                 Cancel
               </button>
@@ -696,7 +760,7 @@ export function MeTab({
             role="dialog"
             aria-modal="true"
             aria-labelledby="offline-title"
-            className="relative z-[61] w-full max-w-[320px] rounded-2xl border border-orange-200/90 bg-white p-5 shadow-xl"
+            className="relative z-[61] w-full max-w-[320px] rounded-2xl border border-sky-200/90 bg-white p-5 shadow-xl dark:border-sky-800/50 dark:bg-zinc-900"
           >
             <h2 id="offline-title" className="text-[17px] font-semibold text-zinc-900">
               Enable full offline mode?
@@ -718,7 +782,7 @@ export function MeTab({
                   setOfflineOnly(true)
                   setOfflineConfirmOpen(false)
                 }}
-                className="flex-1 rounded-xl bg-orange-600 py-3 text-[15px] font-semibold text-white"
+                className={cn("flex-1 rounded-xl py-3 text-[15px] font-semibold text-white", mx.brandCta)}
               >
                 Enable offline
               </button>
@@ -729,10 +793,10 @@ export function MeTab({
 
       {/* Settings hub (below membership) */}
       {showSettingsHub && (
-        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white">
+        <div className="absolute inset-0 z-50 flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <button type="button" onClick={() => setShowSettingsHub(false)} className="p-1">
-              <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
             </button>
             <h1 className="text-lg font-semibold text-zinc-900">Settings</h1>
             <div className="w-8" />
@@ -750,14 +814,14 @@ export function MeTab({
                     i !== settingsMenuItems.length - 1 && "border-b border-stone-100/85"
                   )}
                 >
-                  <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-slate-600" />
+                  <div className="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center">
+                    <item.icon className="w-5 h-5 text-zinc-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-zinc-900">{item.label}</div>
-                    <div className="text-xs text-gray-500">{item.desc}</div>
+                    <div className="text-xs text-zinc-500">{item.desc}</div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-zinc-400 shrink-0" />
                 </button>
               ))}
             </div>
@@ -766,36 +830,84 @@ export function MeTab({
       )}
 
       {settingsExtra && (
-        <div className="absolute inset-0 z-[51] flex flex-col bg-stone-50/95 animate-in slide-in-from-right duration-200">
-          <div className="flex shrink-0 items-center gap-2 border-b border-stone-100/85 bg-white px-4 py-3">
+        <div className="absolute inset-0 z-[51] flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
+          <div className="flex shrink-0 items-center gap-2 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3">
             <button
               type="button"
               onClick={() => {
                 setSettingsExtra(null)
                 setShowSettingsHub(true)
               }}
-              className="rounded-full p-1 hover:bg-gray-100"
+              className="rounded-full p-1 hover:bg-stone-100"
               aria-label="Back to settings"
             >
-              <ChevronRight className="h-6 w-6 rotate-180 text-gray-600" />
+              <ChevronRight className="h-6 w-6 rotate-180 text-zinc-600" />
             </button>
             <h1 className="text-lg font-semibold text-zinc-900">
+              {settingsExtra === "display" && "界面设置"}
               {settingsExtra === "notifications" && "Notifications"}
               {settingsExtra === "privacy" && "Privacy & security"}
               {settingsExtra === "help" && "Help & feedback"}
             </h1>
           </div>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+            {settingsExtra === "display" && (
+              <>
+                <p className="text-sm text-zinc-500">
+                  在此切换配色与整体缩放。状态栏右侧的图标仍可快速切换夜间模式。
+                </p>
+                <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
+                  <div className="border-b border-stone-100/85 px-4 py-4">
+                    <p className="text-[15px] font-medium text-zinc-900">外观</p>
+                    <p className="mt-1 text-xs text-zinc-500">选择白天或夜间界面</p>
+                    <DisplayThemeSegment />
+                  </div>
+                  <div className="px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-medium text-zinc-900">字体大小</p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          缩放手机内整个界面（正文、列表与按钮一并变化）
+                        </p>
+                      </div>
+                      <span className="shrink-0 tabular-nums text-[17px] font-semibold text-sky-800 dark:text-sky-300">
+                        {fontZoomPercent}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-stone-200 accent-sky-600 dark:bg-zinc-700 dark:accent-sky-500"
+                      min={MIND_FONT_ZOOM_MIN}
+                      max={MIND_FONT_ZOOM_MAX}
+                      step={1}
+                      value={fontZoomPercent}
+                      onChange={(e) =>
+                        onFontZoomPercentChange?.(clampFontZoomPercent(Number(e.target.value)))
+                      }
+                      aria-valuemin={MIND_FONT_ZOOM_MIN}
+                      aria-valuemax={MIND_FONT_ZOOM_MAX}
+                      aria-valuenow={fontZoomPercent}
+                      aria-label="字体大小"
+                    />
+                    <div className="mt-1 flex justify-between text-[11px] text-zinc-400">
+                      <span>较小</span>
+                      <span>默认</span>
+                      <span>较大</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
             {settingsExtra === "notifications" && (
               <>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-zinc-500">
                   Demo toggles; turning them on or off shows a short confirmation.
                 </p>
                 <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
                   <div className="flex items-center justify-between px-4 py-4 border-b border-stone-100/85">
                     <div>
                       <div className="text-[15px] text-zinc-900">Recording ready</div>
-                      <div className="mt-1 text-xs text-gray-400">Notify when a capture finishes processing</div>
+                      <div className="mt-1 text-xs text-zinc-400">Notify when a capture finishes processing</div>
                     </div>
                     <button
                       type="button"
@@ -807,7 +919,7 @@ export function MeTab({
                       }}
                       className={cn(
                         "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                        notifCaptureReady ? "bg-zinc-500" : "bg-gray-200"
+                        notifCaptureReady ? "bg-sky-600" : cn(mx.toggleTrackOff)
                       )}
                     >
                       <span
@@ -821,7 +933,7 @@ export function MeTab({
                   <div className="flex items-center justify-between px-4 py-4">
                     <div>
                       <div className="text-[15px] text-zinc-900">Weekly digest</div>
-                      <div className="mt-1 text-xs text-gray-400">Summary of your capture activity</div>
+                      <div className="mt-1 text-xs text-zinc-400">Summary of your capture activity</div>
                     </div>
                     <button
                       type="button"
@@ -833,7 +945,7 @@ export function MeTab({
                       }}
                       className={cn(
                         "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                        notifDigest ? "bg-zinc-500" : "bg-gray-200"
+                        notifDigest ? "bg-sky-600" : cn(mx.toggleTrackOff)
                       )}
                     >
                       <span
@@ -849,14 +961,14 @@ export function MeTab({
             )}
             {settingsExtra === "privacy" && (
               <>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-zinc-500">
                   Manage privacy options for this demo app.
                 </p>
                 <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
                   <div className="flex items-center justify-between px-4 py-4 border-b border-stone-100/85">
                     <div>
                       <div className="text-[15px] text-zinc-900">Share crash reports</div>
-                      <div className="mt-1 text-xs text-gray-400">Helps fix bugs faster (no raw audio)</div>
+                      <div className="mt-1 text-xs text-zinc-400">Helps fix bugs faster (no raw audio)</div>
                     </div>
                     <button
                       type="button"
@@ -868,7 +980,7 @@ export function MeTab({
                       }}
                       className={cn(
                         "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                        privacyCrashReports ? "bg-zinc-500" : "bg-gray-200"
+                        privacyCrashReports ? "bg-sky-600" : cn(mx.toggleTrackOff)
                       )}
                     >
                       <span
@@ -889,14 +1001,14 @@ export function MeTab({
                     className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-stone-50/95"
                   >
                     <span className="text-[15px] text-zinc-900">Export my data</span>
-                    <ChevronRight className="h-5 w-5 text-gray-300" />
+                    <ChevronRight className="h-5 w-5 text-zinc-300" />
                   </button>
                 </div>
               </>
             )}
             {settingsExtra === "help" && (
               <div className="space-y-2">
-                <p className="text-sm text-gray-500">When you need help, start from one of these.</p>
+                <p className="text-sm text-zinc-500">When you need help, start from one of these.</p>
                 {[
                   { label: "User guide", hint: "Getting started and FAQs" },
                   { label: "Contact support", hint: "Email / ticket (demo)" },
@@ -909,7 +1021,7 @@ export function MeTab({
                     className="flex w-full flex-col items-start rounded-xl border border-stone-100/85 bg-white px-4 py-3 text-left hover:bg-stone-50/95"
                   >
                     <span className="text-[15px] font-medium text-zinc-900">{row.label}</span>
-                    <span className="mt-0.5 text-xs text-gray-500">{row.hint}</span>
+                    <span className="mt-0.5 text-xs text-zinc-500">{row.hint}</span>
                   </button>
                 ))}
               </div>
@@ -920,11 +1032,11 @@ export function MeTab({
 
       {/* Preferences */}
       {showPreferences && (
-        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
+        <div className="absolute inset-0 z-50 flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
           {/* Top bar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <button onClick={() => setShowPreferences(false)} className="p-1">
-              <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
             </button>
             <h1 className="text-lg font-semibold text-zinc-900">Preferences</h1>
             <div className="w-8" />
@@ -933,7 +1045,7 @@ export function MeTab({
           <div className="flex-1 overflow-y-auto">
             {/* Transcribe & summarize */}
             <div className="px-5 pt-6 pb-2">
-              <div className="text-sm text-gray-400 mb-2">Transcription & summary</div>
+              <div className="text-sm text-zinc-400 mb-2">Transcription & summary</div>
             </div>
             <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden">
               <button
@@ -948,11 +1060,11 @@ export function MeTab({
               >
                 <div>
                   <div className="text-left text-[15px] text-zinc-900">Transcription language</div>
-                  <div className="mt-1 text-left text-xs text-gray-400">Default language for overview, transcription, and summaries. You can override per recording.</div>
+                  <div className="mt-1 text-left text-xs text-zinc-400">Default language for overview, transcription, and summaries. You can override per recording.</div>
                 </div>
                 <div className="ml-4 flex shrink-0 items-center gap-1">
-                  <span className="text-[15px] text-gray-400">{transcribeLang}</span>
-                  <ChevronRight className="h-5 w-5 text-gray-300" />
+                  <span className="text-[15px] text-zinc-400">{transcribeLang}</span>
+                  <ChevronRight className="h-5 w-5 text-zinc-300" />
                 </div>
               </button>
               <button
@@ -965,8 +1077,8 @@ export function MeTab({
               >
                 <span className="text-[15px] text-zinc-900">Auto speaker labels</span>
                 <div className="flex items-center gap-1">
-                  <span className="text-[15px] text-gray-400">{autoSpeaker ? "On" : "Off"}</span>
-                  <ChevronRight className="h-5 w-5 text-gray-300" />
+                  <span className="text-[15px] text-zinc-400">{autoSpeaker ? "On" : "Off"}</span>
+                  <ChevronRight className="h-5 w-5 text-zinc-300" />
                 </div>
               </button>
               <button
@@ -979,16 +1091,16 @@ export function MeTab({
               >
                 <span className="text-[15px] text-zinc-900">Custom vocabulary</span>
                 <div className="flex items-center gap-1">
-                  <span className="text-[15px] text-gray-400">{customTerms ? "On" : "Off"}</span>
+                  <span className="text-[15px] text-zinc-400">{customTerms ? "On" : "Off"}</span>
                   {!customTerms && <div className={cn("h-2 w-2 shrink-0 rounded-full", mx.warningDot)} />}
-                  <ChevronRight className="h-5 w-5 text-gray-300" />
+                  <ChevronRight className="h-5 w-5 text-zinc-300" />
                 </div>
               </button>
             </div>
 
             {/* Notifications */}
             <div className="px-5 pt-6 pb-2">
-              <div className="text-sm text-gray-400 mb-2">Notifications</div>
+              <div className="text-sm text-zinc-400 mb-2">Notifications</div>
             </div>
             <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden">
               <button
@@ -1001,13 +1113,13 @@ export function MeTab({
                 className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-stone-50/95"
               >
                 <span className="text-[15px] text-zinc-900">Messages & alerts</span>
-                <ChevronRight className="h-5 w-5 text-gray-300" />
+                <ChevronRight className="h-5 w-5 text-zinc-300" />
               </button>
             </div>
 
             {/* Security */}
             <div className="px-5 pt-6 pb-2">
-              <div className="text-sm text-gray-400 mb-2">Security</div>
+              <div className="text-sm text-zinc-400 mb-2">Security</div>
             </div>
             <div className="mx-5 mb-6 overflow-hidden rounded-xl border border-stone-100/85 bg-white">
               <button
@@ -1020,21 +1132,21 @@ export function MeTab({
               >
                 <div>
                   <div className="text-left text-[15px] text-zinc-900">App lock</div>
-                  <div className="mt-1 text-left text-xs text-gray-400">Unlock with Face ID, Touch ID, or device passcode</div>
+                  <div className="mt-1 text-left text-xs text-zinc-400">Unlock with Face ID, Touch ID, or device passcode</div>
                 </div>
                 <div className="ml-4 flex shrink-0 items-center gap-1">
-                  <span className="text-[15px] text-gray-400">{appLock ? "On" : "Off"}</span>
-                  <ChevronRight className="h-5 w-5 text-gray-300" />
+                  <span className="text-[15px] text-zinc-400">{appLock ? "On" : "Off"}</span>
+                  <ChevronRight className="h-5 w-5 text-zinc-300" />
                 </div>
               </button>
               <div className="flex w-full items-center justify-between px-4 py-4">
                 <div className="flex-1">
                   <div className="text-left text-[15px] text-zinc-900">Help improve AI</div>
-                  <div className="mt-1 text-left text-xs text-gray-400">
+                  <div className="mt-1 text-left text-xs text-zinc-400">
                     Share limited diagnostics to improve transcription and summaries while protecting privacy.
                     <button
                       type="button"
-                      className={cn("ml-1 underline underline-offset-2 decoration-slate-300", mx.citationLink)}
+                      className={cn("ml-1 underline underline-offset-2 decoration-stone-300", mx.citationLink)}
                       onClick={() =>
                         toast.message("About the data", {
                           description: "Only anonymous diagnostics are uploaded (demo).",
@@ -1049,7 +1161,7 @@ export function MeTab({
                   onClick={() => setHelpImprove(!helpImprove)}
                   className={cn(
                     "w-12 h-7 rounded-full transition-colors shrink-0 ml-4 relative",
-                    helpImprove ? "bg-zinc-500" : "bg-gray-200"
+                    helpImprove ? "bg-sky-600" : cn(mx.toggleTrackOff)
                   )}
                 >
                   <div className={cn(
@@ -1065,22 +1177,22 @@ export function MeTab({
 
       {/* Private cloud sync */}
       {showCloudSync && (
-        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
+        <div className="absolute inset-0 z-50 flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
           <div className="flex items-center px-4 py-3 bg-white border-b border-stone-100/85">
             <button onClick={() => setShowCloudSync(false)} className="p-1">
-              <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             <div className="flex flex-col items-center pt-12 pb-8 px-5">
-              <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mb-6">
-                <svg className="w-10 h-10 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <div className="w-20 h-20 rounded-2xl bg-stone-100 flex items-center justify-center mb-6">
+                <svg className="w-10 h-10 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
                 </svg>
               </div>
               <h1 className="text-2xl font-bold text-zinc-900 mb-4">Private cloud sync</h1>
-              <p className="text-gray-500 text-center leading-relaxed">
+              <p className="text-zinc-500 text-center leading-relaxed">
                 A secure space for your data. When enabled:<br/>
                 1. Automatic backups help prevent data loss<br/>
                 2. Edits sync across app and web for easy access
@@ -1095,7 +1207,7 @@ export function MeTab({
                     onClick={() => setCloudSyncEnabled(!cloudSyncEnabled)}
                     className={cn(
                       "w-12 h-7 rounded-full transition-colors relative",
-                      cloudSyncEnabled ? "bg-zinc-500" : "bg-gray-200"
+                      cloudSyncEnabled ? "bg-sky-600" : cn(mx.toggleTrackOff)
                     )}
                   >
                     <div className={cn(
@@ -1111,7 +1223,7 @@ export function MeTab({
                       onClick={() => setWifiOnlySync(!wifiOnlySync)}
                       className={cn(
                         "w-12 h-7 rounded-full transition-colors relative",
-                        wifiOnlySync ? "bg-zinc-500" : "bg-gray-200"
+                        wifiOnlySync ? "bg-sky-600" : cn(mx.toggleTrackOff)
                       )}
                     >
                       <div className={cn(
@@ -1120,7 +1232,7 @@ export function MeTab({
                       )} />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400">When on, background sync runs only on Wi‑Fi.</p>
+                  <p className="text-xs text-zinc-400">When on, background sync runs only on Wi‑Fi.</p>
                 </div>
               </div>
 
@@ -1136,8 +1248,8 @@ export function MeTab({
                 >
                   <span className="text-[15px] text-zinc-900">Manage storage</span>
                   <div className="flex items-center gap-1">
-                    <span className="text-[15px] text-gray-400">16.62 MB</span>
-                    <ChevronRight className="w-5 h-5 text-gray-300" />
+                    <span className="text-[15px] text-zinc-400">16.62 MB</span>
+                    <ChevronRight className="w-5 h-5 text-zinc-300" />
                   </div>
                 </button>
                 <button
@@ -1150,7 +1262,7 @@ export function MeTab({
                   className="flex w-full items-center justify-between px-4 py-4"
                 >
                   <span className="text-[15px] text-zinc-900">Delete cloud recordings</span>
-                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                  <ChevronRight className="w-5 h-5 text-zinc-300" />
                 </button>
               </div>
             </div>
@@ -1160,10 +1272,10 @@ export function MeTab({
 
       {/* Personalization */}
       {showPersonalization && (
-        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white">
+        <div className="absolute inset-0 z-50 flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <button onClick={() => setShowPersonalization(false)} className="p-1">
-              <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
             </button>
             <h1 className="text-lg font-semibold text-zinc-900">Personalization</h1>
             <div className="w-8" />
@@ -1179,7 +1291,7 @@ export function MeTab({
               className="w-full flex items-center justify-between px-5 py-4 bg-white border-b border-stone-100/85"
             >
               <span className="text-[15px] text-zinc-900">Profile</span>
-              <ChevronRight className="w-5 h-5 text-gray-300" />
+              <ChevronRight className="w-5 h-5 text-zinc-300" />
             </button>
 
             {/* Content focus */}
@@ -1188,7 +1300,7 @@ export function MeTab({
               <input
                 type="text"
                 placeholder="What should outputs emphasize?"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[15px] placeholder-gray-400 focus:outline-none focus:border-gray-300 mb-4"
+                className="w-full px-4 py-3 border border-stone-200 rounded-xl text-[15px] placeholder:text-zinc-400 focus:outline-none focus:border-stone-300 mb-4"
               />
               <div className="flex flex-wrap gap-2">
                 {["Key takeaways", "Risks & open questions", "Actions & next steps"].map((tag) => (
@@ -1196,7 +1308,7 @@ export function MeTab({
                     key={tag}
                     type="button"
                     onClick={() => toast.success("Focus area saved", { description: tag })}
-                    className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
+                    className="rounded-full bg-stone-100 px-3 py-1.5 text-sm text-zinc-700 hover:bg-stone-200"
                   >
                     {tag}
                   </button>
@@ -1210,7 +1322,7 @@ export function MeTab({
               <input
                 type="text"
                 placeholder="Tone and style for explanations?"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[15px] placeholder-gray-400 focus:outline-none focus:border-gray-300 mb-4"
+                className="w-full px-4 py-3 border border-stone-200 rounded-xl text-[15px] placeholder:text-zinc-400 focus:outline-none focus:border-stone-300 mb-4"
               />
               <div className="flex flex-wrap gap-2">
                 {["Concise", "Formal & professional", "Structured"].map((tag) => (
@@ -1218,7 +1330,7 @@ export function MeTab({
                     key={tag}
                     type="button"
                     onClick={() => toast.success("Style hint applied", { description: tag })}
-                    className="rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200"
+                    className="rounded-full bg-stone-100 px-3 py-1.5 text-sm text-zinc-700 hover:bg-stone-200"
                   >
                     {tag}
                   </button>
@@ -1228,7 +1340,7 @@ export function MeTab({
 
             {/* Memory */}
             <div className="px-5 pt-6 pb-2">
-              <div className="text-sm text-gray-400 mb-2">Memory</div>
+              <div className="text-sm text-zinc-400 mb-2">Memory</div>
             </div>
             <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden mb-6">
               <div className="px-4 py-4 border-b border-stone-100/85">
@@ -1238,7 +1350,7 @@ export function MeTab({
                     onClick={() => setUseMemory(!useMemory)}
                     className={cn(
                       "w-12 h-7 rounded-full transition-colors relative",
-                      useMemory ? "bg-zinc-500" : "bg-gray-200"
+                      useMemory ? "bg-sky-600" : cn(mx.toggleTrackOff)
                     )}
                   >
                     <div className={cn(
@@ -1247,9 +1359,9 @@ export function MeTab({
                     )} />
                   </button>
                 </div>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-zinc-400">
                   When on, Mind may use saved context for more relevant replies.
-                  <span className={cn("underline underline-offset-2 decoration-slate-300", mx.citationLink)}>
+                  <span className={cn("underline underline-offset-2 decoration-stone-300", mx.citationLink)}>
                     Learn more
                   </span>
                 </p>
@@ -1257,9 +1369,9 @@ export function MeTab({
               <button className="w-full flex items-center justify-between px-4 py-4">
                 <div>
                   <div className="text-[15px] text-zinc-900 text-left">Manage memory</div>
-                  <div className="text-xs text-gray-400 mt-1 text-left">View and edit saved context</div>
+                  <div className="text-xs text-zinc-400 mt-1 text-left">View and edit saved context</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-300" />
+                <ChevronRight className="w-5 h-5 text-zinc-300" />
               </button>
             </div>
           </div>
@@ -1268,15 +1380,15 @@ export function MeTab({
 
       {/* Credits & plan purchase */}
       {showCreditsPlans && (
-        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white shrink-0">
+        <div className="absolute inset-0 z-50 flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 shrink-0">
             <button
               type="button"
               onClick={() => setShowCreditsPlans(false)}
-              className="p-1 rounded-full hover:bg-gray-100"
+              className="p-1 rounded-full hover:bg-stone-100"
               aria-label="Back"
             >
-              <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
             </button>
             <h1 className="text-lg font-semibold text-zinc-900">Credits & plans</h1>
             <div className="w-8" />
@@ -1284,12 +1396,12 @@ export function MeTab({
 
           <div className="flex-1 overflow-y-auto pb-8">
             <div className={cn("mx-5 mt-4 p-4 rounded-2xl shadow-sm", mx.creditsCard)}>
-              <div className="text-sm text-gray-500 mb-1">Available balance</div>
-              <div className="text-3xl font-bold tracking-tight text-slate-900">
+              <div className="text-sm text-zinc-500 mb-1">Available balance</div>
+              <div className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 {stats.creditsRemaining.toLocaleString("en-US")}
-                <span className="text-lg font-semibold text-gray-500 ml-1.5">credits</span>
+                <span className="text-lg font-semibold text-zinc-500 ml-1.5">credits</span>
               </div>
-              <div className="mt-3 text-xs text-gray-500">
+              <div className="mt-3 text-xs text-zinc-500">
                 Included this cycle: {stats.creditsMonthlyAllowance.toLocaleString("en-US")} credits ·
                 resets monthly
               </div>
@@ -1305,7 +1417,7 @@ export function MeTab({
 
             <div className="px-5 mt-6 mb-2">
               <h2 className="text-sm font-semibold text-zinc-900">Buy more credits</h2>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-zinc-500 mt-1">
                 One-time packs. Credits apply to transcription, AI summaries, and agents.
               </p>
             </div>
@@ -1334,8 +1446,8 @@ export function MeTab({
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{plan.blurb}</p>
-                      <p className="text-sm font-medium text-gray-800 mt-2">
+                      <p className="text-sm text-zinc-500 mt-1">{plan.blurb}</p>
+                      <p className="text-sm font-medium text-zinc-800 mt-2">
                         +{plan.credits.toLocaleString("en-US")} credits
                       </p>
                     </div>
@@ -1357,7 +1469,7 @@ export function MeTab({
               ))}
             </div>
 
-            <p className="px-5 mt-6 text-xs text-gray-400 text-center leading-relaxed">
+            <p className="px-5 mt-6 text-xs text-zinc-400 text-center leading-relaxed">
               Payments are processed securely. Mock checkout — connect your billing provider here.
             </p>
           </div>
@@ -1366,10 +1478,10 @@ export function MeTab({
 
       {/* Profile screen */}
       {showProfile && (
-        <div className="absolute inset-0 z-50 bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white">
+        <div className="absolute inset-0 z-50 flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <button onClick={() => setShowProfile(false)} className="p-1">
-              <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
             </button>
             <h1 className="text-lg font-semibold text-zinc-900">Profile</h1>
             <div className="w-8" />
@@ -1384,59 +1496,59 @@ export function MeTab({
                   onClick={() =>
                     toast.message("Edit profile", { description: "Would open the profile form (demo)." })
                   }
-                  className="flex items-center gap-1 text-gray-500"
+                  className="flex items-center gap-1 text-zinc-500"
                 >
                   <span className="text-sm">Edit</span>
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
-              <p className="text-xs text-gray-400">Tap Edit to update your work context</p>
+              <p className="text-xs text-zinc-400">Tap Edit to update your work context</p>
             </div>
 
             <div className="mx-5 mt-4 bg-white rounded-xl border border-stone-100/85 overflow-hidden">
               <div className="px-4 py-4 border-b border-stone-100/85">
-                <div className="text-sm text-gray-400 mb-1">Role</div>
+                <div className="text-sm text-zinc-400 mb-1">Role</div>
                 <div className="text-[15px] font-medium text-zinc-900">Strategy / Ops / Data</div>
               </div>
               <div className="px-4 py-4 border-b border-stone-100/85">
-                <div className="text-sm text-gray-400 mb-1">Industry</div>
+                <div className="text-sm text-zinc-400 mb-1">Industry</div>
                 <div className="text-[15px] font-medium text-zinc-900">AI / Technology</div>
               </div>
               <div className="px-4 py-4 border-b border-stone-100/85">
-                <div className="text-sm text-gray-400 mb-1">Level</div>
+                <div className="text-sm text-zinc-400 mb-1">Level</div>
                 <div className="text-[15px] font-medium text-zinc-900">Manager / Lead</div>
               </div>
               <div className="px-4 py-4">
-                <div className="text-sm text-gray-400 mb-1">Primary use</div>
+                <div className="text-sm text-zinc-400 mb-1">Primary use</div>
                 <div className="text-[15px] font-medium text-zinc-900">Personal</div>
               </div>
             </div>
 
             <div className="px-5 pt-6 pb-2">
-              <div className="text-sm text-gray-400 mb-2">Additional notes</div>
+              <div className="text-sm text-zinc-400 mb-2">Additional notes</div>
             </div>
             <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden mb-6">
               <textarea
                 placeholder="Anything else we should know?"
                 rows={4}
-                className="w-full px-4 py-3 text-[15px] placeholder-gray-400 focus:outline-none resize-none"
+                className="w-full px-4 py-3 text-[15px] placeholder:text-zinc-400 focus:outline-none resize-none"
               />
-              <div className="px-4 pb-3 text-right text-xs text-gray-400">0/500</div>
+              <div className="px-4 pb-3 text-right text-xs text-zinc-400">0/500</div>
             </div>
           </div>
         </div>
       )}
 
       {personalizedFeed && (
-        <div className="absolute inset-0 z-[65] bg-stone-50/95 flex flex-col animate-in slide-in-from-right duration-200">
-          <div className="flex items-center px-4 py-3 border-b border-stone-100/85 bg-white shrink-0">
+        <div className="absolute inset-0 z-[65] flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
+          <div className="flex items-center px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 shrink-0">
             <div className="w-10 flex justify-start">
               <button
                 type="button"
                 onClick={() => setPersonalizedFeed(null)}
-                className="p-1 rounded-full hover:bg-gray-100"
+                className="p-1 rounded-full hover:bg-stone-100"
               >
-                <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+                <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
               </button>
             </div>
             <h1 className="flex-1 text-center text-lg font-semibold text-zinc-900 truncate px-2">
@@ -1445,7 +1557,7 @@ export function MeTab({
             <div className="w-10 flex justify-end">
               <button
                 type="button"
-                className="p-2 rounded-full hover:bg-gray-100"
+                className="p-2 rounded-full hover:bg-stone-100"
                 aria-label="Share"
                 onClick={() => {
                   const body =
@@ -1458,7 +1570,7 @@ export function MeTab({
                   })
                 }}
               >
-                <Share2 className="w-5 h-5 text-gray-600" />
+                <Share2 className="w-5 h-5 text-zinc-600" />
               </button>
             </div>
           </div>
@@ -1467,7 +1579,7 @@ export function MeTab({
               AI-generated · <span className={mx.citationMuted}>Personalized</span>
             </p>
             <div className={cn("rounded-2xl border border-sky-100/90 bg-white p-4 shadow-sm dark:border-sky-900/35 dark:bg-zinc-900")}>
-              <p className="text-[15px] leading-relaxed text-gray-700 dark:text-zinc-300">
+              <p className="text-[15px] leading-relaxed text-zinc-700 dark:text-zinc-300">
                 {personalizedFeed.type === "daily"
                   ? PERSONALIZED_DAILY_REVIEW_LATEST
                   : PERSONALIZED_AI_INSIGHTS_LATEST}
@@ -1485,31 +1597,31 @@ export function MeTab({
           const sharePreview = heatmapDaySharePreview(d.date, d.value)
           const openDayShare = () => setInsightShareSheet({ title, preview: sharePreview })
           return (
-            <div className="absolute inset-0 z-[60] bg-stone-50/95 flex flex-col animate-in fade-in duration-150">
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100/85 bg-white shrink-0">
-                <button type="button" onClick={() => setHeatmapDayDetail(null)} className="p-1 rounded-full hover:bg-gray-100">
-                  <ChevronRight className="w-6 h-6 text-gray-600 rotate-180" />
+            <div className="absolute inset-0 z-[60] flex flex-col bg-stone-50/95 dark:bg-zinc-950 animate-in fade-in duration-150">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 shrink-0">
+                <button type="button" onClick={() => setHeatmapDayDetail(null)} className="p-1 rounded-full hover:bg-stone-100">
+                  <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
                 </button>
                 <div className="flex-1 min-w-0">
                   <h1 className="text-lg font-semibold text-zinc-900 truncate">{title}</h1>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-zinc-500">
                     Activity {d.value === 0 ? "none" : `level ${d.value}`}
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="p-2 rounded-full hover:bg-gray-100 shrink-0"
+                  className="p-2 rounded-full hover:bg-stone-100 shrink-0"
                   aria-label="Share this day"
                   onClick={openDayShare}
                 >
-                  <Share2 className="w-5 h-5 text-gray-600" />
+                  <Share2 className="w-5 h-5 text-zinc-600" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto px-5 py-4 pb-8">
                 <div className="bg-white rounded-2xl border border-stone-100/85 shadow-sm overflow-hidden">
                   <div className="px-4 py-3 border-b border-stone-100/85 bg-stone-50/95/80 flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-gray-600">This day · AI summary</span>
+                    <span className="text-xs font-medium text-zinc-600">This day · AI summary</span>
                     <button
                       type="button"
                       onClick={openDayShare}
@@ -1523,12 +1635,12 @@ export function MeTab({
                     <p className="text-[15px] text-zinc-900 leading-relaxed font-medium">
                       {getDayLeadLine(d.date, d.value)}
                     </p>
-                    <p className="text-[15px] text-gray-700 leading-relaxed">
+                    <p className="text-[15px] text-zinc-700 leading-relaxed">
                       {getDailyReviewForDay(d.date, d.value)}
                     </p>
                     {uploads.length > 0 && (
                       <div className="pt-2 border-t border-stone-100/85">
-                        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-3">
                           Recorded
                         </p>
                         <ul className="space-y-2">
@@ -1541,7 +1653,7 @@ export function MeTab({
                                     description: `${item.title} · ${item.time}`,
                                   })
                                 }
-                                className="flex w-full gap-3 rounded-xl bg-stone-50/95 p-3 text-left transition-colors hover:bg-gray-100/80"
+                                className="flex w-full gap-3 rounded-xl bg-stone-50/95 p-3 text-left transition-colors hover:bg-stone-100/80"
                               >
                                 <div
                                   className={cn(
@@ -1549,15 +1661,15 @@ export function MeTab({
                                     mx.citationSubtleBg
                                   )}
                                 >
-                                  <Mic className="w-4 h-4 text-slate-600" />
+                                  <Mic className="w-4 h-4 text-zinc-600" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-zinc-900 text-sm">{item.title}</div>
-                                  <div className="text-xs text-gray-500 mt-0.5">
+                                  <div className="text-xs text-zinc-500 mt-0.5">
                                     {item.time} · {item.source}
                                   </div>
                                 </div>
-                                <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 self-center" />
+                                <ChevronRight className="w-4 h-4 text-zinc-300 shrink-0 self-center" />
                               </button>
                             </li>
                           ))}
@@ -1642,7 +1754,7 @@ export function MeTab({
                 }}
                 className={cn(
                   "relative h-7 w-[44px] shrink-0 rounded-full p-0.5 transition-colors",
-                  offlineOnly ? "bg-orange-600" : "bg-stone-200"
+                  offlineOnly ? "bg-sky-600" : "bg-stone-200"
                 )}
               >
                 <span
@@ -1662,12 +1774,12 @@ export function MeTab({
           <div className="absolute inset-0 bg-black/40" onClick={() => setInsightShareSheet(null)} />
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl animate-in slide-in-from-bottom duration-200">
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              <div className="w-10 h-1 bg-stone-300 rounded-full" />
             </div>
             <div className="px-5 pb-2">
               <h3 className="text-lg font-semibold text-zinc-900">Share</h3>
-              <p className="text-sm font-medium text-gray-800 mt-1">{insightShareSheet.title}</p>
-              <p className="text-sm text-gray-500 mt-2 line-clamp-4">{insightShareSheet.preview}</p>
+              <p className="text-sm font-medium text-zinc-800 mt-1">{insightShareSheet.title}</p>
+              <p className="text-sm text-zinc-500 mt-2 line-clamp-4">{insightShareSheet.preview}</p>
             </div>
             <div className="px-5 pb-4">
               <SocialShareRow
@@ -1680,7 +1792,7 @@ export function MeTab({
               <button
                 type="button"
                 onClick={() => setInsightShareSheet(null)}
-                className="w-full py-3 bg-gray-100 rounded-xl text-gray-700 font-medium text-sm"
+                className="w-full py-3 bg-stone-100 rounded-xl text-zinc-700 font-medium text-sm"
               >
                 Cancel
               </button>

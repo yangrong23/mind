@@ -9,7 +9,6 @@ import type {
 import {
   FilePlus2,
   Volume2,
-  GitBranch,
   Layers,
   HelpCircle,
   BarChart3,
@@ -39,8 +38,6 @@ export function factorySettingsLeadMeta(
   switch (kind) {
     case "audio":
       return settings.audioTargetMinutes != null ? `~${settings.audioTargetMinutes} min audio` : null
-    case "mindmap":
-      return settings.mindmapBranchCount != null ? `${settings.mindmapBranchCount} branches` : null
     case "slides":
       return settings.slidesPageCount != null ? `${settings.slidesPageCount} slides` : null
     case "quiz":
@@ -56,15 +53,15 @@ export function factorySettingsLeadMeta(
   }
 }
 
-const PASTEL_SHELLS = ["bg-[#fdece8]", "bg-[#fce8f4]", "bg-[#f3e8fc]"] as const
+const PASTEL_SHELLS = mx.studioJobShell
 
 /** Demo history (reference data; Studio feed is driven by live `userJobs`). */
 export const FACTORY_MEDIA_SEED: FactoryJob[] = [
   {
     id: "seed-1",
-    kind: "mindmap",
+    kind: "report",
     status: "complete",
-    title: "Mind map: key ideas from sources",
+    title: "Library summary report",
     meta: "3 sources · 3 days ago",
   },
   {
@@ -96,8 +93,6 @@ export function iconForFactoryKind(kind: FactoryModalKind) {
       return <FilePlus2 className="h-5 w-5" strokeWidth={1.75} />
     case "audio":
       return <Volume2 className="h-5 w-5" strokeWidth={1.75} />
-    case "mindmap":
-      return <GitBranch className="h-5 w-5" strokeWidth={1.75} />
     case "flashcards":
       return <Layers className="h-5 w-5" strokeWidth={1.75} />
     case "quiz":
@@ -117,8 +112,6 @@ export function mockTitleForFactoryKind(kind: FactoryModalKind): string {
       return "Library summary report"
     case "audio":
       return "Audio overview: key takeaways"
-    case "mindmap":
-      return "Mind map draft"
     case "flashcards":
       return "Core concept flashcards"
     case "quiz":
@@ -138,8 +131,6 @@ export function factoryKindShortLabel(kind: FactoryModalKind): string {
       return "Report"
     case "audio":
       return "Audio"
-    case "mindmap":
-      return "Mind map"
     case "flashcards":
       return "Flashcards"
     case "quiz":
@@ -199,7 +190,7 @@ export function StudioFactoryJobsInline({
   return (
     <div className={cn("relative", toastFailedJobId ? "pb-16" : "")}>
       {showQuotaBanner ? (
-        <div className="mb-4 rounded-2xl bg-[#ffe8dc] p-4 shadow-sm shadow-orange-950/5">
+        <div className={cn("mb-4", mx.studioQuotaBanner)}>
           <div className="flex gap-3">
             <div
               className={cn(
@@ -212,13 +203,13 @@ export function StudioFactoryJobsInline({
               </span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-semibold text-zinc-900">Presentation</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-zinc-700">
+              <p className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">Presentation</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
                 You have reached the daily generation limit. Try again tomorrow or upgrade now.
               </p>
               <button
                 type="button"
-                className="mt-2 text-[13px] font-semibold text-violet-700 hover:text-violet-800"
+                className={cn("mt-2 text-[13px] font-semibold", mx.accentBlue, mx.accentBlueHover)}
                 onClick={onDismissQuotaBanner}
               >
                 Upgrade now

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
-import { ChevronRight, Store } from "lucide-react"
+import { Store } from "lucide-react"
 import { LibraryPlazaView } from "@/components/mind-v2/library-plaza-view"
 import {
   MOCK_KNOWLEDGE_BASES,
@@ -30,7 +30,15 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
   ]
 
   if (showDiscover) {
-    return <LibraryPlazaView onBack={() => setShowDiscover(false)} />
+    return (
+      <LibraryPlazaView
+        onBack={() => setShowDiscover(false)}
+        onPickLibrary={(kb) => {
+          setShowDiscover(false)
+          onKBClick(kb)
+        }}
+      />
+    )
   }
 
   return (
@@ -52,7 +60,7 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
         </div>
       </div>
 
-      <div className={cn("shrink-0 border-b px-5 py-2", mx.shellHairline, mx.shellSurface)}>
+      <div className={cn("shrink-0 px-5 py-2", mx.shellSurface)}>
         <div className="grid grid-cols-3 gap-0">
           {categories.map((cat) => (
             <button
@@ -73,41 +81,38 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="px-5 py-4">
-          <div className="space-y-2.5">
+        <div className="px-5 py-2">
+          <div className="divide-y divide-zinc-100/80 dark:divide-zinc-800/60">
             {filteredKBs.map((kb) => (
               <button
                 key={kb.id}
                 type="button"
                 onClick={() => onKBClick(kb)}
-                className={cn("w-full text-left transition-transform active:scale-[0.99]")}
+                className="block w-full py-3.5 text-left transition-colors first:pt-1 hover:bg-black/[0.02] active:scale-[0.99] dark:hover:bg-white/[0.03]"
               >
-                <div className={cn("p-3.5", mx.shellCard)}>
-                  <div className="flex items-start gap-3">
-                    <img
-                      src={kb.coverImage}
-                      alt=""
-                      width={48}
-                      height={48}
-                      className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-1 ring-black/[0.04] dark:ring-white/10"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-0.5 flex items-center justify-between gap-2">
-                        <h3 className={cn("text-[15px] font-semibold leading-snug", mx.shellInk)}>{kb.name}</h3>
-                        <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300 dark:text-zinc-600" strokeWidth={1.75} />
-                      </div>
-                      <p className={cn("line-clamp-1 text-[13px] leading-relaxed", mx.shellMuted)}>{kb.description}</p>
-                      <div className={cn("mt-2 flex flex-wrap items-center gap-x-2 text-[11px]", mx.shellIcon)}>
-                        <span>{kb.count} items</span>
-                        <span aria-hidden>·</span>
-                        <span>Updated {kb.lastUpdate}</span>
-                        {kb.subscribers != null ? (
-                          <>
-                            <span aria-hidden>·</span>
-                            <span>{(kb.subscribers / 1000).toFixed(1)}k followers</span>
-                          </>
-                        ) : null}
-                      </div>
+                <div className="flex items-start gap-3">
+                  <img
+                    src={kb.coverImage}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5">
+                      <h3 className={cn("text-[15px] font-semibold leading-snug", mx.shellInk)}>{kb.name}</h3>
+                    </div>
+                    <p className={cn("line-clamp-1 text-[13px] leading-relaxed", mx.shellMuted)}>{kb.description}</p>
+                    <div className={cn("mt-2 flex flex-wrap items-center gap-x-2 text-[11px]", mx.shellIcon)}>
+                      <span>{kb.count} items</span>
+                      <span aria-hidden>·</span>
+                      <span>Updated {kb.lastUpdate}</span>
+                      {kb.subscribers != null ? (
+                        <>
+                          <span aria-hidden>·</span>
+                          <span>{(kb.subscribers / 1000).toFixed(1)}k followers</span>
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 </div>

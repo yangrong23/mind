@@ -15,7 +15,13 @@ import { AgentTab, AgentChat } from "./agent-tab"
 import { MeTab } from "./me-tab"
 import { RecordingPage } from "./recording-page"
 import type { FactoryModalKind } from "./content-factory-modals"
+import type { KBCategory } from "@/lib/mock-knowledge-bases"
 import { MindAuthScreens } from "./mind-auth-screens"
+import {
+  MIND_FONT_ZOOM_DEFAULT,
+  readStoredFontZoomPercent,
+  writeStoredFontZoomPercent,
+} from "@/lib/mind-display-prefs"
 
 const DEMO_AUTH_SESSION_KEY = "mind-v2-demo-auth"
 
@@ -25,7 +31,21 @@ type View =
   | { type: "recording" }
   | {
       type: "kb-detail"
-      kb?: { name: string; color: string; description?: string; coverImage?: string }
+      kb?: {
+        name: string
+        color: string
+        description?: string
+        coverImage?: string
+        isPublicKb?: boolean
+        contentCount?: number
+        subscriberCount?: number
+        viewCount?: number
+        publicTagline?: string
+        publisherName?: string
+        initialLikeCount?: number
+        initialCommentCount?: number
+        category?: KBCategory
+      }
       initialView?: "content" | "graph" | "factory"
       initialFactoryModal?: FactoryModalKind
     }
@@ -34,7 +54,21 @@ type View =
       type: "kb-agent-chat"
       context: { kbName: string; contentTitle?: string }
       /** Preserve notebook when returning from library Chat */
-      kb?: { name: string; color: string; description?: string; coverImage?: string }
+      kb?: {
+        name: string
+        color: string
+        description?: string
+        coverImage?: string
+        isPublicKb?: boolean
+        contentCount?: number
+        subscriberCount?: number
+        viewCount?: number
+        publicTagline?: string
+        publisherName?: string
+        initialLikeCount?: number
+        initialCommentCount?: number
+        category?: KBCategory
+      }
       initialView?: "content" | "graph" | "factory"
     }
 
@@ -74,9 +108,19 @@ export function MindAppV2() {
   ])
   const [notes, setNotes] = useState<Note[]>(() =>
     mockNotes.map((n) =>
-      n.id === 1 ? { ...n, folderId: SEED_FOLDER_WELCOME } : n.id === 2 ? { ...n, folderId: SEED_FOLDER_TUTORIAL } : n
+      n.id === 3 ? { ...n, folderId: SEED_FOLDER_WELCOME } : n.id === 4 ? { ...n, folderId: SEED_FOLDER_TUTORIAL } : n
     )
   )
+  const [fontZoomPercent, setFontZoomPercent] = useState(MIND_FONT_ZOOM_DEFAULT)
+
+  useEffect(() => {
+    setFontZoomPercent(readStoredFontZoomPercent())
+  }, [])
+
+  function handleFontZoomPercentChange(next: number) {
+    setFontZoomPercent(next)
+    writeStoredFontZoomPercent(next)
+  }
 
   useEffect(() => {
     try {
@@ -142,16 +186,46 @@ export function MindAppV2() {
     toast.message("Signed out", { description: "Sign in again to continue the demo." })
   }
 
+  function handleRecordingStopped() {
+    const nextId = notes.reduce((max, n) => Math.max(max, n.id), 0) + 1
+    const now = new Date()
+    const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    const newNote: Note = {
+      id: nextId,
+      title: "New recording",
+      type: "phone",
+      date: `Today ${timeStr}`,
+      duration: "0:00",
+      preview: "Capture saved. Transcript and summary will appear here shortly.",
+      status: "pending",
+      source: "Mind Recorder",
+      folderId: null,
+    }
+    setNotes((prev) => [newNote, ...prev])
+    setCurrentView({ type: "note-detail", note: newNote })
+  }
+
+  function navigateToKnowledgeForStudio() {
+    setActiveTab("knowledge")
+    setCurrentView({ type: "tabs" })
+    toast.message("Studio", {
+      description: "Open a notebook, then switch to the Studio tab to run outputs.",
+    })
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50/80 via-stone-50 to-teal-50/50 p-4 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
       {/* Phone chrome */}
-      <div className="relative h-[844px] w-[390px] overflow-hidden rounded-[3rem] border-[14px] border-zinc-700 bg-white font-sans shadow-2xl dark:border-zinc-600 dark:bg-zinc-900">
+      <div
+        className="relative h-[844px] w-[390px] overflow-hidden rounded-[3rem] border-[14px] border-zinc-700 bg-white font-sans shadow-2xl dark:border-zinc-600 dark:bg-zinc-900"
+        style={{ zoom: fontZoomPercent / 100 }}
+      >
         {/* Notch */}
         <div className="absolute left-1/2 top-0 z-50 h-[35px] w-[120px] -translate-x-1/2 rounded-b-3xl bg-zinc-700 dark:bg-zinc-800" />
         
         {/* Status bar */}
         <div className="absolute left-0 right-0 top-0 z-40 flex h-[50px] items-end justify-between bg-transparent px-8 pb-1">
-          <span className="text-[13px] font-semibold text-gray-900 dark:text-zinc-100">9:41</span>
+          <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">9:41</span>
           <div className="flex items-center gap-1">
             {/* Cellular */}
             <svg className="h-[12px] w-[18px] text-zinc-800 dark:text-zinc-200" viewBox="0 0 18 12" fill="currentColor">
@@ -205,6 +279,15 @@ export function MindAppV2() {
                           color: kb.color,
                           description: kb.description,
                           coverImage: kb.coverImage,
+                          isPublicKb: kb.category === "subscribed",
+                          contentCount: kb.count,
+                          subscriberCount: kb.subscribers,
+                          viewCount: kb.viewCount,
+                          publicTagline: kb.publicTagline,
+                          publisherName: kb.publisherName,
+                          initialLikeCount: kb.category === "subscribed" ? 56 : undefined,
+                          initialCommentCount: kb.category === "subscribed" ? 1 : undefined,
+                          category: kb.category,
                         },
                       })
                     }
@@ -228,6 +311,8 @@ export function MindAppV2() {
                     activeAccountId={activeAccountId}
                     onActiveAccountChange={setActiveAccountId}
                     onSessionSignOut={handleSessionSignOut}
+                    fontZoomPercent={fontZoomPercent}
+                    onFontZoomPercentChange={handleFontZoomPercentChange}
                   />
                 )}
               </>
@@ -258,7 +343,7 @@ export function MindAppV2() {
             {/* Recording */}
             {currentView.type === "recording" && (
               <RecordingPage
-                onStop={() => setCurrentView({ type: "note-detail" })}
+                onStop={handleRecordingStopped}
                 onClose={() => setCurrentView({ type: "tabs" })}
               />
             )}
@@ -290,6 +375,7 @@ export function MindAppV2() {
                 requireAuthThen={requireAuthThen}
                 agent={currentView.agent}
                 onBack={() => setCurrentView({ type: "tabs" })}
+                onNavigateToKnowledge={navigateToKnowledgeForStudio}
               />
             )}
 
@@ -307,6 +393,10 @@ export function MindAppV2() {
                   color: "from-sky-400 to-sky-700",
                 }}
                 entryHint="Route what you saved into answers and artifacts: retrieve, connect, and ship outcomes—not one-off replies disconnected from your library."
+                knowledgeContext={{
+                  kbName: currentView.context.kbName,
+                  contentTitle: currentView.context.contentTitle,
+                }}
                 onBack={() =>
                   setCurrentView({
                     type: "kb-detail",
@@ -314,13 +404,23 @@ export function MindAppV2() {
                     initialView: currentView.initialView,
                   })
                 }
+                onNavigateToKnowledge={() => {
+                  setCurrentView({
+                    type: "kb-detail",
+                    kb: currentView.kb,
+                    initialView: "factory",
+                  })
+                  toast.message("Studio", {
+                    description: "Pick an output type from the Studio tab.",
+                  })
+                }}
               />
             )}
           </div>
 
           {/* Bottom nav (tabs only) */}
           {currentView.type === "tabs" && (
-            <div className="shrink-0 overflow-visible bg-gradient-to-t from-[#fafaf9] via-[#fafaf9]/85 to-transparent pb-0.5 pt-1 dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent">
+            <div className="shrink-0 overflow-visible bg-gradient-to-t from-stone-50 via-stone-50/90 to-transparent pb-0.5 pt-1 dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent">
               <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
             </div>
           )}

@@ -10,6 +10,12 @@ export type KnowledgeBase = {
   icon?: string
   color: string
   subscribers?: number
+  /** Browses / Q&A hits for public-style detail */
+  viewCount?: number
+  /** Subtitle under title on public knowledge detail */
+  publicTagline?: string
+  /** Curator / publisher line under the title on subscribed detail */
+  publisherName?: string
   /** Cover art for list / plaza (photo avatar) */
   coverImage: string
 }
@@ -67,24 +73,32 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
   },
   {
     id: 6,
-    name: "AI tools digest",
-    description: "Curated AI tooling",
+    name: "Patent knowledge base",
+    description:
+      "Coverage spans invention, utility model, and design patents across major jurisdictions—including CN, US, EP, and JP filings—with weekly refresh of office actions, prosecution tips, and claim-mapping checklists you can reuse in Q&A.",
     category: "subscribed",
-    count: 1523,
+    count: 4505,
     lastUpdate: "Today",
     color: "from-cyan-500/80 to-blue-600/80",
-    subscribers: 15000,
+    subscribers: 2527,
+    viewCount: 8750,
+    publicTagline: "Curated · prosecution-ready briefs",
+    publisherName: "CN & global patents desk",
     coverImage: "https://picsum.photos/seed/mindkb06/384/384",
   },
   {
     id: 7,
     name: "PM growth",
-    description: "Product craft and cases",
+    description:
+      "Product craft, discovery cadences, and case write-ups from teams shipping B2B SaaS. Use it for grounded answers on prioritization, narrative testing, and rollout retros—updated as new notes land.",
     category: "subscribed",
     count: 892,
     lastUpdate: "Yesterday",
     color: "from-sky-500/80 to-violet-500/75",
     subscribers: 8900,
+    viewCount: 5120,
+    publicTagline: "Playbooks and annotated wins",
+    publisherName: "Product guild",
     coverImage: "https://picsum.photos/seed/mindkb07/384/384",
   },
 ]

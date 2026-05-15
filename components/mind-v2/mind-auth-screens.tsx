@@ -30,7 +30,11 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
       toast.error("Missing fields", { description: "Enter email and password (demo)." })
       return
     }
-    finishAuth("Signed in")
+    if (email.trim() === "root" && password === "root") {
+      finishAuth("Signed in")
+      return
+    }
+    toast.error("Invalid credentials", { description: "Demo: use account root and password root." })
   }
 
   function handleSubmitSignUp(e: React.FormEvent) {
@@ -46,7 +50,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
     return (
       <div
         className={cn(
-          "relative flex h-full min-h-0 w-full flex-1 flex-col bg-gradient-to-b from-sky-50/90 via-white to-stone-50/90 px-6 pb-8 pt-2 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950"
+          "relative flex h-full min-h-0 w-full flex-1 flex-col bg-gradient-to-b from-sky-50/90 via-white to-stone-50/90 px-6 pb-6 pt-2 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950"
         )}
       >
         {onDismiss ? (
@@ -62,11 +66,11 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
           </div>
         ) : null}
 
-        <div className="flex min-h-0 flex-1 flex-col justify-between gap-8 pt-10">
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-1 text-center">
+        <div className="flex min-h-0 flex-1 flex-col pt-8">
+          <div className="flex shrink-0 flex-col items-center px-1 text-center">
             <div
               className={cn(
-                "mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-md shadow-sky-900/10 ring-1 ring-sky-100/90 dark:bg-zinc-900 dark:ring-sky-900/40"
+                "mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-md shadow-sky-900/10 ring-1 ring-sky-100/90 dark:bg-zinc-900 dark:ring-sky-900/40"
               )}
               aria-hidden
             >
@@ -83,7 +87,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
             </p>
           </div>
 
-          <div className="w-full shrink-0 space-y-3">
+          <div className="mt-9 w-full shrink-0 space-y-3">
             <button
               type="button"
               onClick={() => setMode("sign-in")}
@@ -141,19 +145,19 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
 
       <form
         onSubmit={isSignIn ? handleSubmitSignIn : handleSubmitSignUp}
-        className="flex min-h-0 flex-1 flex-col px-5 pb-8 pt-6"
+        className="flex min-h-0 flex-1 flex-col px-5 pb-6 pt-5"
       >
         <div className="space-y-4">
           <div>
             <label htmlFor="auth-email" className="mb-1.5 block text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
-              Email
+              Account
             </label>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden />
               <input
                 id="auth-email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
@@ -180,13 +184,18 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
           </div>
         </div>
 
-        <div className="mt-auto flex flex-col gap-3 pt-8">
+        <div className="mt-8 flex shrink-0 flex-col gap-3">
           <button
             type="submit"
             className={cn("w-full rounded-2xl py-3.5 text-[16px] font-semibold shadow-sm transition-colors active:scale-[0.99]", mx.brandCta)}
           >
             {isSignIn ? "Sign in" : "Create account"}
           </button>
+          {isSignIn ? (
+            <p className="text-center text-[12px] text-zinc-500 dark:text-zinc-400">
+              演示登录：账号与密码均为 <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">root</span>
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={() => setMode(isSignIn ? "sign-up" : "sign-in")}

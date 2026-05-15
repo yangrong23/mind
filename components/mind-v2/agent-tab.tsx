@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
@@ -16,27 +16,34 @@ import {
 import {
   Plus,
   ChevronRight,
+  ChevronDown,
   Sparkles,
-  ArrowUp,
   Volume2,
   Eye,
   LayoutDashboard,
-  LayoutGrid,
   Store,
-  Atom,
-  Orbit,
-  FileStack,
+  MessageCircle,
+  Share2,
+  MoreHorizontal,
+  FolderInput,
+  Check,
+  Bot,
+  Globe,
+  AtSign,
+  AudioLines,
 } from "lucide-react"
 
 const STUDIO_OUTPUTS: { id: FactoryModalKind; label: string; sub: string }[] = [
   { id: "report", label: "Report", sub: "Structured doc" },
   { id: "audio", label: "Audio", sub: "Narrated recap" },
-  { id: "mindmap", label: "Mind map", sub: "From sources" },
   { id: "flashcards", label: "Flashcards", sub: "Study deck" },
   { id: "quiz", label: "Quiz", sub: "Quick check" },
   { id: "slides", label: "Slides", sub: "Outline → deck" },
   { id: "infographic", label: "Infographic", sub: "Visual summary" },
 ]
+
+/** Two balanced rows for the agent home “content factory” rail (3 + 3). */
+const STUDIO_OUTPUT_ROWS = [STUDIO_OUTPUTS.slice(0, 3), STUDIO_OUTPUTS.slice(3)] as const
 
 interface Agent {
   id: number
@@ -101,12 +108,31 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
   const [showKBSelect, setShowKBSelect] = useState(false)
   const [libraryLinkMode, setLibraryLinkMode] = useState<StudioLibraryLinkMode>("auto")
   const [pickedKbIds, setPickedKbIds] = useState<number[]>([])
-  const [showStudioMenu, setShowStudioMenu] = useState(false)
   const [agentHomeDraft, setAgentHomeDraft] = useState("")
   const [agentStudioSession, setAgentStudioSession] = useState<StudioFromAgentHandoff | null>(null)
   const [libraryPlazaFromAgent, setLibraryPlazaFromAgent] = useState(false)
+  /** Home composer — ima-style: dialog vs agent, model, @ KB, voice, upload */
+  const [agentHomeChatMode, setAgentHomeChatMode] = useState<"dialog" | "agent">("dialog")
+  const [agentHomeModeMenuOpen, setAgentHomeModeMenuOpen] = useState(false)
+  const [agentHomeModelMenuOpen, setAgentHomeModelMenuOpen] = useState(false)
+  const [agentHomeModelLabel, setAgentHomeModelLabel] = useState("DS 快速")
+  const [agentHomeVoiceOn, setAgentHomeVoiceOn] = useState(false)
+  const homeComposerRef = useRef<HTMLDivElement>(null)
 
   const linkSummary = libraryLinkSummary(libraryLinkMode, pickedKbIds)
+
+  useEffect(() => {
+    if (!agentHomeModeMenuOpen && !agentHomeModelMenuOpen) return
+    function onDocMouseDown(e: MouseEvent) {
+      const el = homeComposerRef.current
+      if (el && !el.contains(e.target as Node)) {
+        setAgentHomeModeMenuOpen(false)
+        setAgentHomeModelMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", onDocMouseDown)
+    return () => document.removeEventListener("mousedown", onDocMouseDown)
+  }, [agentHomeModeMenuOpen, agentHomeModelMenuOpen])
 
   function handlePlazaPick(kb: KnowledgeBase) {
     setLibraryLinkMode("pick")
@@ -131,10 +157,20 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
         toast.error("Add a prompt first")
         return
       }
-      toast.success("Queued", { description: q.length > 100 ? `${q.slice(0, 100)}…` : q })
+      setAgentHomeModeMenuOpen(false)
+      setAgentHomeModelMenuOpen(false)
+      const modeLabel = agentHomeChatMode === "dialog" ? "Dialog" : "Agent"
+      toast.success("Queued", {
+        description: `${q.length > 100 ? `${q.slice(0, 100)}…` : q} · ${modeLabel} · ${agentHomeModelLabel}`,
+      })
       setAgentHomeDraft("")
     })
   }
+
+  const homePillBtn =
+    "inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-zinc-200/85 bg-white/95 px-2.5 text-[12px] font-medium text-zinc-800 shadow-none transition-colors hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800/90 dark:text-zinc-100 dark:hover:bg-zinc-700"
+  const homeRoundBtn =
+    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#fafaf9] font-sans text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
@@ -257,7 +293,7 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-8 pt-12">
             <div className="flex w-full max-w-md flex-col items-stretch">
               <div className="mb-7 flex flex-col items-center">
-                <div className="flex items-end gap-2.5" aria-label="Minder">
+                <div className="flex items-center gap-2.5" aria-label="Minder">
                   <img
                     src="/minder-agent-mark.png"
                     alt=""
@@ -265,7 +301,7 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
                     height={40}
                     className="h-10 w-10 shrink-0 object-contain drop-shadow-sm dark:opacity-90"
                   />
-                  <div className="flex flex-col pb-0.5 font-sans">
+                  <div className="flex flex-col pt-1.5 font-sans">
                     <span className="text-[22px] font-bold leading-none tracking-tight text-zinc-900 dark:text-zinc-50">
                       inder
                     </span>
@@ -276,110 +312,220 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
                 </div>
               </div>
 
-              <div className="rounded-[1.75rem] bg-white/92 p-4 shadow-[0_16px_48px_-20px_rgba(15,23,42,0.14),0_2px_12px_-4px_rgba(15,23,42,0.06)] backdrop-blur-md dark:bg-zinc-900/72 dark:shadow-[0_20px_50px_-24px_rgba(0,0,0,0.55)]">
-                <input
-                  type="text"
+              <div
+                ref={homeComposerRef}
+                className="relative overflow-hidden rounded-[1.75rem] border border-zinc-200/55 bg-white/92 shadow-[0_16px_48px_-20px_rgba(15,23,42,0.14),0_2px_12px_-4px_rgba(15,23,42,0.06)] backdrop-blur-md dark:border-zinc-700/65 dark:bg-zinc-900/72 dark:shadow-[0_20px_50px_-24px_rgba(0,0,0,0.55)]"
+              >
+                <textarea
                   value={agentHomeDraft}
                   onChange={(e) => setAgentHomeDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      submitAgentHomePrompt()
-                    }
+                    if (e.key !== "Enter" || e.shiftKey) return
+                    e.preventDefault()
+                    submitAgentHomePrompt()
                   }}
-                  placeholder="Message or hold to speak"
-                  className="w-full bg-transparent text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400/90 focus:outline-none dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                  rows={2}
+                  placeholder="Send a message or hold to speak"
+                  className="max-h-36 min-h-[3.25rem] w-full resize-none border-0 bg-transparent px-4 pb-2 pt-3.5 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400/90 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                  aria-label="Message"
                 />
-                <div className="mt-3.5 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowStudioMenu(false)
-                        setShowKBSelect(true)
-                      }}
-                      className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-sky-50 hover:text-sky-700 active:scale-95 dark:text-zinc-400 dark:hover:bg-sky-950/40 dark:hover:text-sky-300"
-                      aria-label="Library scope — choose linked knowledge bases"
-                      title="All, Auto, or pick libraries that feed this chat"
-                    >
-                      <Atom className="h-5 w-5" strokeWidth={1.65} aria-hidden />
-                    </button>
-                    <div className="relative">
+                <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                    <span className="relative inline-flex">
+                      {agentHomeModeMenuOpen ? (
+                        <div
+                          className="absolute bottom-full left-0 z-20 mb-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                          role="listbox"
+                        >
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={agentHomeChatMode === "dialog"}
+                            onClick={() => {
+                              setAgentHomeChatMode("dialog")
+                              setAgentHomeModeMenuOpen(false)
+                            }}
+                            className={cn(
+                              "flex w-full items-start gap-3 border-b border-zinc-100 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/80",
+                              agentHomeChatMode === "dialog" && "bg-sky-50/70 dark:bg-sky-950/35"
+                            )}
+                          >
+                            <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
+                                对话模式
+                                {agentHomeChatMode === "dialog" ? (
+                                  <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
+                                ) : null}
+                              </span>
+                              <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
+                                Multi-turn chat
+                              </span>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={agentHomeChatMode === "agent"}
+                            onClick={() => {
+                              setAgentHomeChatMode("agent")
+                              setAgentHomeModeMenuOpen(false)
+                            }}
+                            className={cn(
+                              "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80",
+                              agentHomeChatMode === "agent" && "bg-sky-50/70 dark:bg-sky-950/35"
+                            )}
+                          >
+                            <Bot className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
+                                智能体模式
+                                {agentHomeChatMode === "agent" ? (
+                                  <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
+                                ) : null}
+                              </span>
+                              <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
+                                Agent-style delivery (demo)
+                              </span>
+                            </span>
+                          </button>
+                        </div>
+                      ) : null}
                       <button
                         type="button"
-                        onClick={() => setShowStudioMenu((v) => !v)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 active:scale-95 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                        aria-label="Studio"
-                        aria-expanded={showStudioMenu}
+                        className={homePillBtn}
+                        aria-expanded={agentHomeModeMenuOpen}
+                        aria-haspopup="listbox"
+                        onClick={() => {
+                          setAgentHomeModeMenuOpen((v) => !v)
+                          setAgentHomeModelMenuOpen(false)
+                        }}
                       >
-                        <LayoutGrid className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                        {agentHomeChatMode === "dialog" ? "对话" : "智能体"}
+                        <ChevronDown className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} aria-hidden />
                       </button>
-                      {showStudioMenu && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setShowStudioMenu(false)} />
-                          <div className="absolute bottom-full left-0 z-50 mb-2 w-[min(100vw-2rem,18rem)] overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/98 py-1 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-lg dark:border-zinc-700 dark:bg-zinc-900/98">
+                    </span>
+                    <span className="relative inline-flex">
+                      {agentHomeModelMenuOpen ? (
+                        <div className="absolute bottom-full left-0 z-20 mb-2 min-w-[10.5rem] overflow-hidden rounded-xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                          {(["DS 快速", "Mind Pro", "Balanced"] as const).map((m) => (
                             <button
+                              key={m}
                               type="button"
                               onClick={() => {
-                                setShowStudioMenu(false)
-                                runWithAuth(() =>
-                                  toast.message("Attach files", { description: "Demo — pick a file." })
-                                )
+                                setAgentHomeModelLabel(m)
+                                setAgentHomeModelMenuOpen(false)
                               }}
-                              className="flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/90"
+                              className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
                             >
-                              <FileStack className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
-                              <span className="min-w-0 flex-1">
-                                <span className="block text-[14px] font-medium text-zinc-900 dark:text-zinc-100">Attach files</span>
-                                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">Upload documents to this thread (demo)</span>
-                              </span>
+                              {m}
+                              {agentHomeModelLabel === m ? (
+                                <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
+                              ) : (
+                                <span className="w-4" />
+                              )}
                             </button>
-                            <div className="mx-3 border-t border-zinc-100 dark:border-zinc-800" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowStudioMenu(false)
-                                setShowKBSelect(true)
-                              }}
-                              className="flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/90"
-                            >
-                              <Orbit className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" strokeWidth={2} aria-hidden />
-                              <span className="min-w-0 flex-1">
-                                <span className="block text-[14px] font-medium text-zinc-900 dark:text-zinc-100">Libraries</span>
-                                <span className="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">{linkSummary}</span>
-                              </span>
-                            </button>
-                            <div className="mx-3 border-t border-zinc-100 dark:border-zinc-800" />
-                            <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-                              Outputs
-                            </p>
-                            {STUDIO_OUTPUTS.map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => {
-                                  setShowStudioMenu(false)
-                                  openStudioWithKind(item.id)
-                                }}
-                                className="w-full px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/90"
-                              >
-                                <span className="block text-[14px] font-medium text-zinc-900 dark:text-zinc-100">{item.label}</span>
-                                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">{item.sub}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        className={homePillBtn}
+                        aria-expanded={agentHomeModelMenuOpen}
+                        onClick={() => {
+                          setAgentHomeModelMenuOpen((v) => !v)
+                          setAgentHomeModeMenuOpen(false)
+                        }}
+                      >
+                        <Globe className="h-3.5 w-3.5 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
+                        <span className="max-w-[6.5rem] truncate">{agentHomeModelLabel}</span>
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
+                      </button>
+                    </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={submitAgentHomePrompt}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white transition-colors hover:bg-zinc-800 active:scale-95 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                    aria-label="Send"
+                  <div className="ml-auto flex shrink-0 items-center gap-0.5">
+                    <button
+                      type="button"
+                      className={homeRoundBtn}
+                      aria-label="Choose knowledge libraries"
+                      title={linkSummary}
+                      onClick={() => {
+                        setAgentHomeModeMenuOpen(false)
+                        setAgentHomeModelMenuOpen(false)
+                        setShowKBSelect(true)
+                      }}
+                    >
+                      <AtSign className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={agentHomeVoiceOn}
+                      aria-label={agentHomeVoiceOn ? "Stop voice input" : "Voice input"}
+                      onClick={() =>
+                        runWithAuth(() => {
+                          setAgentHomeVoiceOn((prev) => {
+                            const next = !prev
+                            toast.message(next ? "Voice input" : "Voice input off", {
+                              description: next ? "Demo: tap again to stop." : "Demo: no audio sent.",
+                            })
+                            return next
+                          })
+                        })
+                      }
+                      className={cn(
+                        homeRoundBtn,
+                        agentHomeVoiceOn && "bg-sky-50 text-sky-800 dark:bg-sky-950/45 dark:text-sky-200"
+                      )}
+                    >
+                      <AudioLines className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      className={homeRoundBtn}
+                      aria-label="Upload file"
+                      onClick={() =>
+                        runWithAuth(() =>
+                          toast.message("Upload file", { description: "Demo — pick a file from your device." })
+                        )
+                      }
+                    >
+                      <Plus className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 w-full">
+                <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+                    Content factory
+                  </p>
+                  <p
+                    className="max-w-[55%] truncate text-[10px] font-medium text-zinc-400 dark:text-zinc-500"
+                    title={linkSummary}
                   >
-                    <ArrowUp className="h-5 w-5" strokeWidth={2.15} />
-                  </button>
+                    {linkSummary}
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {STUDIO_OUTPUT_ROWS.flat().map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => openStudioWithKind(item.id)}
+                      className={cn(
+                        "flex min-h-[2.75rem] flex-col justify-center rounded-lg border border-zinc-200/80 bg-white px-2 py-1.5 text-left",
+                        "transition-colors hover:bg-zinc-50 active:scale-[0.99] dark:border-zinc-700/80 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/50"
+                      )}
+                    >
+                      <span className="block text-[11px] font-medium leading-tight tracking-tight text-zinc-800 dark:text-zinc-100">
+                        {item.label}
+                      </span>
+                      <span className="mt-0.5 block line-clamp-2 text-[9px] leading-snug text-zinc-500 dark:text-zinc-400">
+                        {item.sub}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -559,7 +705,12 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
           open={agentStudioSession.factoryKind}
           onClose={() => setAgentStudioSession(null)}
           libraryName={resolveAgentStudioLibraryName(agentStudioSession)}
-          onGenerateSubmit={(_kind, _settings) => setAgentStudioSession(null)}
+          onGenerateSubmit={(kind) => {
+            setAgentStudioSession(null)
+            toast.success("Queued", {
+              description: `${kind} run started from your library scope (demo).`,
+            })
+          }}
         />
       )}
     </div>
@@ -813,71 +964,343 @@ interface AgentChatProps {
   /** Shown under the header when present — e.g. library-grounded “deep knowledge” entry */
   entryHint?: string
   requireAuthThen?: (run: () => void) => void
+  /** Jump to Knowledge list or library Studio (parent decides). */
+  onNavigateToKnowledge?: () => void
+  /** When set, AI bubbles get “save to library” actions and the library-style composer (对话/任务/语音). */
+  knowledgeContext?: { kbName: string; contentTitle?: string }
 }
 
-export function AgentChat({ agent, onBack, entryHint, requireAuthThen }: AgentChatProps) {
+type ChatMsg = { id: string; role: "user" | "ai"; content: string }
+/** 对话 = multi-turn chat; 智能体 = agent-style autonomous delivery (demo). */
+type AgentComposerMode = "dialog" | "agent"
+
+export function AgentChat({
+  agent,
+  onBack,
+  entryHint,
+  requireAuthThen,
+  onNavigateToKnowledge,
+  knowledgeContext,
+}: AgentChatProps) {
   const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const avatar = agent.avatar ?? ""
   const showRemoteAvatar = agentAvatarIsRemoteUrl(avatar)
+  const isLibraryChat = Boolean(knowledgeContext)
+  const kbLabel = knowledgeContext?.kbName ?? ""
+  const scopeLabel = knowledgeContext?.contentTitle
+    ? `「${knowledgeContext.contentTitle}」· ${kbLabel}`
+    : kbLabel
+
   const [input, setInput] = useState("")
-  const [messages, setMessages] = useState<Array<{ role: "user" | "ai"; content: string }>>([])
+  const [messages, setMessages] = useState<ChatMsg[]>([])
+  const [chatMode, setChatMode] = useState<AgentComposerMode>("dialog")
+  const [modeMenuOpen, setModeMenuOpen] = useState(false)
+  const [modelMenuOpen, setModelMenuOpen] = useState(false)
+  const [kbMenuOpen, setKbMenuOpen] = useState(false)
+  const [modelLabel, setModelLabel] = useState("DS 快速")
+  const [voiceOn, setVoiceOn] = useState(false)
+  /** Optional KB grounding chosen via @ (demo; parent `knowledgeContext` still drives library entry). */
+  const [pickedKbName, setPickedKbName] = useState<string | null>(null)
+  const composerShellRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!modeMenuOpen && !modelMenuOpen && !kbMenuOpen) return
+    function onDocMouseDown(e: MouseEvent) {
+      const el = composerShellRef.current
+      if (el && !el.contains(e.target as Node)) {
+        setModeMenuOpen(false)
+        setModelMenuOpen(false)
+        setKbMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", onDocMouseDown)
+    return () => document.removeEventListener("mousedown", onDocMouseDown)
+  }, [modeMenuOpen, modelMenuOpen, kbMenuOpen])
 
   const handleSend = () => {
     if (!input.trim()) return
-    setMessages([...messages, { role: "user", content: input }])
+    const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content: input.trim() }
+    const modeAtSend = chatMode
+    setMessages((prev) => [...prev, userMsg])
     setInput("")
+    setModeMenuOpen(false)
+    setModelMenuOpen(false)
+    setKbMenuOpen(false)
     setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        role: "ai", 
-        content: `Hi — I’m ${agent.name}. I’ve got your message and I’ll help from here.`,
-      }])
+      const agentNote =
+        modeAtSend === "agent"
+          ? "\n\n(Agent mode: step-by-step, more autonomous delivery — demo.)"
+          : ""
+      const kbGround = (pickedKbName || (isLibraryChat ? kbLabel : "")).trim()
+      const kbHint = kbGround ? `\n\n(Grounding: ${kbGround} — demo.)` : ""
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "ai",
+          content: `Hi — I’m ${agent.name}. I’ve got your message and I’ll help from here.${agentNote}${kbHint}`,
+        },
+      ])
     }, 1000)
   }
 
   const trySend = () => runWithAuth(handleSend)
 
+  function saveAiReplyToLibrary(text: string) {
+    runWithAuth(() =>
+      toast.success("已存入知识库", {
+        description: scopeLabel ? `${scopeLabel} · 已保存该条回复（演示）` : `${kbLabel} · 已保存该条回复（演示）`,
+      })
+    )
+  }
+
+  function shareAiReply(text: string) {
+    runWithAuth(() => {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        void navigator.share({ title: "Mind", text }).catch(() => {
+          toast.message("已复制分享文案", { description: text.slice(0, 120) + (text.length > 120 ? "…" : "") })
+        })
+      } else {
+        void navigator.clipboard?.writeText(text).then(
+          () => toast.message("已复制到剪贴板"),
+          () => toast.message("分享", { description: text.slice(0, 160) })
+        )
+      }
+    })
+  }
+
+  const displayKbName = pickedKbName ?? (isLibraryChat ? kbLabel : null)
+
+  const pillBtn =
+    "inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-zinc-200/85 bg-white px-2.5 text-[12px] font-medium text-zinc-800 shadow-none transition-colors hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+
+  const roundToolBtn =
+    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+
   const composer = (
-    <div className="flex items-center gap-2">
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && trySend()}
-        placeholder={entryHint ? "Turn saved knowledge into an outcome…" : "Message…"}
-        className="min-w-0 flex-1 rounded-xl bg-zinc-100 px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300/60 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-600/50"
-      />
-      <button
-        type="button"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-        aria-label="Upload file"
-        onClick={() =>
-          runWithAuth(() =>
-            toast.message("Attach file", { description: "Demo — pick a file." })
-          )
-        }
+    <div ref={composerShellRef} className="relative w-full max-w-md">
+      <div
+        className={cn(
+          "overflow-hidden rounded-[26px] border bg-white dark:bg-zinc-900",
+          "border-zinc-200/80 dark:border-zinc-700/90"
+        )}
       >
-        <FileStack className="h-5 w-5" strokeWidth={1.75} />
-      </button>
-      <button
-        type="button"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-        aria-label="Studio"
-        onClick={() =>
-          toast.message("Studio", {
-            description: "Open a knowledge base and use Studio outputs there (demo).",
-          })
-        }
-      >
-        <LayoutGrid className="h-5 w-5" strokeWidth={1.75} />
-      </button>
-      <button
-        type="button"
-        onClick={trySend}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        aria-label="Send"
-      >
-        <ArrowUp className="h-5 w-5" strokeWidth={2.15} />
-      </button>
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return
+            if (e.shiftKey) return
+            e.preventDefault()
+            trySend()
+          }}
+          rows={2}
+          placeholder={
+            isLibraryChat
+              ? "Ask this knowledge base…"
+              : entryHint
+                ? "Turn saved knowledge into an outcome…"
+                : "Send a message or hold to talk"
+          }
+          className="max-h-36 min-h-[3.25rem] w-full resize-none border-0 bg-transparent px-4 pb-2 pt-3.5 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+          aria-label="Message"
+        />
+
+        <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+            <span className="relative inline-flex">
+              {modeMenuOpen ? (
+                <div
+                  className="absolute bottom-full left-0 z-20 mb-2 w-[min(20rem,calc(100vw-2.5rem))] overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-lg shadow-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900"
+                  role="listbox"
+                >
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={chatMode === "dialog"}
+                    onClick={() => {
+                      setChatMode("dialog")
+                      setModeMenuOpen(false)
+                    }}
+                    className={cn(
+                      "flex w-full items-start gap-3 border-b border-zinc-100 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/80",
+                      chatMode === "dialog" && "bg-sky-50/70 dark:bg-sky-950/35"
+                    )}
+                  >
+                    <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
+                        对话模式
+                        {chatMode === "dialog" ? <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} /> : null}
+                      </span>
+                      <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
+                        Multi-turn chat and reasoning
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={chatMode === "agent"}
+                    onClick={() => {
+                      setChatMode("agent")
+                      setModeMenuOpen(false)
+                    }}
+                    className={cn(
+                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80",
+                      chatMode === "agent" && "bg-sky-50/70 dark:bg-sky-950/35"
+                    )}
+                  >
+                    <Bot className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
+                        智能体模式
+                        {chatMode === "agent" ? <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} /> : null}
+                      </span>
+                      <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
+                        Agent-style steps and structured delivery (demo)
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className={pillBtn}
+                aria-expanded={modeMenuOpen}
+                aria-haspopup="listbox"
+                onClick={() => {
+                  setModeMenuOpen((v) => !v)
+                  setModelMenuOpen(false)
+                  setKbMenuOpen(false)
+                }}
+              >
+                {chatMode === "dialog" ? "对话" : "智能体"}
+                <ChevronDown className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} aria-hidden />
+              </button>
+            </span>
+
+            <span className="relative inline-flex">
+              {modelMenuOpen ? (
+                <div className="absolute bottom-full left-0 z-20 mb-2 min-w-[10.5rem] overflow-hidden rounded-xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                  {(["DS 快速", "Mind Pro", "Balanced"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        setModelLabel(m)
+                        setModelMenuOpen(false)
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      {m}
+                      {modelLabel === m ? (
+                        <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
+                      ) : (
+                        <span className="w-4" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className={pillBtn}
+                aria-expanded={modelMenuOpen}
+                onClick={() => {
+                  setModelMenuOpen((v) => !v)
+                  setModeMenuOpen(false)
+                  setKbMenuOpen(false)
+                }}
+              >
+                <Globe className="h-3.5 w-3.5 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
+                <span className="max-w-[6.5rem] truncate">{modelLabel}</span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
+              </button>
+            </span>
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
+            <span className="relative inline-flex">
+              {kbMenuOpen ? (
+                <div className="absolute bottom-full right-0 z-20 mb-2 max-h-52 w-[min(17.5rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                  <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                    Knowledge base
+                  </p>
+                  {MOCK_KNOWLEDGE_BASES.slice(0, 8).map((kb) => (
+                    <button
+                      key={kb.id}
+                      type="button"
+                      onClick={() => {
+                        setPickedKbName(kb.name)
+                        setKbMenuOpen(false)
+                        toast.message("Knowledge base", { description: `Grounding set to “${kb.name}” (demo).` })
+                      }}
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      <span className="truncate">{kb.name}</span>
+                      {(pickedKbName === kb.name || (isLibraryChat && kbLabel === kb.name && !pickedKbName)) ? (
+                        <Check className="h-4 w-4 shrink-0 text-sky-600" strokeWidth={2.5} />
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className={roundToolBtn}
+                aria-label={displayKbName ? `Knowledge base: ${displayKbName}` : "Pick knowledge base"}
+                title={displayKbName ?? "Pick knowledge base"}
+                onClick={() =>
+                  runWithAuth(() => {
+                    setKbMenuOpen((v) => !v)
+                    setModeMenuOpen(false)
+                    setModelMenuOpen(false)
+                  })
+                }
+              >
+                <AtSign className="h-[18px] w-[18px]" strokeWidth={2} />
+              </button>
+            </span>
+
+            <button
+              type="button"
+              aria-pressed={voiceOn}
+              aria-label={voiceOn ? "Stop voice input" : "Voice input"}
+              onClick={() =>
+                runWithAuth(() => {
+                  setVoiceOn((prev) => {
+                    const next = !prev
+                    toast.message(next ? "Voice input" : "Voice input off", {
+                      description: next ? "Demo: speak, tap again to stop." : "Demo: no audio uploaded.",
+                    })
+                    return next
+                  })
+                })
+              }
+              className={cn(
+                roundToolBtn,
+                voiceOn && "bg-sky-50 text-sky-800 dark:bg-sky-950/45 dark:text-sky-200"
+              )}
+            >
+              <AudioLines className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+            </button>
+
+            <button
+              type="button"
+              className={roundToolBtn}
+              aria-label="Upload file"
+              onClick={() =>
+                runWithAuth(() =>
+                  toast.message("Upload file", { description: "Demo — pick a file from your device." })
+                )
+              }
+            >
+              <Plus className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 
@@ -934,29 +1357,62 @@ export function AgentChat({ agent, onBack, entryHint, requireAuthThen }: AgentCh
               ? "Flexible AI on your sources—toward concrete outcomes."
               : "Send a message to start"}
           </p>
-          <div className="w-full max-w-md rounded-2xl border border-stone-200/90 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-            {composer}
-          </div>
+          <div className="w-full max-w-md">{composer}</div>
         </div>
       ) : (
         <>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-            {messages.map((msg, i) => (
-              <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+            {messages.map((msg) => (
+              <div key={msg.id} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
                 <div
                   className={cn(
-                    "max-w-[80%] rounded-2xl px-4 py-3",
+                    "max-w-[85%] rounded-2xl px-4 py-3",
                     msg.role === "user"
                       ? "rounded-br-md bg-zinc-600 text-white"
                       : "rounded-bl-md border border-stone-200/90 bg-white text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                   )}
                 >
-                  <p className="text-sm">{msg.content}</p>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                  {msg.role === "ai" && isLibraryChat ? (
+                    <div className="mt-3 flex justify-end gap-0.5 border-t border-stone-100 pt-2.5 dark:border-zinc-700/90">
+                      <button
+                        type="button"
+                        className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-stone-50 hover:text-sky-700 dark:hover:bg-zinc-800 dark:hover:text-sky-400"
+                        aria-label="Save reply to knowledge base"
+                        title="存入知识库"
+                        onClick={() => saveAiReplyToLibrary(msg.content)}
+                      >
+                        <FolderInput className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-stone-50 hover:text-sky-700 dark:hover:bg-zinc-800 dark:hover:text-sky-400"
+                        aria-label="Share"
+                        onClick={() => shareAiReply(msg.content)}
+                      >
+                        <Share2 className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-stone-50 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                        aria-label="More"
+                        onClick={() =>
+                          runWithAuth(() =>
+                            toast.message("更多", { description: "演示：可复制、举报或重新生成。" })
+                          )
+                        }
+                      >
+                        <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}
           </div>
-          <div className="shrink-0 border-t border-stone-200/90 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">{composer}</div>
+          <div className="shrink-0 border-t border-stone-200/90 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+            {composer}
+          </div>
         </>
       )}
     </div>

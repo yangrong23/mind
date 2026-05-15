@@ -16,6 +16,12 @@ import {
 import { TextNoteEditor } from "@/components/mind-v2/text-note-editor"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
 import {
+  PersonalKbInfoOverlay,
+  SubscribedKbInfoOverlay,
+  TeamKbInfoOverlay,
+} from "@/components/mind-v2/knowledge-base-info-overlays"
+import type { KBCategory } from "@/lib/mock-knowledge-bases"
+import {
   ChevronLeft,
   MoreHorizontal,
   Plus,
@@ -36,8 +42,14 @@ import {
   Library,
   Trash2,
   ArrowUp,
-  GitBranch,
   MessageCircle,
+  Heart,
+  X,
+  Send,
+  User,
+  Share2,
+  Settings,
+  UserMinus,
 } from "lucide-react"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 
@@ -53,6 +65,17 @@ interface KnowledgeDetailProps {
     color: string
     description?: string
     coverImage?: string
+    /** Public / subscribed library: metrics, like & comment, bottom quick ask */
+    isPublicKb?: boolean
+    contentCount?: number
+    subscriberCount?: number
+    viewCount?: number
+    publicTagline?: string
+    initialLikeCount?: number
+    initialCommentCount?: number
+    category?: KBCategory
+    /** Curator line under title on subscribed / public library detail */
+    publisherName?: string
   }
   initialView?: "content" | "graph" | "factory"
   /** When set (e.g. from Agent → Studio), open this factory modal once on mount */
@@ -243,6 +266,39 @@ function SwipeableLibraryDocRow({
   )
 }
 
+function formatFolderUpdatedLabel(raw: string) {
+  const ymd = raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/)
+  if (ymd) return `${ymd[1]}/${ymd[2].padStart(2, "0")}/${ymd[3].padStart(2, "0")}`
+  const md = raw.match(/^(\d{1,2})\/(\d{1,2})$/)
+  if (md) return `2025/${md[1].padStart(2, "0")}/${md[2].padStart(2, "0")}`
+  return raw
+}
+
+function PublicKbFolderRow({ content, onOpen }: { content: LibraryDoc; onOpen: () => void }) {
+  const itemCount = 420 + content.id * 211
+  const meta = `${itemCount.toLocaleString("en-US")} items | Updated ${formatFolderUpdatedLabel(content.date)}`
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-start gap-3.5 bg-white px-4 py-4 text-left transition-colors hover:bg-stone-50/80 active:bg-stone-100/50 dark:bg-zinc-950 dark:hover:bg-zinc-900/50"
+    >
+      <div
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[11px] bg-[#e8f7f0] dark:bg-emerald-950/40"
+        aria-hidden
+      >
+        <FolderOpen className="h-6 w-6 text-[#2fb27a] dark:text-emerald-400" strokeWidth={1.65} />
+      </div>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <h3 className="text-[16px] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
+          {content.title}
+        </h3>
+        <p className="mt-1.5 text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">{meta}</p>
+      </div>
+    </button>
+  )
+}
+
 function bodyForContent(id: number, title: string, excerpt: string): string[] {
   const common = [
     excerpt,
@@ -270,6 +326,25 @@ function notebookSummaryForLibrary(name: string, sourceCount: number): string {
   return `Across the ${sourceCount} ${unit} in “${name}”, we pull a single thread you can read in one pass: what each source contributes, where they reinforce each other, and where they diverge. Skim this first, then jump into chat when you want detail—replies stay tied to the passages they came from.`
 }
 
+type PublicComment = {
+  id: string
+  user: string
+  isAuthor?: boolean
+  meta: string
+  body: string
+}
+
+const DEMO_PUBLIC_COMMENTS: PublicComment[] = [
+  {
+    id: "pc-1",
+    user: "Patent desk",
+    isAuthor: true,
+    meta: "Seattle · Dec 10, 2025",
+    body:
+      "Step 1: Map claims to the specification so formal objections are easy to preempt.\nStep 2: Build a feature table against the closest prior art before drafting the response.\nStep 3: If divisionals or priority are in play, align filing dates with the published text and cite them in the reply.\nStep 4: When creativity is challenged, add experiments or technical effects with paragraph anchors so the narrative stays closed-loop.",
+  },
+]
+
 export function KnowledgeDetail({
   onBack,
   onAgentChat,
@@ -286,7 +361,34 @@ export function KnowledgeDetail({
   const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
   const [showContentDetail, setShowContentDetail] = useState<LibraryDoc | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
+  const [libraryOverflowOpen, setLibraryOverflowOpen] = useState(false)
+  const [kbInfoVariant, setKbInfoVariant] = useState<null | "personal" | "team" | "subscribed">(null)
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
+  const [showCommentSheet, setShowCommentSheet] = useState(false)
+  const [publicComments, setPublicComments] = useState<PublicComment[]>(() => DEMO_PUBLIC_COMMENTS.map((c) => ({ ...c })))
+  const [commentExpandedIds, setCommentExpandedIds] = useState<Set<string>>(new Set())
+  const [commentComposerDraft, setCommentComposerDraft] = useState("")
+  const [publicLiked, setPublicLiked] = useState(false)
+  const [publicLikeCount, setPublicLikeCount] = useState(0)
+  const [publicBottomDraft, setPublicBottomDraft] = useState("")
+  const [publicPlusMenuOpen, setPublicPlusMenuOpen] = useState(false)
+
+  const isPublicKb = knowledgeBase?.isPublicKb ?? false
+  const kbCategory = knowledgeBase?.category
+  const isPersonalMineKb = kbCategory === "mine" && !isPublicKb
+  const isTeamKb = kbCategory === "team" && !isPublicKb
+  const isSubscribedKb = kbCategory === "subscribed" || isPublicKb
+
+  useEffect(() => {
+    if (!knowledgeBase?.isPublicKb) return
+    setPublicLikeCount(knowledgeBase.initialLikeCount ?? 56)
+  }, [knowledgeBase?.isPublicKb, knowledgeBase?.initialLikeCount, knowledgeBase?.name])
+
+  useEffect(() => {
+    if (!showCommentSheet) {
+      setCommentComposerDraft("")
+    }
+  }, [showCommentSheet])
 
   useEffect(() => {
     if (initialFactoryModal) {
@@ -303,7 +405,25 @@ export function KnowledgeDetail({
   const [archivedFactoryJobIds, setArchivedFactoryJobIds] = useState<string[]>([])
   const [contents, setContents] = useState<LibraryDoc[]>(() => mockContents.map((c) => ({ ...c })))
   const sourceCount = contents.length
+  const publicContentMetric = knowledgeBase?.contentCount ?? sourceCount
+  const publicSubscribeMetric = knowledgeBase?.subscriberCount ?? 0
+  const publicViewMetric = knowledgeBase?.viewCount ?? 0
   const kbDisplayName = knowledgeBase?.name || "Notebook"
+
+  function handleSubscribedUnsubscribe() {
+    setLibraryOverflowOpen(false)
+    setKbInfoVariant(null)
+    toast.success("Unsubscribed", {
+      description: `${kbDisplayName} was removed from your list (demo).`,
+    })
+    onBack()
+  }
+
+  useEffect(() => {
+    if (!isPublicKb) return
+    setActiveView("content")
+  }, [isPublicKb, knowledgeBase?.name])
+
   const notebookSummaryBody = notebookSummaryForLibrary(kbDisplayName, sourceCount)
 
   const kbOverviewNarrative = useMemo(() => {
@@ -430,13 +550,13 @@ export function KnowledgeDetail({
       <div className="absolute inset-0 bg-black/40" onClick={() => setShareTarget(null)} />
       <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl animate-in slide-in-from-bottom duration-200">
         <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+          <div className="w-10 h-1 bg-stone-300 rounded-full" />
         </div>
         <div className="px-5 pb-2">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-zinc-900">
             {shareTarget.scope === "library" ? "Share library" : "Share item"}
           </h3>
-          <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+          <p className="text-sm text-zinc-500 mt-1 line-clamp-2">
             {shareTarget.scope === "library"
               ? knowledgeBase?.name || "Library"
               : shareTarget.title}
@@ -461,7 +581,7 @@ export function KnowledgeDetail({
           <button
             type="button"
             onClick={() => setShareTarget(null)}
-            className="w-full py-3 bg-gray-100 rounded-xl text-gray-700 font-medium text-sm"
+            className="w-full py-3 bg-stone-100 rounded-xl text-zinc-700 font-medium text-sm"
           >
             Cancel
           </button>
@@ -669,17 +789,17 @@ export function KnowledgeDetail({
           <img 
             src={showContentDetail.image} 
             alt="" 
-            className="w-full h-48 rounded-xl object-cover bg-gray-100 mb-4"
+            className="w-full h-48 rounded-xl object-cover bg-stone-100 mb-4"
           />
-          <h1 className="text-xl font-bold text-gray-900 mb-3">{showContentDetail.title}</h1>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 mb-4">
+          <h1 className="text-xl font-bold text-zinc-900 mb-3">{showContentDetail.title}</h1>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500 mb-4">
             <span>{showContentDetail.source}</span>
             <span>·</span>
             <span>{showContentDetail.author}</span>
             <span>·</span>
             <span>{showContentDetail.date}</span>
           </div>
-          <div className="space-y-4 text-[15px] leading-[1.7] text-gray-800">
+          <div className="space-y-4 text-[15px] leading-[1.7] text-zinc-800">
             {bodyForContent(
               showContentDetail.id,
               showContentDetail.title,
@@ -695,172 +815,494 @@ export function KnowledgeDetail({
   }
 
   return (
-    <div className="relative flex flex-col h-full bg-white">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-        <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
-          <ChevronLeft className="w-6 h-6 text-gray-700" />
+    <div
+      className={cn(
+        "relative flex h-full flex-col",
+        isPublicKb ? "bg-[#f2f2f4] dark:bg-zinc-950" : "bg-white dark:bg-zinc-950"
+      )}
+    >
+      <div
+        className={cn(
+          "flex items-center justify-between px-4 py-3",
+          isPublicKb
+            ? "border-b border-stone-200/50 bg-white/90 backdrop-blur-sm dark:border-zinc-800/80 dark:bg-zinc-950/90"
+            : "border-b border-stone-100 dark:border-zinc-800"
+        )}
+      >
+        <button onClick={onBack} className="p-2 -ml-2 hover:bg-stone-100 rounded-full">
+          <ChevronLeft className="w-6 h-6 text-zinc-700" />
         </button>
         <div className="flex items-center gap-1">
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <SmartSearchIcon className="w-5 h-5 text-gray-600" />
+          <button
+            type="button"
+            onClick={() =>
+              toast.message("Search this library", {
+                description: "Filter titles and excerpts in this notebook (demo).",
+              })
+            }
+            className="rounded-full p-2 hover:bg-stone-100"
+            aria-label="Search this library"
+          >
+            <SmartSearchIcon className="h-5 w-5 text-zinc-600" />
           </button>
-          <div className="relative">
-            <button 
-              onClick={() => setShowAddMenu(!showAddMenu)}
-              className="p-2 hover:bg-gray-100 rounded-full"
-            >
-              <Plus className="w-5 h-5 text-gray-600" />
-            </button>
-            
-            {showAddMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
-                <div className="absolute right-0 top-full z-50 mt-1.5 w-[15rem] overflow-hidden rounded-2xl border border-stone-200/90 bg-white py-1.5 shadow-[0_12px_40px_-4px_rgba(0,0,0,0.12)] animate-in fade-in slide-in-from-top-2 duration-200">
-                  {addMenuItems.map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={() => {
-                        setShowAddMenu(false)
-                        runWithAuth(() => {
-                          if ("openRichNote" in item && item.openRichNote) {
-                            setHubRichNoteOpen(true)
-                          } else {
-                            toast.message(item.label, { description: "Would open import (demo)." })
-                          }
-                        })
-                      }}
-                      className="mx-1.5 flex w-[calc(100%-12px)] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 active:bg-stone-100/80"
-                    >
-                      <span className="text-[15px] text-zinc-800">{item.label}</span>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        {"openRichNote" in item && item.openRichNote ? (
-                          <ChevronRight className="h-4 w-4 text-zinc-400" aria-hidden />
-                        ) : null}
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100/90 text-stone-500">
-                          <item.icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+          {!isPublicKb ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className="p-2 hover:bg-stone-100 rounded-full"
+                type="button"
+                aria-label="Add to library"
+              >
+                <Plus className="w-5 h-5 text-zinc-600" />
+              </button>
+
+              {showAddMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
+                  <div className="absolute right-0 top-full z-50 mt-1.5 w-[15rem] overflow-hidden rounded-2xl border border-stone-200/90 bg-white py-1.5 shadow-[0_12px_40px_-4px_rgba(0,0,0,0.12)] animate-in fade-in slide-in-from-top-2 duration-200">
+                    {addMenuItems.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => {
+                          setShowAddMenu(false)
+                          runWithAuth(() => {
+                            if ("openRichNote" in item && item.openRichNote) {
+                              setHubRichNoteOpen(true)
+                            } else {
+                              toast.message(item.label, { description: "Would open import (demo)." })
+                            }
+                          })
+                        }}
+                        className="mx-1.5 flex w-[calc(100%-12px)] items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-stone-50 active:bg-stone-100/80"
+                      >
+                        <span className="text-[15px] text-zinc-800">{item.label}</span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {"openRichNote" in item && item.openRichNote ? (
+                            <ChevronRight className="h-4 w-4 text-zinc-400" aria-hidden />
+                          ) : null}
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100/90 text-stone-500">
+                            <item.icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : null}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                if (isPersonalMineKb) {
+                  setKbInfoVariant("personal")
+                  return
+                }
+                if (isTeamKb) {
+                  setLibraryOverflowOpen((o) => !o)
+                  return
+                }
+                if (isSubscribedKb) {
+                  setLibraryOverflowOpen((o) => !o)
+                  return
+                }
+                setShareTarget({ scope: "library" })
+              }}
+              className="p-2 hover:bg-stone-100 rounded-full"
+              aria-label={
+                isPersonalMineKb
+                  ? "Library information"
+                  : isTeamKb || isSubscribedKb
+                    ? "Library menu"
+                    : "Share library"
+              }
+            >
+              <MoreHorizontal className="w-5 h-5 text-zinc-600" />
+            </button>
+            {libraryOverflowOpen && isTeamKb ? (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setLibraryOverflowOpen(false)} />
+                <div className="absolute right-0 top-full z-50 mt-1.5 w-[14rem] overflow-hidden rounded-2xl border border-stone-200/90 bg-white py-1 shadow-[0_12px_40px_-4px_rgba(0,0,0,0.12)] animate-in fade-in slide-in-from-top-2 duration-200 dark:border-zinc-700 dark:bg-zinc-900">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left text-[15px] text-zinc-800 hover:bg-stone-50 active:bg-stone-100/80 dark:text-zinc-100 dark:hover:bg-zinc-800/60 dark:active:bg-zinc-800"
+                    onClick={() => {
+                      setLibraryOverflowOpen(false)
+                      setKbInfoVariant("team")
+                    }}
+                  >
+                    <span>Library information</span>
+                    <Settings className="h-5 w-5 shrink-0 text-zinc-400" strokeWidth={1.75} aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left text-[15px] text-zinc-800 hover:bg-stone-50 active:bg-stone-100/80 dark:text-zinc-100 dark:hover:bg-zinc-800/60 dark:active:bg-zinc-800"
+                    onClick={() => {
+                      setLibraryOverflowOpen(false)
+                      setShareTarget({ scope: "library" })
+                    }}
+                  >
+                    <span>Share</span>
+                    <Share2 className="h-5 w-5 shrink-0 text-zinc-400" strokeWidth={1.75} aria-hidden />
+                  </button>
                 </div>
               </>
-            )}
+            ) : null}
+            {libraryOverflowOpen && isSubscribedKb && !isTeamKb ? (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setLibraryOverflowOpen(false)} />
+                <div className="absolute right-0 top-full z-50 mt-1.5 w-[14rem] overflow-hidden rounded-2xl border border-stone-200/90 bg-white py-1 shadow-[0_12px_40px_-4px_rgba(0,0,0,0.12)] animate-in fade-in slide-in-from-top-2 duration-200 dark:border-zinc-700 dark:bg-zinc-900">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left text-[15px] text-zinc-800 hover:bg-stone-50 active:bg-stone-100/80 dark:text-zinc-100 dark:hover:bg-zinc-800/60 dark:active:bg-zinc-800"
+                    onClick={() => {
+                      setLibraryOverflowOpen(false)
+                      setKbInfoVariant("subscribed")
+                    }}
+                  >
+                    <span>Library information</span>
+                    <Settings className="h-5 w-5 shrink-0 text-zinc-400" strokeWidth={1.75} aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left text-[15px] text-zinc-800 hover:bg-stone-50 active:bg-stone-100/80 dark:text-zinc-100 dark:hover:bg-zinc-800/60 dark:active:bg-zinc-800"
+                    onClick={() => {
+                      setLibraryOverflowOpen(false)
+                      handleSubscribedUnsubscribe()
+                    }}
+                  >
+                    <span>Unsubscribe</span>
+                    <UserMinus className="h-5 w-5 shrink-0 text-zinc-400" strokeWidth={1.75} aria-hidden />
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {!isPublicKb ? (
+        <div className="flex min-w-0 items-center gap-3 border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
+          {knowledgeBase?.coverImage ? (
+            <img
+              src={knowledgeBase.coverImage}
+              alt=""
+              width={44}
+              height={44}
+              className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
+            />
+          ) : (
+            <div
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br",
+                knowledgeBase?.color || "from-zinc-400 to-stone-600"
+              )}
+            >
+              <KbHeaderIcon className="h-6 w-6 text-white" strokeWidth={1.65} aria-hidden />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-[16px] font-semibold tracking-tight text-zinc-900">
+              {knowledgeBase?.name || "Notebook"}
+            </h1>
+            <p className="line-clamp-2 text-[12px] leading-snug text-zinc-500 sm:line-clamp-1">
+              {knowledgeBase?.description || "Depth you can browse, connect, and turn into finished work"}
+            </p>
           </div>
           <button
             type="button"
-            onClick={() => setShareTarget({ scope: "library" })}
-            className="p-2 hover:bg-gray-100 rounded-full"
-            aria-label="Share library"
-          >
-            <MoreHorizontal className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-      </div>
-
-      <div className="px-4 py-3 border-b border-stone-100 flex items-center gap-3 min-w-0">
-        {knowledgeBase?.coverImage ? (
-          <img
-            src={knowledgeBase.coverImage}
-            alt=""
-            width={44}
-            height={44}
-            className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
-          />
-        ) : (
-          <div
+            onClick={() => setShowNotebookAsk(true)}
             className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br",
-              knowledgeBase?.color || "from-zinc-400 to-stone-600"
+              "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition-colors",
+              mx.knowledgeAskPill
             )}
           >
-            <KbHeaderIcon className="h-6 w-6 text-white" strokeWidth={1.65} aria-hidden />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[16px] font-semibold tracking-tight text-zinc-900 truncate">
-            {knowledgeBase?.name || "Notebook"}
-          </h1>
-          <p className="text-[12px] leading-snug text-zinc-500 line-clamp-2 sm:line-clamp-1">
-            {knowledgeBase?.description || "Depth you can browse, connect, and turn into finished work"}
-          </p>
+            <Sparkles className={cn("h-3.5 w-3.5", mx.knowledgeAskSparkle)} strokeWidth={2} />
+            Ask
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowNotebookAsk(true)}
-          className={cn(
-            "shrink-0 flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition-colors",
-            mx.knowledgeAskPill
-          )}
-        >
-          <Sparkles className={cn("h-3.5 w-3.5", mx.knowledgeAskSparkle)} strokeWidth={2} />
-          Ask
-        </button>
-      </div>
+      ) : (
+        <div className="border-b border-stone-200/40 bg-white px-4 pb-4 pt-3.5 dark:border-zinc-800/60 dark:bg-zinc-950">
+          <div className="flex gap-3.5">
+            {knowledgeBase?.coverImage ? (
+              <img
+                src={knowledgeBase.coverImage}
+                alt=""
+                width={60}
+                height={60}
+                className="h-[60px] w-[60px] shrink-0 rounded-[14px] object-cover shadow-sm ring-1 ring-black/[0.04] dark:ring-white/10"
+              />
+            ) : (
+              <div
+                className={cn(
+                  "flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br shadow-sm ring-1 ring-black/[0.04]",
+                  knowledgeBase?.color || "from-zinc-400 to-stone-600"
+                )}
+              >
+                <KbHeaderIcon className="h-8 w-8 text-white" strokeWidth={1.65} aria-hidden />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[18px] font-bold leading-[1.2] tracking-tight text-zinc-900 dark:text-zinc-50">
+                {kbDisplayName}
+              </h1>
+              <div className="mt-2 flex min-w-0 items-center gap-1.5">
+                <div
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-[8px] font-bold text-white shadow-sm"
+                  aria-hidden
+                >
+                  {(knowledgeBase?.publisherName ?? "Publisher").trim().charAt(0).toUpperCase() || "P"}
+                </div>
+                <span className="truncate text-[13px] leading-snug text-zinc-500 dark:text-zinc-400">
+                  {(knowledgeBase?.publisherName ?? "Publisher").trim()}
+                </span>
+              </div>
+              {knowledgeBase?.publicTagline ? (
+                <p className="mt-1 line-clamp-1 text-[12px] leading-snug text-zinc-400 dark:text-zinc-500">
+                  {knowledgeBase.publicTagline}
+                </p>
+              ) : null}
 
-      <div className="px-4 py-2 bg-white border-b border-stone-100">
-        <div className="flex gap-1 p-0.5 bg-stone-100 rounded-lg">
-          {[
-            { id: "content" as const, label: "Hub" },
-            { id: "graph" as const, label: "Graph" },
-            { id: "factory" as const, label: "Studio" },
-          ].map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              onClick={() => setActiveView(mode.id)}
-              className={cn(
-                "flex-1 py-1.5 rounded-md text-[12px] font-medium transition-all",
-                activeView === mode.id
-                  ? "bg-white text-zinc-900 shadow-sm"
-                  : "text-zinc-500"
-              )}
-            >
-              {mode.label}
-            </button>
-          ))}
+              <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+                <div className="grid min-w-0 flex-1 grid-cols-3">
+                  {[
+                    { label: "Content", value: publicContentMetric },
+                    { label: "Subscriptions", value: publicSubscribeMetric },
+                    { label: "Views & Q&A", value: publicViewMetric },
+                  ].map((cell, idx) => (
+                    <div
+                      key={cell.label}
+                      className={cn(
+                        "px-1 text-center",
+                        idx < 2 && "border-r border-stone-200/80 dark:border-zinc-700/80"
+                      )}
+                    >
+                      <div className="text-[17px] font-bold tabular-nums leading-none text-zinc-900 dark:text-zinc-50">
+                        {cell.value.toLocaleString("en-US")}
+                      </div>
+                      <div className="mt-1.5 text-[11px] font-medium leading-none text-zinc-500 dark:text-zinc-400">
+                        {cell.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex shrink-0 items-center gap-2 pb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublicLiked((prev) => {
+                        setPublicLikeCount((c) => (prev ? Math.max(0, c - 1) : c + 1))
+                        return !prev
+                      })
+                    }}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border border-stone-200/95 bg-white px-2.5 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300",
+                      publicLiked &&
+                        "border-emerald-200/90 bg-emerald-50/95 text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-100"
+                    )}
+                    aria-pressed={publicLiked}
+                  >
+                    <Heart
+                      className={cn("h-3.5 w-3.5", publicLiked && "fill-current text-emerald-600")}
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                    {publicLikeCount}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublicPlusMenuOpen(false)
+                      setShowCommentSheet(true)
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-stone-200/95 bg-white px-2.5 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors hover:bg-stone-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                    {publicComments.length}
+                  </button>
+                </div>
+              </div>
+              {knowledgeBase?.description?.trim() ? (
+                <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  {knowledgeBase.description}
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!isPublicKb ? (
+        <div className="border-b border-stone-100 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex gap-1 rounded-lg bg-stone-100 p-0.5 dark:bg-zinc-800/80">
+            {[
+              { id: "content" as const, label: "Hub" },
+              { id: "graph" as const, label: "Graph" },
+              { id: "factory" as const, label: "Studio" },
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => setActiveView(mode.id)}
+                className={cn(
+                  "flex-1 rounded-md py-1.5 text-[12px] font-medium transition-all",
+                  activeView === mode.id ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-50" : "text-zinc-500"
+                )}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className={cn("flex-1 flex flex-col min-h-0", activeView === "content" ? "overflow-hidden" : "overflow-y-auto")}>
         {activeView === "content" && (
-          <div className="flex min-h-0 flex-1 flex-col bg-stone-50/80">
+          <div className={cn("flex min-h-0 flex-1 flex-col", isPublicKb ? "bg-[#f2f2f4] dark:bg-zinc-950" : "bg-stone-50/80")}>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="px-4 pb-2 pt-3">
-              <div className="mb-4 overflow-hidden rounded-2xl border border-sky-100/60 bg-gradient-to-br from-white via-white to-sky-50/50 p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_24px_-12px_rgba(14,165,233,0.1)] ring-1 ring-sky-100/40 dark:border-zinc-700 dark:from-zinc-900 dark:via-zinc-900 dark:to-sky-950/20 dark:ring-zinc-700/60">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700/90 dark:text-sky-300/90">Overview</p>
-                    <h2 className="mt-1 text-[15px] font-semibold tracking-tight text-zinc-900">How this library fits together</h2>
+              <div className={cn("pb-2", isPublicKb ? "px-3 pt-2" : "px-4 pt-3")}>
+                {!isPublicKb ? (
+                  <div className="mb-4 overflow-hidden rounded-2xl border border-sky-100/60 bg-gradient-to-br from-white via-white to-sky-50/50 p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_24px_-12px_rgba(14,165,233,0.1)] ring-1 ring-sky-100/40 dark:border-zinc-700 dark:from-zinc-900 dark:via-zinc-900 dark:to-sky-950/20 dark:ring-zinc-700/60">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700/90 dark:text-sky-300/90">
+                          Overview
+                        </p>
+                        <h2 className="mt-1 text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                          How this library fits together
+                        </h2>
+                      </div>
+                      <div className="shrink-0 rounded-full border border-stone-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-zinc-600 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300">
+                        {sourceCount} {sourceCount === 1 ? "source" : "sources"}
+                      </div>
+                    </div>
+                    <p className="mt-3.5 text-[14px] leading-[1.65] text-zinc-700 dark:text-zinc-300">{kbOverviewNarrative}</p>
                   </div>
-                  <div className="shrink-0 rounded-full border border-stone-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-zinc-600 shadow-sm">
-                    {sourceCount} {sourceCount === 1 ? "source" : "sources"}
-                  </div>
+                ) : null}
+                {!isPublicKb ? (
+                  <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Documents</h2>
+                ) : null}
+                <div
+                  className={cn(
+                    "overflow-hidden bg-white dark:bg-zinc-950",
+                    isPublicKb
+                      ? "divide-y divide-stone-100 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-black/[0.04] dark:divide-zinc-800/90 dark:shadow-none dark:ring-zinc-800/70"
+                      : "rounded-xl border border-stone-200/90 dark:border-zinc-700"
+                  )}
+                >
+                  {contents.length === 0 ? (
+                    <div className="px-4 py-10 text-center text-[13px] text-zinc-500">
+                      {isPublicKb ? "No folders yet" : "No documents yet"}
+                    </div>
+                  ) : isPublicKb ? (
+                    contents.map((content) => (
+                      <PublicKbFolderRow key={content.id} content={content} onOpen={() => setShowContentDetail(content)} />
+                    ))
+                  ) : (
+                    contents.map((content) => (
+                      <SwipeableLibraryDocRow
+                        key={content.id}
+                        content={content}
+                        onOpen={() => setShowContentDetail(content)}
+                        onDelete={() => {
+                          setContents((prev) => prev.filter((c) => c.id !== content.id))
+                          setShowContentDetail((open) => (open?.id === content.id ? null : open))
+                        }}
+                      />
+                    ))
+                  )}
                 </div>
-                <p className="mt-3.5 text-[14px] leading-[1.65] text-zinc-700">{kbOverviewNarrative}</p>
-              </div>
-              <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                Documents
-              </h2>
-              <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white">
-                {contents.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-[13px] text-zinc-500">No documents yet</div>
-                ) : (
-                  contents.map((content) => (
-                    <SwipeableLibraryDocRow
-                      key={content.id}
-                      content={content}
-                      onOpen={() => setShowContentDetail(content)}
-                      onDelete={() => {
-                        setContents((prev) => prev.filter((c) => c.id !== content.id))
-                        setShowContentDetail((open) => (open?.id === content.id ? null : open))
-                      }}
-                    />
-                  ))
-                )}
               </div>
             </div>
-            </div>
+            {isPublicKb ? (
+              <div className="relative shrink-0 border-t border-stone-200/50 bg-[#f2f2f4] px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 dark:border-zinc-800/60 dark:bg-zinc-950">
+                <p className="mb-2.5 rounded-xl bg-[#e6f4ec] px-3 py-2 text-center text-[11px] font-medium leading-snug text-emerald-900/95 dark:bg-emerald-950/35 dark:text-emerald-100/90">
+                  This library can assist with patent Q&A, translation, and brief answers (demo).
+                </p>
+                <div className="relative flex items-center gap-1 rounded-full border border-stone-200/70 bg-white py-1 pl-4 pr-1 shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900 dark:shadow-none">
+                  {publicPlusMenuOpen ? (
+                    <div className="absolute bottom-full right-2 z-20 mb-2 w-[11.5rem] overflow-hidden rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                      <button
+                        type="button"
+                        className="flex w-full px-3 py-2.5 text-left text-[13px] text-zinc-800 hover:bg-stone-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                        onClick={() => {
+                          setPublicPlusMenuOpen(false)
+                          toast.message("Dialog mode", {
+                            description: "Match tags to intent for grounded replies (demo).",
+                          })
+                        }}
+                      >
+                        Dialog mode
+                      </button>
+                      <button
+                        type="button"
+                        className="flex w-full px-3 py-2.5 text-left text-[13px] text-zinc-800 hover:bg-stone-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                        onClick={() => {
+                          setPublicPlusMenuOpen(false)
+                          toast.message("Task mode", {
+                            description: "Bundle multi-step work into one prompt (demo).",
+                          })
+                        }}
+                      >
+                        Task mode
+                      </button>
+                    </div>
+                  ) : null}
+                  <label htmlFor="public-kb-quick-ask" className="sr-only">
+                    Ask this library
+                  </label>
+                  <input
+                    id="public-kb-quick-ask"
+                    type="text"
+                    value={publicBottomDraft}
+                    onChange={(e) => setPublicBottomDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        runWithAuth(() => {
+                          const q = publicBottomDraft.trim()
+                          if (!q) {
+                            toast.message("Enter a question", {
+                              description: "Use # to scope answers to a tag (demo).",
+                            })
+                            return
+                          }
+                          onAgentChat?.({ kbName: kbDisplayName })
+                          setPublicBottomDraft("")
+                        })
+                      }
+                    }}
+                    placeholder="Enter # to specify tag for Q&A"
+                    className="min-h-[40px] min-w-0 flex-1 border-0 bg-transparent py-2 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Voice input"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    onClick={() =>
+                      runWithAuth(() =>
+                        toast.message("Voice input", {
+                          description: "Use system dictation or an external mic (demo).",
+                        })
+                      )
+                    }
+                  >
+                    <Mic className="h-5 w-5" strokeWidth={2} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Modes"
+                    aria-expanded={publicPlusMenuOpen}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-stone-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    onClick={() => setPublicPlusMenuOpen((o) => !o)}
+                  >
+                    <Plus className="h-5 w-5" strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -913,8 +1355,8 @@ export function KnowledgeDetail({
                 ))}
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Knowledge graph</h3>
-            <p className="text-sm text-gray-500 text-center mb-4">
+            <h3 className="text-lg font-semibold text-zinc-900 mb-2">Knowledge graph</h3>
+            <p className="text-sm text-zinc-500 text-center mb-4">
               Visualize how ideas connect across your library.
             </p>
             <button className="px-6 py-2.5 bg-zinc-500 text-white rounded-xl text-sm font-medium hover:bg-zinc-600">
@@ -975,26 +1417,6 @@ export function KnowledgeDetail({
                     />
                   </div>
                   <span className="truncate text-[15px] font-medium text-zinc-800">Audio overview</span>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFactoryModal("mindmap")}
-                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                      mx.factoryTone.mindmap.well,
-                      mx.factoryTone.mindmap.icon
-                    )}
-                  >
-                    <GitBranch className="h-5 w-5" strokeWidth={2} />
-                  </div>
-                  <span className="truncate text-[15px] font-medium text-zinc-800">Mind map</span>
                 </div>
                 <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
               </button>
@@ -1123,7 +1545,160 @@ export function KnowledgeDetail({
         )}
       </div>
 
+      {showCommentSheet ? (
+        <div className="absolute inset-0 z-[88] flex flex-col justify-end bg-black/45" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label="Close comments"
+            onClick={() => setShowCommentSheet(false)}
+          />
+          <div
+            className="relative z-10 flex max-h-[min(88dvh,640px)] w-full flex-col rounded-t-[1.25rem] bg-white shadow-2xl dark:bg-zinc-950"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="public-kb-comments-title"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
+              <h2 id="public-kb-comments-title" className="text-[16px] font-semibold text-zinc-900 dark:text-zinc-50">
+                Comments {publicComments.length}
+              </h2>
+              <button
+                type="button"
+                className="rounded-full p-2 hover:bg-stone-100 dark:hover:bg-zinc-800"
+                onClick={() => setShowCommentSheet(false)}
+                aria-label="Close"
+              >
+                <X className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
+              {publicComments.map((c) => {
+                const previewLen = 72
+                const long = c.body.length > previewLen
+                const expanded = commentExpandedIds.has(c.id)
+                const shown = expanded || !long ? c.body : `${c.body.slice(0, previewLen)}…`
+                return (
+                  <div key={c.id} className="border-b border-stone-100 py-4 last:border-b-0 dark:border-zinc-800">
+                    <div className="flex gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                        <User className="h-4 w-4" aria-hidden />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">{c.user}</span>
+                          {c.isAuthor ? (
+                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
+                              Author
+                            </span>
+                          ) : null}
+                          <span className="text-[12px] text-zinc-400 dark:text-zinc-500">{c.meta}</span>
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-zinc-800 dark:text-zinc-200">
+                          {shown}
+                        </p>
+                        {long ? (
+                          <button
+                            type="button"
+                            className="mt-1.5 text-[13px] font-medium text-emerald-600 dark:text-emerald-400"
+                            onClick={() =>
+                              setCommentExpandedIds((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(c.id)) next.delete(c.id)
+                                else next.add(c.id)
+                                return next
+                              })
+                            }
+                          >
+                            {expanded ? "Show less" : "Show more"}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="shrink-0 border-t border-stone-100 bg-white px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-3 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-200 dark:bg-zinc-700">
+                  <User className="h-4 w-4 text-zinc-600 dark:text-zinc-300" aria-hidden />
+                </div>
+                <input
+                  value={commentComposerDraft}
+                  onChange={(e) => setCommentComposerDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      const t = commentComposerDraft.trim()
+                      if (!t) return
+                      setPublicComments((prev) => [
+                        { id: `pc-${Date.now()}`, user: "Guest", meta: "Just now", body: t },
+                        ...prev,
+                      ])
+                      setCommentComposerDraft("")
+                      toast.success("Posted", { description: "Comment added to the thread (demo)." })
+                    }
+                  }}
+                  placeholder="Write a comment…"
+                  className="min-h-[44px] flex-1 rounded-full border border-transparent bg-stone-100 px-4 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:ring-emerald-900/40"
+                />
+                <button
+                  type="button"
+                  disabled={!commentComposerDraft.trim()}
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
+                    commentComposerDraft.trim()
+                      ? "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                      : "text-zinc-300 dark:text-zinc-600"
+                  )}
+                  aria-label="Send"
+                  onClick={() => {
+                    const t = commentComposerDraft.trim()
+                    if (!t) return
+                    setPublicComments((prev) => [
+                      { id: `pc-${Date.now()}`, user: "Guest", meta: "Just now", body: t },
+                      ...prev,
+                    ])
+                    setCommentComposerDraft("")
+                    toast.success("Posted", { description: "Comment added to the thread (demo)." })
+                  }}
+                >
+                  <Send className="h-5 w-5" strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {shareSheet}
+
+      <PersonalKbInfoOverlay
+        open={kbInfoVariant === "personal"}
+        onClose={() => setKbInfoVariant(null)}
+        name={kbDisplayName}
+        description={knowledgeBase?.description}
+        coverImage={knowledgeBase?.coverImage}
+        colorClass={knowledgeBase?.color}
+      />
+      <TeamKbInfoOverlay
+        open={kbInfoVariant === "team"}
+        onClose={() => setKbInfoVariant(null)}
+        name={kbDisplayName}
+        description={knowledgeBase?.description}
+        coverImage={knowledgeBase?.coverImage}
+        colorClass={knowledgeBase?.color}
+      />
+      <SubscribedKbInfoOverlay
+        open={kbInfoVariant === "subscribed"}
+        onClose={() => setKbInfoVariant(null)}
+        name={kbDisplayName}
+        description={knowledgeBase?.description}
+        coverImage={knowledgeBase?.coverImage}
+        colorClass={knowledgeBase?.color}
+        onUnsubscribe={handleSubscribedUnsubscribe}
+      />
 
       <ContentFactoryModals
         open={factoryModal}

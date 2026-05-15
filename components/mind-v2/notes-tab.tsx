@@ -2,14 +2,15 @@
 
 import { useState, useRef } from "react"
 import { cn } from "@/lib/utils"
-import { getMindAccount, accountSpaceLabel, type MindAccountId } from "@/lib/mind-accounts"
+import { type MindAccountId } from "@/lib/mind-accounts"
 import { mx } from "@/lib/medrix-design-tokens"
-import { Mic, Bluetooth, Smartphone, Library, Trash2, ChevronRight, ChevronDown, X, Folder, Package, Plus, MoreHorizontal, ArrowUpDown, FileText, FileInput, Check, LayoutList, LayoutGrid } from "lucide-react"
+import { Mic, Bluetooth, Smartphone, Library, Trash2, ChevronRight, ChevronDown, X, Folder, Package, Plus, MoreHorizontal, ArrowUpDown, FileText, Check, LayoutList, LayoutGrid, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import type { NoteFolder } from "@/lib/note-folders"
 import { folderIconComponent } from "@/lib/note-folders"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
+import { MindHardwareDetail } from "@/components/mind-v2/mind-hardware-detail"
 
 export interface Note {
   id: number
@@ -28,19 +29,68 @@ export interface Note {
   folderId?: string | null
   /** Swipe-right archive / save to library (demo: hide from list) */
   archived?: boolean
+  /** Optional second line under title (e.g. Imported) */
+  listSubtitle?: string
+  /** Show failed-processing state on the row */
+  processingFailed?: boolean
 }
 
 export const mockNotes: Note[] = [
   {
-    id: 1,
-    title: "Product requirements sync",
+    id: 100,
+    title: "Dream_It_Possible-05-12 15:49:55",
     type: "hardware",
-    date: "Today 2:32 PM",
-    duration: "23 min",
-    preview: "Discussed the next release, including knowledge graph visualization…",
+    date: "May 12 · 3:49 PM",
+    duration: "3 min",
+    preview: "",
     status: "analyzed",
     source: "Mind Recorder",
-    highlightCount: 3,
+    listSubtitle: "Imported",
+    processingFailed: true,
+  },
+  {
+    id: 101,
+    title: "Dialogue as intelligence: Mind, AI, and the future of human cognition",
+    type: "hardware",
+    date: "Apr 23 · 4:13 PM",
+    duration: "16 min",
+    preview: "",
+    status: "analyzed",
+    source: "Mind Recorder",
+  },
+  {
+    id: 3,
+    title: "Welcome to Mind",
+    type: "hardware",
+    date: "Apr 20 · 10:02 AM",
+    duration: "3 min",
+    preview: "",
+    status: "analyzed",
+    source: "Mind Recorder",
+    highlightCount: 1,
+  },
+  {
+    id: 4,
+    title: "How to use Mind?",
+    type: "hardware",
+    date: "Apr 19 · 2:18 PM",
+    duration: "4 min",
+    preview: "",
+    status: "analyzed",
+    source: "Mind Recorder",
+    highlightCount: 2,
+  },
+  {
+    id: 102,
+    title: "Field memo — product sync",
+    type: "hardware",
+    date: "May 5 · 9:12 AM",
+    duration: "8 min",
+    preview: "",
+    status: "analyzed",
+    source: "Mind Recorder",
+    listSubtitle: "Imported",
+    processingFailed: true,
   },
   {
     id: 2,
@@ -53,7 +103,18 @@ export const mockNotes: Note[] = [
     source: "Mind Recorder",
   },
   {
-    id: 3,
+    id: 1,
+    title: "Product requirements sync",
+    type: "hardware",
+    date: "Today 2:32 PM",
+    duration: "23 min",
+    preview: "Discussed the next release, including knowledge graph visualization…",
+    status: "analyzed",
+    source: "Mind Recorder",
+    highlightCount: 3,
+  },
+  {
+    id: 5,
     title: "Podcast — AI product design",
     type: "phone",
     date: "Yesterday 4:20 PM",
@@ -64,7 +125,7 @@ export const mockNotes: Note[] = [
     highlightCount: 5,
   },
   {
-    id: 4,
+    id: 6,
     title: "Technical design notes",
     type: "phone",
     date: "Yesterday 11:00 AM",
@@ -74,7 +135,7 @@ export const mockNotes: Note[] = [
     source: "Phone mic",
   },
   {
-    id: 5,
+    id: 7,
     title: "Customer call recording",
     type: "hardware",
     date: "May 6",
@@ -86,19 +147,53 @@ export const mockNotes: Note[] = [
   },
 ]
 
+function isRecordingNote(note: Note) {
+  return note.type === "hardware" || note.type === "phone"
+}
+
+function RecorderGlyph({
+  className,
+  batteryPercent,
+}: {
+  className?: string
+  /** 0–100: left-edge level strip; omit when disconnected / unknown */
+  batteryPercent?: number | null
+}) {
+  const pct =
+    batteryPercent != null && Number.isFinite(batteryPercent)
+      ? Math.round(Math.max(0, Math.min(100, batteryPercent)))
+      : null
+
+  return (
+    <span
+      className={cn(
+        "inline-flex h-[26px] min-w-[17px] overflow-hidden rounded-[5px] border-[2px] border-current",
+        pct != null ? "w-[21px]" : "w-[17px]",
+        className
+      )}
+      aria-hidden
+    >
+      {pct != null ? (
+        <span className="flex w-[3px] shrink-0 flex-col justify-end border-r border-current/15 bg-zinc-200/50 py-[3px] pl-[2px] dark:bg-zinc-700/50">
+          <span
+            className="w-[2px] max-h-full min-h-[2px] rounded-[1px] bg-emerald-500 dark:bg-emerald-400"
+            style={{ height: `${pct}%` }}
+          />
+        </span>
+      ) : null}
+      <span className="flex min-w-0 flex-1 flex-col items-center justify-end pb-[5px] pt-[3px]">
+        <span className="h-2 w-2 rounded-full bg-current opacity-80" />
+      </span>
+    </span>
+  )
+}
+
 function NoteCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-stone-200/85 bg-white p-4 shadow-sm space-y-3 animate-pulse" aria-hidden>
-      <div className="flex justify-between gap-3">
-        <div className="h-6 flex-1 rounded-md bg-stone-200/90" />
-        <div className="h-5 w-16 rounded-md bg-stone-100" />
-      </div>
-        <div className="h-3 w-40 rounded bg-stone-100" />
-      <div className="space-y-2">
-        <div className="h-3 w-full rounded bg-stone-100" />
-        <div className="h-3 w-4/5 rounded bg-stone-100" />
-      </div>
-      <p className="text-[11px] text-zinc-500">Minder is still polishing this one—almost there.</p>
+    <div className="animate-pulse py-4" aria-hidden>
+      <div className="h-4 w-[72%] max-w-md rounded bg-zinc-200/85" />
+      <div className="mt-2.5 h-3 w-[42%] rounded bg-zinc-100/90" />
+      <div className="mt-2.5 h-3 w-28 rounded bg-zinc-100/80" />
     </div>
   )
 }
@@ -141,20 +236,18 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl">
-      {/* Swipe right: add to library */}
+    <div className="relative overflow-hidden">
       <div
-        className="absolute inset-y-0 left-0 flex w-24 items-center justify-center rounded-l-2xl bg-sky-700 text-white"
+        className="absolute inset-y-0 left-0 flex w-20 items-center justify-center bg-sky-700 text-white"
         style={{ opacity: dx > 0 ? Math.min(1, dx / 72) : 0 }}
       >
-        <Library className="h-6 w-6" strokeWidth={1.65} />
+        <Library className="h-5 w-5" strokeWidth={1.65} />
       </div>
-      {/* Swipe left: delete */}
       <div
-        className="absolute inset-y-0 right-0 flex w-24 items-center justify-center bg-red-600 text-white rounded-r-2xl"
+        className="absolute inset-y-0 right-0 flex w-20 items-center justify-center bg-red-600 text-white"
         style={{ opacity: dx < 0 ? Math.min(1, -dx / 72) : 0 }}
       >
-        <Trash2 className="h-6 w-6" strokeWidth={1.65} />
+        <Trash2 className="h-5 w-5" strokeWidth={1.65} />
       </div>
 
       <div
@@ -171,43 +264,53 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
         onMouseMove={(e) => dragging.current && onMove(e.clientX)}
         onMouseUp={onEnd}
         onMouseLeave={() => dragging.current && onEnd()}
-        className="relative z-10 w-full cursor-pointer select-none text-left"
+        className="relative z-10 w-full cursor-pointer select-none bg-white text-left active:bg-zinc-50/70"
         style={{ transform: `translateX(${dx}px)`, transition: dragging.current ? "none" : "transform 0.2s ease-out" }}
       >
-        <div className="rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm transition-shadow hover:border-stone-200 hover:shadow-md">
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <h3 className="text-[19px] font-semibold leading-snug tracking-tight text-zinc-900 line-clamp-2">
-              {note.title}
-            </h3>
-            {note.highlightCount != null && note.highlightCount > 0 && (
-              <span className="shrink-0 rounded-full bg-sky-100/95 px-2 py-0.5 text-[11px] font-medium text-sky-900">
-                💡 {note.highlightCount} highlights
-              </span>
+        <div className="py-4">
+          {note.listSubtitle ? (
+            <p className="mb-1 text-[11px] leading-tight text-zinc-400">{note.listSubtitle}</p>
+          ) : null}
+          <h3
+            className={cn(
+              "line-clamp-2 text-[16px] font-semibold leading-snug tracking-tight",
+              note.processingFailed ? "text-zinc-400" : "text-zinc-900"
             )}
-          </div>
-          <p className="mb-3 line-clamp-2 text-[15px] leading-relaxed text-zinc-600">{note.preview}</p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-500">
+          >
+            {note.title}
+          </h3>
+          {!isRecordingNote(note) ? (
+            <p className="mt-1 line-clamp-1 text-[13px] leading-relaxed text-zinc-500">{note.preview}</p>
+          ) : null}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[13px] tabular-nums text-zinc-400">
             <span>{note.date}</span>
-            {note.duration && (
+            {note.duration ? (
               <>
-                <span className="text-zinc-400">·</span>
+                <span className="text-zinc-300" aria-hidden>
+                  |
+                </span>
                 <span>{note.duration}</span>
               </>
-            )}
-            <span className="ml-auto flex items-center gap-1">
-              {note.type === "hardware" ? (
-                <Mic className={cn("h-3.5 w-3.5", mx.navActiveIcon)} strokeWidth={2} />
-              ) : (
-                <Smartphone className="h-3.5 w-3.5 text-zinc-500" strokeWidth={2} />
-              )}
-            </span>
+            ) : null}
+            {note.processingFailed ? (
+              <span className="ml-auto inline-flex items-center gap-0.5 text-[12px] font-medium text-red-500">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                Processing failed
+              </span>
+            ) : null}
           </div>
-          {folder && FolderIcon && (
-            <div className="mt-2 flex items-center gap-1.5 text-[12px] text-zinc-600">
+          {folder && FolderIcon ? (
+            <div className="mt-2 flex items-center gap-1.5 text-[12px] text-zinc-500">
               <FolderIcon className="h-4 w-4 shrink-0" style={{ color: folder.color }} strokeWidth={2} aria-hidden />
-              <span className="truncate font-medium text-zinc-700">{folder.name}</span>
+              {note.highlightCount != null && note.highlightCount > 0 ? (
+                <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                  {note.highlightCount}
+                </span>
+              ) : null}
             </div>
-          )}
+          ) : note.highlightCount != null && note.highlightCount > 0 ? (
+            <div className="mt-2 text-[12px] text-zinc-500">{note.highlightCount} highlights</div>
+          ) : null}
         </div>
       </div>
     </div>
@@ -217,12 +320,17 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
 function NoteThumbnailSkeleton() {
   return (
     <div
-      className="flex aspect-[4/5] flex-col rounded-xl border border-stone-200/70 bg-stone-50/80 p-2 animate-pulse"
+      className="flex min-h-[100px] flex-col rounded-xl border border-stone-200/70 bg-stone-50/80 p-2.5 animate-pulse"
       aria-hidden
     >
-      <div className="h-9 rounded-lg bg-stone-200/90" />
-      <div className="mt-2 flex-1 rounded-md bg-stone-100/90" />
-      <div className="mt-1.5 h-2 w-2/3 rounded bg-stone-100" />
+      <div className="flex gap-2">
+        <div className="h-9 w-9 shrink-0 rounded-lg bg-stone-200/90" />
+        <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+          <div className="h-3 w-full rounded bg-stone-200/80" />
+          <div className="h-3 w-4/5 rounded bg-stone-200/80" />
+          <div className="h-2.5 w-1/2 rounded bg-stone-100" />
+        </div>
+      </div>
     </div>
   )
 }
@@ -245,48 +353,59 @@ function NoteThumbnailCell({
   }
 
   const TypeIcon = note.type === "hardware" ? Mic : note.type === "phone" ? Smartphone : FileText
+  const recording = isRecordingNote(note)
 
   return (
     <button
       type="button"
       onClick={onOpen}
       className={cn(
-        "group flex aspect-[4/5] flex-col rounded-xl border bg-white p-1.5 text-left shadow-sm transition-all active:scale-[0.98]",
+        "group flex min-h-[100px] flex-col rounded-xl border bg-white p-2.5 text-left shadow-sm transition-all active:scale-[0.98]",
         trashView
           ? "border-zinc-200/80 opacity-90 hover:border-zinc-300"
           : "border-stone-200/80 hover:border-sky-200/90 hover:shadow-md"
       )}
     >
-      <div
-        className={cn(
-          "relative flex shrink-0 items-center justify-center rounded-lg py-2",
-          trashView ? "bg-zinc-100 dark:bg-zinc-800/80" : "bg-sky-50 dark:bg-sky-950/40"
-        )}
-      >
-        <TypeIcon
-          className={cn("h-5 w-5", trashView ? "text-zinc-600" : "text-sky-700 dark:text-sky-300")}
-          strokeWidth={1.85}
-          aria-hidden
-        />
-        {folder ? (
-          <span
-            className="absolute right-1 top-1 h-2 w-2 rounded-full ring-2 ring-white dark:ring-zinc-900"
-            style={{ backgroundColor: folder.color }}
-            title={folder.name}
+      <div className="flex min-h-0 flex-1 gap-2">
+        <div
+          className={cn(
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+            trashView ? "bg-zinc-100 dark:bg-zinc-800/80" : "bg-stone-100 dark:bg-zinc-800/80"
+          )}
+        >
+          <TypeIcon
+            className={cn("h-4 w-4", trashView ? "text-zinc-600" : "text-zinc-600 dark:text-zinc-300")}
+            strokeWidth={1.85}
+            aria-hidden
           />
-        ) : null}
+          {folder ? (
+            <span
+              className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full ring-2 ring-white dark:ring-zinc-900"
+              style={{ backgroundColor: folder.color }}
+              title={folder.name}
+            />
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">{note.title}</p>
+          {recording ? (
+            <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-zinc-500 dark:text-zinc-400">
+              {note.date}
+              {note.duration ? ` · ${note.duration}` : ""}
+              {note.source ? ` · ${note.source}` : ""}
+            </p>
+          ) : (
+            <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-zinc-500 dark:text-zinc-400">{note.preview}</p>
+          )}
+        </div>
       </div>
-      <p className="mt-1 line-clamp-3 min-h-0 flex-1 px-0.5 text-[10px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
-        {note.title}
-      </p>
-      <div className="mt-auto flex items-center justify-between gap-0.5 px-0.5 pt-0.5 text-[9px] text-zinc-400 dark:text-zinc-500">
-        <span className="min-w-0 truncate">{note.duration ?? note.date}</span>
-        {note.highlightCount != null && note.highlightCount > 0 ? (
-          <span className="shrink-0 rounded bg-sky-100 px-1 text-[8px] font-semibold text-sky-800 dark:bg-sky-900/60 dark:text-sky-200">
-            {note.highlightCount}
+      {note.highlightCount != null && note.highlightCount > 0 ? (
+        <div className="mt-1.5 flex justify-end border-t border-stone-100/80 pt-1.5 dark:border-zinc-800">
+          <span className="shrink-0 rounded bg-sky-100 px-1.5 py-0.5 text-[8px] font-semibold text-sky-800 dark:bg-sky-900/60 dark:text-sky-200">
+            {note.highlightCount} highlights
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </button>
   )
 }
@@ -301,32 +420,29 @@ interface NotesTabProps {
 }
 
 export function NotesTab({
-  activeAccountId,
+  activeAccountId: _activeAccountId,
   notes,
   folders,
   onNotesChange,
   onNoteClick,
   onStartRecording,
 }: NotesTabProps) {
-  const activeAccount = getMindAccount(activeAccountId)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [showRecordOptions, setShowRecordOptions] = useState(false)
+  const [showHardwareDetail, setShowHardwareDetail] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
+  const [deviceBatteryPercent, setDeviceBatteryPercent] = useState<number | null>(55)
   /** Filter: all / phone / device / trash; mutually exclusive with folder pick */
   const [fileScope, setFileScope] = useState<"all" | "phone" | "device" | "trash">("all")
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [showFilterSortSheet, setShowFilterSortSheet] = useState(false)
-  const [showFilesMenu, setShowFilesMenu] = useState(false)
-  const [listScope, setListScope] = useState<"all" | "active">("all")
   const [notesViewMode, setNotesViewMode] = useState<"list" | "thumbnails">("list")
 
-  const inListScope = (n: Note) => (listScope === "active" ? !n.archived : true)
+  const inListScope = (_n: Note) => true
   const nonArchived = notes.filter((n) => !n.archived)
   const archivedCount = notes.filter((n) => n.archived).length
   const phoneCount = nonArchived.filter((n) => n.type === "phone").length
   const deviceCount = nonArchived.filter((n) => n.type === "hardware").length
-  const textDialogCount = nonArchived.filter((n) => n.type === "text").length
-  const importCount = nonArchived.filter((n) => n.type === "hardware" || n.type === "phone").length
 
   const filteredNotes = (() => {
     if (selectedFolderId) {
@@ -344,150 +460,91 @@ export function NotesTab({
       })
   })()
 
+  const openDevicePrimary = () => {
+    if (isDeviceConnected) setShowHardwareDetail(true)
+    else setShowDeviceSheet(true)
+  }
+
   return (
     <div className={cn("relative flex h-full flex-col", mx.shellCanvas)}>
-      <div className={cn("border-b bg-white/90 backdrop-blur-sm", mx.shellHairline)}>
-        <div className="flex items-center justify-between px-5 py-3">
-          <button
-            type="button"
-            onClick={() => setShowDeviceSheet(true)}
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-xl py-1 pl-0.5 pr-2 text-left transition-colors hover:bg-sky-50/50 active:bg-sky-50/70 dark:hover:bg-zinc-800/60"
-            aria-label="Recorder and devices"
-          >
-            <div
-              className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                isDeviceConnected ? "bg-sky-600" : "bg-zinc-300 dark:bg-zinc-600"
-              )}
+      <div className={cn("border-b bg-white/95 backdrop-blur-sm", mx.shellHairline)}>
+        <div className="flex items-center justify-between gap-2 px-4 pb-1 pt-2.5">
+          <div className="flex min-w-0 items-center gap-0.5">
+            <button
+              type="button"
+              onClick={openDevicePrimary}
+              className="relative flex shrink-0 items-center justify-center rounded-lg p-1 text-zinc-900 transition-colors hover:bg-zinc-100/80 active:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800/70"
+              aria-label={
+                isDeviceConnected && deviceBatteryPercent != null
+                  ? `Device status, battery ${deviceBatteryPercent} percent`
+                  : isDeviceConnected
+                    ? "Device status"
+                    : "Connect device"
+              }
+              title={
+                isDeviceConnected && deviceBatteryPercent != null
+                  ? `Battery ${deviceBatteryPercent}% (demo)`
+                  : undefined
+              }
             >
-              <Bluetooth className="h-4 w-4 text-white" />
-            </div>
-            <div className="min-w-0 text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Mind</span>
-                <span
+              <span className="relative inline-flex items-center justify-center">
+                <RecorderGlyph
+                  batteryPercent={isDeviceConnected ? deviceBatteryPercent : null}
                   className={cn(
-                    "rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-tight",
-                    activeAccount.kind === "work"
-                      ? "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-100"
-                      : "bg-sky-50 text-sky-800 dark:bg-sky-950/35 dark:text-sky-100"
-                  )}
-                >
-                  {accountSpaceLabel(activeAccount.kind)}
-                </span>
-                <div
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    isDeviceConnected ? "bg-sky-300" : "bg-zinc-300 dark:bg-zinc-500"
+                    isDeviceConnected ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"
                   )}
                 />
-              </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Recorder status · use mic button for devices</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              toast.message("Smart search", {
-                description: "Search across all captures (demo).",
-              })
-            }
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-sky-50/60 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
-            aria-label="Smart search"
-          >
-            <SmartSearchIcon className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
-          </button>
-        </div>
-      </div>
-
-      <div className="px-5 pb-2 pt-5">
-        <div className="relative mb-1">
-          <button
-            type="button"
-            onClick={() => setShowFilesMenu((v) => !v)}
-            className="flex items-center gap-1 text-[15px] font-semibold text-zinc-900"
-            aria-haspopup="listbox"
-            aria-expanded={showFilesMenu}
-          >
-            {listScope === "all" ? "All files" : "Active"}
-            <ChevronDown
-              className={cn("h-4 w-4 text-zinc-500 transition-transform", showFilesMenu && "rotate-180")}
-              strokeWidth={2}
-              aria-hidden
-            />
-          </button>
-          {showFilesMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowFilesMenu(false)} />
-              <div className="absolute left-0 top-full z-50 mt-1 min-w-[10rem] overflow-hidden rounded-xl border border-stone-200/85 bg-white py-1 shadow-lg">
-                {(
-                  [
-                    { id: "all" as const, label: "All files" },
-                    { id: "active" as const, label: "Active" },
-                  ] as const
-                ).map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      setListScope(opt.id)
-                      setShowFilesMenu(false)
-                      toast.message("List scope updated", { description: opt.label })
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-stone-100/85",
-                      listScope === opt.id ? "font-medium text-zinc-900" : "text-zinc-700"
-                    )}
-                  >
-                    {opt.label}
-                    {listScope === opt.id && (
-                      <svg className="h-4 w-4 text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="min-w-0 flex-1 text-left">
-            <button type="button" onClick={() => setShowFilterSortSheet(true)} className="text-left">
-              <h1 className="text-[28px] font-bold tracking-tight text-zinc-900">Notes</h1>
+                {isDeviceConnected ? (
+                  <span
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-950"
+                    title="Firmware update available (demo)"
+                  />
+                ) : null}
+              </span>
             </button>
-            {notesViewMode === "thumbnails" ? (
-              <p className="mt-0.5 text-[12px] font-medium text-sky-700 dark:text-sky-300">Thumbnail view · dense grid</p>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => setShowDeviceSheet(true)}
+              className="flex shrink-0 items-center rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-100/80 dark:text-zinc-400 dark:hover:bg-zinc-800/70"
+              aria-label="Device menu"
+            >
+              <ChevronDown className="h-4 w-4" strokeWidth={2} />
+            </button>
           </div>
+          <div className="flex shrink-0 items-center">
+            <button
+              type="button"
+              onClick={() =>
+                toast.message("Smart search", {
+                  description: "Search across all captures (demo).",
+                })
+              }
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100/70 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
+              aria-label="Smart search"
+            >
+              <SmartSearchIcon className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
+            </button>
+          </div>
+        </div>
+        <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-0.5">
           <button
             type="button"
             onClick={() => setShowFilterSortSheet(true)}
-            className="relative flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-zinc-700 hover:bg-white"
+            className="flex min-w-0 items-center gap-1 py-1 text-left"
             aria-label="Filter and sort"
           >
-            <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="4" y1="6" x2="20" y2="6" />
-              <line x1="4" y1="12" x2="16" y2="12" />
-              <line x1="4" y1="18" x2="12" y2="18" />
-            </svg>
-            {(fileScope !== "all" || selectedFolderId) && (
-              <span className="max-w-[5.5rem] truncate font-medium text-zinc-900">
-                {selectedFolderId
-                  ? folders.find((f) => f.id === selectedFolderId)?.name ?? "Folder"
-                  : fileScope === "phone"
-                    ? "Phone"
-                    : fileScope === "device"
-                      ? "Device"
-                      : "Trash"}
-              </span>
-            )}
+            <span className="truncate text-[26px] font-bold leading-none tracking-tight text-zinc-900 dark:text-zinc-50">
+              All files
+            </span>
+            <ChevronDown className="h-5 w-5 shrink-0 translate-y-px text-zinc-400" strokeWidth={2} />
           </button>
+          {notesViewMode === "thumbnails" ? (
+            <p className="shrink-0 pt-2 text-[11px] font-medium text-zinc-400">Thumbnails</p>
+          ) : null}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-28 pt-2">
+      <div className="flex-1 overflow-y-auto overscroll-y-contain px-0 pb-28 pt-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {filteredNotes.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
             <p className="max-w-[280px] text-[17px] leading-relaxed text-zinc-700">
@@ -502,7 +559,7 @@ export function NotesTab({
             </button>
           </div>
         ) : notesViewMode === "thumbnails" ? (
-          <div className="grid grid-cols-3 gap-2 pb-2">
+          <div className="grid grid-cols-3 gap-2 px-4 pb-2 pt-3">
             {filteredNotes.map((note) => (
               <NoteThumbnailCell
                 key={note.id}
@@ -514,7 +571,7 @@ export function NotesTab({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="divide-y divide-zinc-100/90 px-4 dark:divide-zinc-800/80">
             {filteredNotes.map((note) =>
               note.status === "pending" ? (
                 <NoteCardSkeleton key={note.id} />
@@ -787,36 +844,6 @@ export function NotesTab({
                     )
                   })}
                 </div>
-
-                <p className="mt-4 text-[13px] font-semibold uppercase tracking-wide text-zinc-400">From</p>
-                <div className="mt-1 space-y-0.5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toast.message("Chat-style notes", {
-                        description: `${textDialogCount} items (demo filter).`,
-                      })
-                    }
-                    className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 text-left hover:bg-sky-50/50"
-                  >
-                    <FileText className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
-                    <span className="text-[15px] text-zinc-900">
-                      Chat-style notes <span className="text-zinc-400">({textDialogCount})</span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toast.message("Imports", { description: `${importCount} imported captures (demo).` })
-                    }
-                    className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 text-left hover:bg-sky-50/50"
-                  >
-                    <FileInput className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
-                    <span className="text-[15px] text-zinc-900">
-                      Imports <span className="text-zinc-400">({importCount})</span>
-                    </span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -827,7 +854,21 @@ export function NotesTab({
         open={showDeviceSheet}
         onClose={() => setShowDeviceSheet(false)}
         isDeviceConnected={isDeviceConnected}
-        onSetDeviceConnected={setIsDeviceConnected}
+        onSetDeviceConnected={(c) => {
+          setIsDeviceConnected(c)
+          setDeviceBatteryPercent(c ? 55 : null)
+        }}
+        onConnectedDeviceOpen={() => setShowHardwareDetail(true)}
+      />
+
+      <MindHardwareDetail
+        open={showHardwareDetail}
+        onBack={() => setShowHardwareDetail(false)}
+        batteryPercent={deviceBatteryPercent ?? 55}
+        onDisconnect={() => {
+          setIsDeviceConnected(false)
+          setDeviceBatteryPercent(null)
+        }}
       />
     </div>
   )

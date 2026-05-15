@@ -15,14 +15,12 @@ import {
   BarChart3,
   Presentation,
   Volume2,
-  GitBranch,
   ChevronDown,
 } from "lucide-react"
 
 export type FactoryModalKind =
   | "report"
   | "audio"
-  | "mindmap"
   | "flashcards"
   | "quiz"
   | "infographic"
@@ -31,7 +29,6 @@ export type FactoryModalKind =
 /** Numeric knobs chosen in Studio modals; passed through to generation / job meta. */
 export type FactoryGenerationSettings = Partial<{
   audioTargetMinutes: number
-  mindmapBranchCount: number
   slidesPageCount: number
   quizQuestionCount: number
   flashcardCount: number
@@ -242,7 +239,8 @@ function ReportModal({
     <button
       type="button"
       className={cn(
-        "relative flex w-full flex-col rounded-xl border border-stone-200/90 bg-[#faf8f5] p-3.5 text-left transition-colors",
+        "relative flex w-full flex-col rounded-xl border border-stone-200/90 p-3.5 text-left transition-colors dark:border-zinc-700/90",
+        mx.surfaceTint,
         tc.softHover
       )}
     >
@@ -510,7 +508,7 @@ function InfographicModal({
               onClick={() => setStyle(s.id)}
               className={cn(
                 "flex w-[4.5rem] shrink-0 flex-col items-center gap-1 rounded-xl border p-2 text-center transition-colors",
-                style === s.id ? tc.styleCardOn : "border-stone-200 bg-[#faf8f5] hover:border-stone-300"
+                style === s.id ? tc.styleCardOn : cn("border-stone-200 hover:border-stone-300 dark:border-zinc-700", mx.surfaceTint)
               )}
             >
               <span className="text-xl">{s.emoji}</span>
@@ -603,7 +601,7 @@ function AudioModal({
             onClick={() => setFormat(f.id)}
             className={cn(
               "relative flex flex-col rounded-xl border p-3 text-left text-[12px] leading-snug",
-              format === f.id ? tc.cardOn : "border-stone-200 bg-[#faf8f5] hover:border-stone-300"
+              format === f.id ? tc.cardOn : cn("border-stone-200 hover:border-stone-300 dark:border-zinc-700", mx.surfaceTint)
             )}
           >
             {format === f.id && (
@@ -701,7 +699,7 @@ function SlidesModal({
           onClick={() => setMode("detailed")}
           className={cn(
             "relative flex flex-col rounded-xl border p-3 text-left",
-            mode === "detailed" ? tc.cardOn : "border-stone-200 bg-[#faf8f5]"
+            mode === "detailed" ? tc.cardOn : cn("border-stone-200 dark:border-zinc-700", mx.surfaceTint)
           )}
         >
           {mode === "detailed" && (
@@ -717,7 +715,7 @@ function SlidesModal({
           onClick={() => setMode("slides")}
           className={cn(
             "relative flex flex-col rounded-xl border p-3 text-left",
-            mode === "slides" ? tc.cardOn : "border-stone-200 bg-[#faf8f5]"
+            mode === "slides" ? tc.cardOn : cn("border-stone-200 dark:border-zinc-700", mx.surfaceTint)
           )}
         >
           {mode === "slides" && (
@@ -767,81 +765,6 @@ function SlidesModal({
   )
 }
 
-/** Mind map — layout + branch count + brief */
-function MindMapModal({
-  onClose,
-  onSubmitFactory,
-}: {
-  onClose: () => void
-  onSubmitFactory?: (settings: FactoryGenerationSettings) => void
-}) {
-  const [layout, setLayout] = useState("hierarchy")
-  const [lang, setLang] = useState("English")
-  const [branchCount, setBranchCount] = useState(12)
-  const [desc, setDesc] = useState("")
-  const tc = mx.factoryTone.mindmap
-  return (
-    <ModalFrame
-      tone="mindmap"
-      title="Custom mind map"
-      icon={<GitBranch className="h-5 w-5" />}
-      onClose={onClose}
-      footer={
-        <GenerateFooter
-          onGenerate={() => onSubmitFactory?.({ mindmapBranchCount: branchCount })}
-          onClose={onClose}
-        />
-      }
-    >
-      <PillRow
-        tone="mindmap"
-        label="Layout"
-        value={layout}
-        onChange={setLayout}
-        options={[
-          { id: "hierarchy", label: "Hierarchy" },
-          { id: "radial", label: "Radial" },
-          { id: "timeline", label: "Timeline" },
-        ]}
-      />
-      <div className="mb-4">
-        <p className="mb-1 text-[13px] text-zinc-500">Language</p>
-        <select
-          value={lang}
-          onChange={(e) => setLang(e.target.value)}
-          className={cn("w-full rounded-xl border border-stone-200 py-2 text-[13px]", tc.fieldFocus)}
-        >
-          <option>English</option>
-          <option>Chinese</option>
-        </select>
-      </div>
-      <SliderRow
-        tone="mindmap"
-        label="Primary branches"
-        hint="How many first-level branches to extract from your sources."
-        min={5}
-        max={28}
-        value={branchCount}
-        onChange={setBranchCount}
-        valueSuffix="branches"
-      />
-      <div>
-        <p className="mb-2 text-[13px] text-zinc-500">Central topic & emphasis</p>
-        <textarea
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          rows={4}
-          placeholder='e.g. Center on "product roadmap" and highlight milestones, risks, and dependencies.'
-          className={cn(
-            "w-full resize-none rounded-xl border border-stone-200 px-3 py-2 text-[14px] text-zinc-800 placeholder:text-zinc-400",
-            tc.fieldFocus
-          )}
-        />
-      </div>
-    </ModalFrame>
-  )
-}
-
 export function ContentFactoryModals({ open, onClose, libraryName, onGenerateSubmit }: ContentFactoryModalsProps) {
   if (!open) return null
   const submit =
@@ -852,8 +775,6 @@ export function ContentFactoryModals({ open, onClose, libraryName, onGenerateSub
       return <ReportModal onClose={onClose} onSubmitFactory={submit("report")} />
     case "audio":
       return <AudioModal onClose={onClose} libraryName={libraryName} onSubmitFactory={submit("audio")} />
-    case "mindmap":
-      return <MindMapModal onClose={onClose} onSubmitFactory={submit("mindmap")} />
     case "flashcards":
       return <FlashcardsModal onClose={onClose} onSubmitFactory={submit("flashcards")} />
     case "quiz":

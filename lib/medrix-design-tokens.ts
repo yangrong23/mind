@@ -54,6 +54,18 @@ export const mx = {
   brandMutedBgHover: "hover:bg-stone-200/85",
   brandSubtleBorder: "border-stone-200",
 
+  /**
+   * UI chrome — prefer over raw `gray-*` / `slate-*` so every page reads the same cool-neutral temperature.
+   */
+  surfaceTint: "bg-stone-50 dark:bg-zinc-900/92",
+  surfaceTintHover: "hover:bg-stone-100/90 dark:hover:bg-zinc-800/70",
+  settingsIconWell: "bg-stone-100 dark:bg-zinc-800",
+  settingsIconInk: "text-zinc-600 dark:text-zinc-300",
+  toggleTrackOff: "bg-stone-200 dark:bg-zinc-600",
+  /** Studio / factory soft callouts (aligned with nav sky, not warm peach) */
+  studioQuotaBanner:
+    "rounded-2xl border border-sky-100/95 bg-gradient-to-br from-sky-50/95 via-white to-cyan-50/35 p-4 shadow-sm shadow-sky-900/[0.04] dark:border-sky-900/45 dark:from-sky-950/40 dark:via-zinc-900/90 dark:to-cyan-950/20",
+
   brandCta:
     "bg-sky-600 text-white hover:bg-sky-700 active:bg-sky-800 shadow-sm shadow-sky-600/20 border border-sky-700/40",
   brandCtaSoft:
@@ -122,17 +134,6 @@ export const mx = {
       fieldFocus: "focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-200",
       softHover: "hover:border-cyan-200/80 hover:bg-cyan-50/40",
     },
-    mindmap: {
-      well: "bg-teal-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
-      icon: "text-teal-800",
-      sparkle: "text-teal-600",
-      pillOn: "border-teal-400 bg-teal-50 text-teal-900",
-      cardOn: "border-teal-400 bg-teal-50/90",
-      check: "text-teal-600",
-      styleCardOn: "border-teal-500 bg-teal-50/80 ring-1 ring-teal-200",
-      fieldFocus: "focus:border-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-200",
-      softHover: "hover:border-teal-200/80 hover:bg-teal-50/40",
-    },
     flashcards: {
       well: "bg-emerald-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
       icon: "text-emerald-800",
@@ -183,6 +184,13 @@ export const mx = {
   knowledgeAskPill:
     "border border-sky-200/90 bg-sky-50/95 text-sky-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] hover:border-sky-300/90 hover:bg-sky-100/80",
   knowledgeAskSparkle: "text-sky-700",
+
+  /** Generating-job row shells — cool pastels only (no pink/peach drift) */
+  studioJobShell: [
+    "bg-sky-50/90 shadow-sm shadow-sky-900/[0.03] dark:bg-sky-950/25 dark:shadow-black/20",
+    "bg-cyan-50/85 shadow-sm shadow-cyan-900/[0.03] dark:bg-cyan-950/20 dark:shadow-black/20",
+    "bg-teal-50/80 shadow-sm shadow-teal-900/[0.03] dark:bg-teal-950/20 dark:shadow-black/20",
+  ] as const,
 } as const
 
 /** Heatmap: slight cool tint at higher activity */
