@@ -15,7 +15,7 @@ import {
 
 export type MindChatMode = "dialog" | "agent"
 
-const DEFAULT_MODELS = ["DS 快速", "Mind Pro", "Balanced"] as const
+const DEFAULT_MODELS = ["DS Fast", "Mind Pro", "Balanced"] as const
 
 const pillBtn =
   "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-zinc-200/85 bg-white px-2 text-[11px] font-medium text-zinc-800 shadow-none transition-colors hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
@@ -55,6 +55,8 @@ export type MindChatComposerProps = {
   showAtButton?: boolean
   showVoiceButton?: boolean
   showUploadButton?: boolean
+  /** Replaces dialog/agent mode pill (e.g. library-grounded Ask). */
+  toolbarLead?: ReactNode
   ariaLabel?: string
 }
 
@@ -68,7 +70,7 @@ export function MindChatComposer({
   shellRef: shellRefProp,
   chatMode = "dialog",
   onChatModeChange,
-  modelLabel = "DS 快速",
+  modelLabel = "DS Fast",
   onModelLabelChange,
   modelOptions = DEFAULT_MODELS,
   voiceOn = false,
@@ -85,6 +87,7 @@ export function MindChatComposer({
   showAtButton = true,
   showVoiceButton = true,
   showUploadButton = true,
+  toolbarLead,
   ariaLabel = "Message",
 }: MindChatComposerProps) {
   const internalRef = useRef<HTMLDivElement>(null)
@@ -137,13 +140,17 @@ export function MindChatComposer({
             }}
             rows={1}
             placeholder={placeholder}
-            className="max-h-24 min-h-[2.25rem] w-full resize-none border-0 bg-transparent px-3.5 pb-1 pt-2 text-[14px] leading-snug text-zinc-900 placeholder:text-zinc-400/90 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+            className={cn(
+              "max-h-24 w-full resize-none border-0 bg-transparent px-3.5 text-[14px] leading-[1.45] text-zinc-900 placeholder:text-zinc-400/90 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500",
+              variant === "thread" ? "min-h-[2.75rem] pb-2 pt-3" : "min-h-[2.25rem] pb-1 pt-2"
+            )}
             aria-label={ariaLabel}
           />
 
           
             <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5">
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                {toolbarLead}
                 {showModeSelector ? (
                   <span className="relative inline-flex">
                     {modeMenuOpen ? (
@@ -161,19 +168,19 @@ export function MindChatComposer({
                           }}
                           className={cn(
                             "flex w-full items-start gap-3 border-b border-zinc-100 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/80",
-                            chatMode === "dialog" && "bg-sky-50/70 dark:bg-sky-950/35"
+                            chatMode === "dialog" && "bg-mind/70 dark:bg-mind/35"
                           )}
                         >
-                          <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
+                          <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-mind" strokeWidth={2} aria-hidden />
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
                               Dialog mode
                               {chatMode === "dialog" ? (
-                                <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
+                                <Check className="h-4 w-4 text-mind" strokeWidth={2.5} />
                               ) : null}
                             </span>
                             <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
-                              Multi-turn chat
+                              Multi-turn conversation
                             </span>
                           </span>
                         </button>
@@ -187,19 +194,19 @@ export function MindChatComposer({
                           }}
                           className={cn(
                             "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80",
-                            chatMode === "agent" && "bg-sky-50/70 dark:bg-sky-950/35"
+                            chatMode === "agent" && "bg-mind/70 dark:bg-mind/35"
                           )}
                         >
-                          <Bot className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
+                          <Bot className="mt-0.5 h-5 w-5 shrink-0 text-mind" strokeWidth={2} aria-hidden />
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
-                              Agent mode
+                              Task mode
                               {chatMode === "agent" ? (
-                                <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
+                                <Check className="h-4 w-4 text-mind" strokeWidth={2.5} />
                               ) : null}
                             </span>
                             <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
-                              Agent-style delivery (demo)
+                              Step-by-step delivery (demo)
                             </span>
                           </span>
                         </button>
@@ -216,7 +223,7 @@ export function MindChatComposer({
                         setAtMenuOpen(false)
                       }}
                     >
-                      {chatMode === "dialog" ? "Dialog" : "Agent"}
+                      {chatMode === "dialog" ? "Dialog" : "Task"}
                       <ChevronDown className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} aria-hidden />
                     </button>
                   </span>
@@ -239,7 +246,7 @@ export function MindChatComposer({
                             >
                               {m}
                               {modelLabel === m ? (
-                                <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
+                                <Check className="h-4 w-4 text-mind" strokeWidth={2.5} />
                               ) : (
                                 <span className="w-4" />
                               )}
@@ -291,24 +298,6 @@ export function MindChatComposer({
                   </span>
                 ) : null}
 
-                {showVoiceButton ? (
-                  <button
-                    type="button"
-                    aria-pressed={voiceOn}
-                    aria-label={voiceOn ? "Stop voice input" : "Voice input"}
-                    onClick={() => {
-                      closeMenus()
-                      onVoiceToggle?.()
-                    }}
-                    className={cn(
-                      roundToolBtn,
-                      voiceOn && "bg-sky-50 text-sky-800 dark:bg-sky-950/45 dark:text-sky-200"
-                    )}
-                  >
-                    <AudioLines className="h-4 w-4" strokeWidth={2} aria-hidden />
-                  </button>
-                ) : null}
-
                 {showUploadButton ? (
                   <button
                     type="button"
@@ -320,6 +309,24 @@ export function MindChatComposer({
                     }}
                   >
                     <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
+                  </button>
+                ) : null}
+
+                {showVoiceButton ? (
+                  <button
+                    type="button"
+                    aria-pressed={voiceOn}
+                    aria-label={voiceOn ? "Stop voice input" : "Voice input"}
+                    onClick={() => {
+                      closeMenus()
+                      onVoiceToggle?.()
+                    }}
+                    className={cn(
+                      roundToolBtn,
+                      voiceOn && "bg-mind/5 text-mind dark:bg-zinc-800 dark:text-mind/18"
+                    )}
+                  >
+                    <AudioLines className="h-4 w-4" strokeWidth={2} aria-hidden />
                   </button>
                 ) : null}
               </div>

@@ -50,7 +50,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
     return (
       <div
         className={cn(
-          "relative flex h-full min-h-0 w-full flex-1 flex-col bg-gradient-to-b from-sky-50/90 via-white to-stone-50/90 px-6 pb-6 pt-2 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950"
+          "relative flex h-full min-h-0 w-full flex-1 flex-col bg-white dark:bg-zinc-950 px-6 pb-6 pt-2 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950"
         )}
       >
         {onDismiss ? (
@@ -70,11 +70,11 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
           <div className="flex shrink-0 flex-col items-center px-1 text-center">
             <div
               className={cn(
-                "mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-md shadow-sky-900/10 ring-1 ring-sky-100/90 dark:bg-zinc-900 dark:ring-sky-900/40"
+                "mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-md shadow-stone-900/10 ring-1 ring-stone-200/90 dark:bg-zinc-900 dark:ring-zinc-200/50"
               )}
               aria-hidden
             >
-              <Sparkles className="h-8 w-8 text-sky-600 dark:text-sky-400" strokeWidth={1.5} />
+              <Sparkles className="h-8 w-8 text-mind dark:text-mind/38" strokeWidth={1.5} />
             </div>
             <h1
               id="mind-auth-title"
@@ -102,7 +102,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
               type="button"
               onClick={() => setMode("sign-up")}
               className={cn(
-                "w-full rounded-2xl border border-sky-200/90 bg-white py-3.5 text-[16px] font-semibold text-sky-900 shadow-sm transition-colors hover:bg-sky-50/90 dark:border-sky-800/60 dark:bg-zinc-900 dark:text-sky-100 dark:hover:bg-sky-950/50"
+                "w-full rounded-2xl border border-stone-200 bg-white py-3.5 text-[16px] font-semibold text-mind shadow-sm transition-colors hover:bg-stone-50 dark:border-stone-200 dark:bg-zinc-900 dark:text-mind/10 dark:hover:bg-stone-50"
               )}
             >
               Create account
@@ -121,7 +121,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
   const subtitle = isSignIn ? "Use your Mind account to continue." : "Set up email and password to get started."
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col bg-white dark:bg-zinc-950">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950">
       <div className="flex shrink-0 items-center gap-2 border-b border-stone-100/90 px-3 py-3 dark:border-zinc-800">
         <button
           type="button"
@@ -161,7 +161,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="w-full rounded-xl border border-stone-200/90 bg-stone-50/50 py-3 pl-10 pr-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200/50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                className="w-full rounded-xl border border-stone-200/90 bg-stone-50/50 py-3 pl-10 pr-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300/50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
               />
             </div>
           </div>
@@ -178,7 +178,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-stone-200/90 bg-stone-50/50 py-3 pl-10 pr-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200/50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                className="w-full rounded-xl border border-stone-200/90 bg-stone-50/50 py-3 pl-10 pr-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300/50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
               />
             </div>
           </div>
@@ -193,13 +193,14 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
           </button>
           {isSignIn ? (
             <p className="text-center text-[12px] text-zinc-500 dark:text-zinc-400">
-              演示登录：账号与密码均为 <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">root</span>
+              Demo sign-in: username and password are both{" "}
+              <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">root</span>
             </p>
           ) : null}
           <button
             type="button"
             onClick={() => setMode(isSignIn ? "sign-up" : "sign-in")}
-            className="text-center text-[14px] font-medium text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300"
+            className="text-center text-[14px] font-medium text-mind hover:text-mind dark:text-mind/38 dark:hover:text-mind/28"
           >
             {isSignIn ? "Need an account? Create one" : "Already have an account? Sign in"}
           </button>

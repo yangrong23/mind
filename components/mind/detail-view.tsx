@@ -1,8 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft, Play, Pause, Share2, MoreHorizontal, ThumbsUp, ThumbsDown, Maximize2, Sparkles, ChevronDown, Plus, BookOpen, X, Check, FolderPlus, Clock, ChevronRight } from "lucide-react"
+import { ChevronLeft, Play, Pause, Share2, ThumbsUp, ThumbsDown, Maximize2, Sparkles, ChevronDown, Plus, BookOpen, X, Check, FolderPlus, Clock, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { MindChatHeaderActions } from "@/components/mind-v2/mind-chat-header-actions"
+import {
+  MindChatQaHistoryPanel,
+  seedDemoQaHistory,
+  type MindQaHistoryItem,
+} from "@/components/mind-v2/mind-chat-qa-history-panel"
 
 interface DetailViewProps {
   onBack: () => void
@@ -46,6 +52,8 @@ export function DetailView({ onBack }: DetailViewProps) {
   const [selectedNotebook, setSelectedNotebook] = useState<number | null>(null)
   const [isTransferring, setIsTransferring] = useState(false)
   const [transferComplete, setTransferComplete] = useState(false)
+  const [qaHistoryOpen, setQaHistoryOpen] = useState(false)
+  const [qaHistoryItems] = useState<MindQaHistoryItem[]>(() => seedDemoQaHistory())
 
   const handleTransfer = () => {
     if (!selectedNotebook) return
@@ -62,12 +70,12 @@ export function DetailView({ onBack }: DetailViewProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="relative flex h-full flex-col bg-white">
       {/* Top bar */}
       <div className="pt-14 px-4 pb-2 bg-white">
         <div className="flex items-center justify-between">
           <button onClick={onBack} className="w-10 h-10 flex items-center justify-center">
-            <ChevronLeft className="w-6 h-6 text-gray-800" />
+            <ChevronLeft className="w-6 h-6 text-zinc-800" />
           </button>
 
           {/* Tabs */}
@@ -76,7 +84,7 @@ export function DetailView({ onBack }: DetailViewProps) {
               onClick={() => setActiveTab("source")}
               className={cn(
                 "text-base font-medium pb-1 border-b-2 transition-colors",
-                activeTab === "source" ? "text-gray-900 border-gray-900" : "text-gray-400 border-transparent"
+                activeTab === "source" ? "text-zinc-900 border-zinc-900" : "text-zinc-400 border-transparent"
               )}
             >
               Source
@@ -85,20 +93,21 @@ export function DetailView({ onBack }: DetailViewProps) {
               onClick={() => setActiveTab("note")}
               className={cn(
                 "text-base font-medium pb-1 border-b-2 transition-colors",
-                activeTab === "note" ? "text-gray-900 border-gray-900" : "text-gray-400 border-transparent"
+                activeTab === "note" ? "text-zinc-900 border-zinc-900" : "text-zinc-400 border-transparent"
               )}
             >
               Note
             </button>
           </div>
 
-          <div className="flex items-center gap-1">
-            <button className="w-10 h-10 flex items-center justify-center">
-              <Share2 className="w-5 h-5 text-gray-600" />
+          <div className="flex items-center gap-0.5">
+            <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-zinc-50">
+              <Share2 className="h-5 w-5 text-zinc-600" />
             </button>
-            <button className="w-10 h-10 flex items-center justify-center">
-              <MoreHorizontal className="w-5 h-5 text-gray-600" />
-            </button>
+            <MindChatHeaderActions
+              onNewChat={() => setQaHistoryOpen(false)}
+              onOpenHistory={() => setQaHistoryOpen(true)}
+            />
           </div>
         </div>
       </div>
@@ -108,45 +117,45 @@ export function DetailView({ onBack }: DetailViewProps) {
         {activeTab === "source" ? (
           /* Source / transcript */
           <div className="px-4">
-            <div className="py-3 border-b border-gray-100">
-              <span className="text-base font-medium text-gray-900 border-b-2 border-gray-900 pb-3">Transcript</span>
+            <div className="py-3 border-b border-zinc-100">
+              <span className="text-base font-medium text-zinc-900 border-b-2 border-zinc-900 pb-3">Transcript</span>
             </div>
 
             {/* Audio player */}
-            <div className="py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="py-4 border-b border-zinc-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  className="w-12 h-12 rounded-full border-2 border-zinc-200 flex items-center justify-center hover:bg-zinc-50 transition-colors"
                 >
                   {isPlaying ? (
-                    <Pause className="w-5 h-5 text-gray-700" />
+                    <Pause className="w-5 h-5 text-zinc-700" />
                   ) : (
-                    <Play className="w-5 h-5 text-gray-700 ml-0.5" />
+                    <Play className="w-5 h-5 text-zinc-700 ml-0.5" />
                   )}
                 </button>
-                <span className="text-lg font-medium text-gray-900">00:04:28</span>
+                <span className="text-lg font-medium text-zinc-900">00:04:28</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <Sparkles className="w-5 h-5 text-blue-500" />
+                <button className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
+                  <Sparkles className="w-5 h-5 text-mind/48" />
                 </button>
-                <div className="w-px h-5 bg-gray-200" />
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <Maximize2 className="w-5 h-5 text-gray-500" />
+                <div className="w-px h-5 bg-zinc-200" />
+                <button className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
+                  <Maximize2 className="w-5 h-5 text-zinc-500" />
                 </button>
               </div>
             </div>
 
             <div className="py-4 flex items-center justify-between">
-              <span className="text-lg font-semibold text-gray-900">Transcript</span>
+              <span className="text-lg font-semibold text-zinc-900">Transcript</span>
               <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <ThumbsUp className="w-5 h-5 text-gray-400" />
+                <button className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
+                  <ThumbsUp className="w-5 h-5 text-zinc-400" />
                 </button>
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <ThumbsDown className="w-5 h-5 text-gray-400" />
+                <button className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
+                  <ThumbsDown className="w-5 h-5 text-zinc-400" />
                 </button>
               </div>
             </div>
@@ -154,8 +163,8 @@ export function DetailView({ onBack }: DetailViewProps) {
             <div className="space-y-6 pb-6">
               {transcriptSegments.map((segment, index) => (
                 <div key={index}>
-                  <div className="text-sm text-gray-400 mb-2">{segment.time}</div>
-                  <p className="text-base text-gray-800 leading-relaxed">{segment.text}</p>
+                  <div className="text-sm text-zinc-400 mb-2">{segment.time}</div>
+                  <p className="text-base text-zinc-800 leading-relaxed">{segment.text}</p>
                 </div>
               ))}
             </div>
@@ -163,18 +172,18 @@ export function DetailView({ onBack }: DetailViewProps) {
         ) : (
           /* Note view */
           <div className="px-4">
-            <div className="py-3 flex items-center gap-4 border-b border-gray-100">
-              <span className="text-base text-gray-500">Marks</span>
+            <div className="py-3 flex items-center gap-4 border-b border-zinc-100">
+              <span className="text-base text-zinc-500">Marks</span>
               <div className="relative">
                 <button
                   onClick={() => setShowSummaryDropdown(!showSummaryDropdown)}
-                  className="flex items-center gap-1 text-base text-gray-900 font-medium"
+                  className="flex items-center gap-1 text-base text-zinc-900 font-medium"
                 >
                   {summaryType}
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  <ChevronDown className="w-4 h-4 text-zinc-500" />
                 </button>
                 {showSummaryDropdown && (
-                  <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-10 min-w-[100px]">
+                  <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-zinc-100 py-1 z-10 min-w-[100px]">
                     {["Summary", "Key points", "Outline", "Q&A"].map((type) => (
                       <button
                         key={type}
@@ -182,7 +191,7 @@ export function DetailView({ onBack }: DetailViewProps) {
                           setSummaryType(type)
                           setShowSummaryDropdown(false)
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        className="w-full px-4 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
                       >
                         {type}
                       </button>
@@ -190,43 +199,43 @@ export function DetailView({ onBack }: DetailViewProps) {
                   </div>
                 )}
               </div>
-              <button className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
-                <Plus className="w-4 h-4 text-gray-600" />
+              <button className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center hover:bg-zinc-200 transition-colors">
+                <Plus className="w-4 h-4 text-zinc-600" />
               </button>
             </div>
 
             <div className="py-4 text-center">
-              <span className="text-sm text-gray-400">AI-generated content for reference only</span>
+              <span className="text-sm text-zinc-400">AI-generated content for reference only</span>
             </div>
 
             <div className="space-y-6 pb-6">
-              <h1 className="text-2xl font-bold text-gray-900">How do I use a Mind device?</h1>
+              <h1 className="text-2xl font-bold text-zinc-900">How do I use a Mind device?</h1>
 
-              <h2 className="text-xl font-bold text-gray-900">How do I use a Mind device?</h2>
+              <h2 className="text-xl font-bold text-zinc-900">How do I use a Mind device?</h2>
 
-              <p className="text-base text-gray-700 leading-relaxed">
+              <p className="text-base text-zinc-700 leading-relaxed">
                 Here is how Mind fits into your flow—from recording and marks to summaries, AI Q&A, and export—so you can move faster with less friction.
               </p>
 
-              <h2 className="text-xl font-bold text-gray-900 pt-4">How to record</h2>
+              <h2 className="text-xl font-bold text-zinc-900 pt-4">How to record</h2>
 
-              <p className="text-base text-gray-700 leading-relaxed">
+              <p className="text-base text-zinc-700 leading-relaxed">
                 On Mind Pro, Mind Pin S, or Mind Note, press and hold the device button for high-quality capture.
               </p>
 
-              <h2 className="text-xl font-bold text-gray-900 pt-4">Key terms</h2>
+              <h2 className="text-xl font-bold text-zinc-900 pt-4">Key terms</h2>
 
-              <p className="text-base text-gray-700 leading-relaxed">
+              <p className="text-base text-zinc-700 leading-relaxed">
                 This session mentions{" "}
-                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-sm font-medium">CASK</span>, an
+                <span className="px-1.5 py-0.5 bg-mind/10 text-mind rounded text-sm font-medium">CASK</span>, an
                 important X-linked gene linked to several neurodevelopmental disorders.{" "}
-                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-sm font-medium">trio-WES</span>{" "}
+                <span className="px-1.5 py-0.5 bg-mind/10 text-mind rounded text-sm font-medium">trio-WES</span>{" "}
                 can help locate pathogenic variants quickly.
               </p>
 
-              <h2 className="text-xl font-bold text-gray-900 pt-4">Multimodal input</h2>
+              <h2 className="text-xl font-bold text-zinc-900 pt-4">Multimodal input</h2>
 
-              <p className="text-base text-gray-700 leading-relaxed">
+              <p className="text-base text-zinc-700 leading-relaxed">
                 Mind supports three multimodal inputs; each can stream a live AI summary so you can align on what matters
                 while the conversation is still happening.
               </p>
@@ -235,10 +244,10 @@ export function DetailView({ onBack }: DetailViewProps) {
         )}
       </div>
 
-      <div className="p-4 bg-white border-t border-gray-100 space-y-3">
+      <div className="p-4 bg-white border-t border-zinc-100 space-y-3">
         <button
           onClick={() => setShowNotebookSheet(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium shadow-lg shadow-blue-500/20 hover:shadow-xl transition-all active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-mind/48 to-mind text-white font-medium shadow-lg shadow-mind/20 hover:shadow-xl transition-all active:scale-[0.98]"
         >
           <BookOpen className="w-5 h-5" />
           Send to Notebook
@@ -247,11 +256,11 @@ export function DetailView({ onBack }: DetailViewProps) {
 
         {activeTab === "note" && (
           <div className="relative">
-            <span className="absolute -top-2 left-3 px-1 bg-white text-xs text-gray-400">Beta</span>
+            <span className="absolute -top-2 left-3 px-1 bg-white text-xs text-zinc-400">Beta</span>
             <input
               type="text"
               placeholder="Ask about this note"
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-base text-gray-700 placeholder-gray-400"
+              className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 focus:border-mind/48 focus:outline-none text-base text-zinc-700 placeholder-zinc-400"
             />
           </div>
         )}
@@ -266,21 +275,21 @@ export function DetailView({ onBack }: DetailViewProps) {
 
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[75%] flex flex-col animate-in slide-in-from-bottom duration-300">
             <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              <div className="w-10 h-1 bg-zinc-300 rounded-full" />
             </div>
 
-            <div className="px-5 pb-4 flex items-center justify-between border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">Choose a Notebook</h3>
+            <div className="px-5 pb-4 flex items-center justify-between border-b border-zinc-100">
+              <h3 className="text-lg font-semibold text-zinc-900">Choose a Notebook</h3>
               <button
                 onClick={() => !isTransferring && setShowNotebookSheet(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-100"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-zinc-500" />
               </button>
             </div>
 
             <div className="px-5 py-3">
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+              <div className="flex items-center gap-2 text-sm text-zinc-500 mb-3">
                 <Clock className="w-4 h-4" />
                 <span>Recently used</span>
               </div>
@@ -294,21 +303,21 @@ export function DetailView({ onBack }: DetailViewProps) {
                       className={cn(
                         "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
                         selectedNotebook === notebook.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-100 bg-gray-50 hover:border-gray-200"
+                          ? "border-mind/48 bg-mind/5"
+                          : "border-zinc-100 bg-zinc-50 hover:border-zinc-200"
                       )}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-mind/48 to-mind flex items-center justify-center">
                         <BookOpen className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1 text-left">
-                        <div className="font-medium text-gray-900">{notebook.name}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="font-medium text-zinc-900">{notebook.name}</div>
+                        <div className="text-xs text-zinc-500">
                           {notebook.workspace} · {notebook.count} items
                         </div>
                       </div>
                       {selectedNotebook === notebook.id && (
-                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-mind/48 flex items-center justify-center">
                           <Check className="w-4 h-4 text-white" />
                         </div>
                       )}
@@ -318,7 +327,7 @@ export function DetailView({ onBack }: DetailViewProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pb-4">
-              <div className="text-sm text-gray-500 mb-3">All Notebooks</div>
+              <div className="text-sm text-zinc-500 mb-3">All Notebooks</div>
               <div className="space-y-2">
                 {notebooks
                   .filter((n) => !n.recent)
@@ -329,21 +338,21 @@ export function DetailView({ onBack }: DetailViewProps) {
                       className={cn(
                         "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
                         selectedNotebook === notebook.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-100 bg-gray-50 hover:border-gray-200"
+                          ? "border-mind/48 bg-mind/5"
+                          : "border-zinc-100 bg-zinc-50 hover:border-zinc-200"
                       )}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-400 to-zinc-500 flex items-center justify-center">
                         <BookOpen className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1 text-left">
-                        <div className="font-medium text-gray-900">{notebook.name}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="font-medium text-zinc-900">{notebook.name}</div>
+                        <div className="text-xs text-zinc-500">
                           {notebook.workspace} · {notebook.count} items
                         </div>
                       </div>
                       {selectedNotebook === notebook.id && (
-                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-mind/48 flex items-center justify-center">
                           <Check className="w-4 h-4 text-white" />
                         </div>
                       )}
@@ -351,19 +360,19 @@ export function DetailView({ onBack }: DetailViewProps) {
                   ))}
               </div>
 
-              <button className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-300 mt-3 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
-                  <FolderPlus className="w-5 h-5 text-gray-500" />
+              <button className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-zinc-200 hover:border-zinc-300 mt-3 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
+                  <FolderPlus className="w-5 h-5 text-zinc-500" />
                 </div>
-                <span className="font-medium text-gray-600">Create new Notebook</span>
+                <span className="font-medium text-zinc-600">Create new Notebook</span>
               </button>
             </div>
 
-            <div className="p-5 border-t border-gray-100 flex gap-3">
+            <div className="p-5 border-t border-zinc-100 flex gap-3">
               <button
                 onClick={() => setShowNotebookSheet(false)}
                 disabled={isTransferring}
-                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="flex-1 py-3 rounded-xl border border-zinc-200 text-zinc-700 font-medium hover:bg-zinc-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -373,10 +382,10 @@ export function DetailView({ onBack }: DetailViewProps) {
                 className={cn(
                   "flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2",
                   selectedNotebook && !transferComplete
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/20"
+                    ? "bg-gradient-to-r from-mind/48 to-mind text-white shadow-lg shadow-mind/20"
                     : transferComplete
-                      ? "bg-emerald-500 text-white"
-                      : "bg-gray-200 text-gray-400"
+                      ? "bg-mind/48 text-white"
+                      : "bg-zinc-200 text-zinc-400"
                 )}
               >
                 {isTransferring ? (
@@ -397,6 +406,8 @@ export function DetailView({ onBack }: DetailViewProps) {
           </div>
         </div>
       )}
+
+      <MindChatQaHistoryPanel open={qaHistoryOpen} onClose={() => setQaHistoryOpen(false)} items={qaHistoryItems} />
     </div>
   )
 }

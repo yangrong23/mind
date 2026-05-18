@@ -11,8 +11,8 @@ interface FeatureCardProps {
 
 export function FeatureCard({ category, categoryColor, title, subtitle, imageSrc }: FeatureCardProps) {
   const categoryStyles = {
-    green: "bg-emerald-50 text-emerald-600 border border-emerald-200",
-    gray: "bg-gray-100 text-gray-600 border border-gray-200",
+    green: "bg-mind/5 text-mind border border-mind/18",
+    gray: "bg-zinc-100 text-zinc-600 border border-zinc-200",
   }
 
   const categoryIcons = {
@@ -56,20 +56,20 @@ export function FeatureCard({ category, categoryColor, title, subtitle, imageSrc
         </div>
         
         {/* Title */}
-        <h3 className="text-xl font-semibold text-gray-900 mt-4 leading-tight max-w-[200px]">
+        <h3 className="text-xl font-semibold text-zinc-900 mt-4 leading-tight max-w-[200px]">
           {title}
         </h3>
         
         {/* Subtitle */}
-        <p className="text-sm text-gray-500 mt-2 max-w-[220px]">
+        <p className="text-sm text-zinc-500 mt-2 max-w-[220px]">
           {subtitle}
         </p>
       </div>
       
       {/* Arrow Button */}
       <div className="absolute bottom-5 right-5 z-10">
-        <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:bg-gray-50 transition-colors">
-          <ArrowRight className="w-5 h-5 text-gray-700" />
+        <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:bg-zinc-50 transition-colors">
+          <ArrowRight className="w-5 h-5 text-zinc-700" />
         </button>
       </div>
     </div>

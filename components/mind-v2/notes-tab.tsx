@@ -11,6 +11,9 @@ import { folderIconComponent } from "@/lib/note-folders"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
 import { MindHardwareDetail } from "@/components/mind-v2/mind-hardware-detail"
+import { isNoteProcessing, type NoteStatus } from "@/lib/note-status"
+
+export type { NoteStatus }
 
 export interface Note {
   id: number
@@ -21,7 +24,7 @@ export interface Note {
   preview: string
   /** Rich HTML body for `type: "text"`; list row uses plain `preview` */
   bodyHtml?: string
-  status: "pending" | "analyzed" | "transferred"
+  status: NoteStatus
   source?: string
   /** Multimodal badge, e.g. highlight count */
   highlightCount?: number
@@ -93,13 +96,24 @@ export const mockNotes: Note[] = [
     processingFailed: true,
   },
   {
+    id: 103,
+    title: "2026-05-13 14:49:42",
+    type: "hardware",
+    date: "May 13 · 2:49 PM",
+    duration: "0:54",
+    preview: "",
+    status: "synced",
+    source: "Mind Recorder",
+    listSubtitle: "Imported",
+  },
+  {
     id: 2,
     title: "User interview notes",
     type: "hardware",
     date: "Today 10:15 AM",
     duration: "45 min",
-    preview: "Feedback on transcription accuracy and latency…",
-    status: "pending",
+    preview: "",
+    status: "synced",
     source: "Mind Recorder",
   },
   {
@@ -174,9 +188,9 @@ function RecorderGlyph({
       aria-hidden
     >
       {pct != null ? (
-        <span className="flex w-[3px] shrink-0 flex-col justify-end border-r border-current/15 bg-zinc-200/50 py-[3px] pl-[2px] dark:bg-zinc-700/50">
+        <span className="flex w-[3px] shrink-0 flex-col justify-end border-r border-sky-200/40 bg-sky-100/35 py-[3px] pl-[2px] dark:border-sky-500/25 dark:bg-sky-950/40">
           <span
-            className="w-[2px] max-h-full min-h-[2px] rounded-[1px] bg-emerald-500 dark:bg-emerald-400"
+            className="w-[2px] max-h-full min-h-[2px] rounded-[1px] bg-gradient-to-t from-mind/75 to-mind shadow-[0_0_6px_rgba(56,189,248,0.5)]"
             style={{ height: `${pct}%` }}
           />
         </span>
@@ -185,6 +199,25 @@ function RecorderGlyph({
         <span className="h-2 w-2 rounded-full bg-current opacity-80" />
       </span>
     </span>
+  )
+}
+
+/** Mic well with the same soft bloom as the bottom nav active tab */
+function NotesRecordGlowIcon({
+  className,
+  wellClassName = "h-10 w-10",
+  iconClassName = "h-6 w-6",
+}: {
+  className?: string
+  wellClassName?: string
+  iconClassName?: string
+}) {
+  return (
+    <div className={cn("relative flex items-center justify-center rounded-2xl", wellClassName, className)}>
+      <span className={mx.navBloomOuter} aria-hidden />
+      <span className={mx.navBloomInner} aria-hidden />
+      <Mic className={cn("relative z-[1]", iconClassName, mx.navIconGlow)} strokeWidth={2.1} aria-hidden />
+    </div>
   )
 }
 
@@ -238,7 +271,7 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
   return (
     <div className="relative overflow-hidden">
       <div
-        className="absolute inset-y-0 left-0 flex w-20 items-center justify-center bg-sky-700 text-white"
+        className="absolute inset-y-0 left-0 flex w-20 items-center justify-center bg-zinc-700 text-white"
         style={{ opacity: dx > 0 ? Math.min(1, dx / 72) : 0 }}
       >
         <Library className="h-5 w-5" strokeWidth={1.65} />
@@ -320,7 +353,7 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
 function NoteThumbnailSkeleton() {
   return (
     <div
-      className="flex min-h-[100px] flex-col rounded-xl border border-stone-200/70 bg-stone-50/80 p-2.5 animate-pulse"
+      className="flex min-h-[100px] flex-col rounded-xl border border-stone-200/70 bg-white dark:bg-zinc-950 p-2.5 animate-pulse"
       aria-hidden
     >
       <div className="flex gap-2">
@@ -348,7 +381,7 @@ function NoteThumbnailCell({
 }) {
   const folder = note.folderId ? folders.find((f) => f.id === note.folderId) : undefined
 
-  if (note.status === "pending") {
+  if (isNoteProcessing(note)) {
     return <NoteThumbnailSkeleton />
   }
 
@@ -363,7 +396,7 @@ function NoteThumbnailCell({
         "group flex min-h-[100px] flex-col rounded-xl border bg-white p-2.5 text-left shadow-sm transition-all active:scale-[0.98]",
         trashView
           ? "border-zinc-200/80 opacity-90 hover:border-zinc-300"
-          : "border-stone-200/80 hover:border-sky-200/90 hover:shadow-md"
+          : "border-stone-200/80 hover:border-stone-200 hover:shadow-md"
       )}
     >
       <div className="flex min-h-0 flex-1 gap-2">
@@ -401,7 +434,7 @@ function NoteThumbnailCell({
       </div>
       {note.highlightCount != null && note.highlightCount > 0 ? (
         <div className="mt-1.5 flex justify-end border-t border-stone-100/80 pt-1.5 dark:border-zinc-800">
-          <span className="shrink-0 rounded bg-sky-100 px-1.5 py-0.5 text-[8px] font-semibold text-sky-800 dark:bg-sky-900/60 dark:text-sky-200">
+          <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-[8px] font-semibold text-mind dark:bg-stone-500 dark:text-mind/18">
             {note.highlightCount} highlights
           </span>
         </div>
@@ -487,20 +520,12 @@ export function NotesTab({
                   : undefined
               }
             >
-              <span className="relative inline-flex items-center justify-center">
-                <RecorderGlyph
-                  batteryPercent={isDeviceConnected ? deviceBatteryPercent : null}
-                  className={cn(
-                    isDeviceConnected ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"
-                  )}
-                />
-                {isDeviceConnected ? (
-                  <span
-                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-950"
-                    title="Firmware update available (demo)"
-                  />
-                ) : null}
-              </span>
+              <RecorderGlyph
+                batteryPercent={isDeviceConnected ? deviceBatteryPercent : null}
+                className={cn(
+                  isDeviceConnected ? mx.navIconGlow : "text-zinc-500 dark:text-zinc-400"
+                )}
+              />
             </button>
             <button
               type="button"
@@ -573,7 +598,7 @@ export function NotesTab({
         ) : (
           <div className="divide-y divide-zinc-100/90 px-4 dark:divide-zinc-800/80">
             {filteredNotes.map((note) =>
-              note.status === "pending" ? (
+              isNoteProcessing(note) ? (
                 <NoteCardSkeleton key={note.id} />
               ) : (
                 <SwipeableMemoCard
@@ -601,8 +626,8 @@ export function NotesTab({
         className="absolute bottom-7 right-6 z-30 flex items-center justify-center"
         aria-label="Recording options"
       >
-        <div className="flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-[0_12px_32px_-8px_rgba(14,165,233,0.45)] ring-[3px] ring-white/90 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-95 dark:ring-zinc-900/80">
-          <Mic className="h-7 w-7" strokeWidth={1.85} />
+        <div className={cn("flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full", mx.navGlassShell, mx.navEase, "hover:scale-105 active:scale-95")}>
+          <NotesRecordGlowIcon wellClassName="h-11 w-11" iconClassName="h-7 w-7" />
         </div>
       </button>
 
@@ -630,18 +655,18 @@ export function NotesTab({
                   onStartRecording()
                 }}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-xl border border-stone-200/85 py-3.5 pl-4 pr-3 text-left text-white shadow-sm",
-                  mx.brandCta
+                  "flex w-full items-center gap-3 rounded-xl border border-stone-200/85 py-3.5 pl-4 pr-3 text-left",
+                  mx.navGlassShell,
+                  mx.navEase,
+                  "hover:scale-[1.01] active:scale-[0.99]"
                 )}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                  <Mic className="h-5 w-5" strokeWidth={2.25} />
-                </div>
+                <NotesRecordGlowIcon className="shrink-0" wellClassName="h-10 w-10" iconClassName="h-5 w-5" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[15px] font-semibold">Start recording</div>
-                  <div className="text-[12px] text-white/70">Phone mic or linked Mind Recorder</div>
+                  <div className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Start recording</div>
+                  <div className="text-[12px] text-zinc-500 dark:text-zinc-400">Phone mic or linked Mind Recorder</div>
                 </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-white/50" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300 dark:text-zinc-500" />
               </button>
               <button
                 type="button"
@@ -649,12 +674,12 @@ export function NotesTab({
                   setShowRecordOptions(false)
                   setShowDeviceSheet(true)
                 }}
-                className="flex w-full items-center gap-3 rounded-xl border border-stone-200/85 bg-white py-3.5 pl-4 pr-3 text-left hover:bg-sky-50/50"
+                className="flex w-full items-center gap-3 rounded-xl border border-stone-200/85 bg-white py-3.5 pl-4 pr-3 text-left hover:bg-stone-50"
               >
                 <div
                   className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                    isDeviceConnected ? "bg-sky-600" : "bg-zinc-300 dark:bg-zinc-600"
+                    isDeviceConnected ? "bg-mind" : "bg-zinc-300 dark:bg-zinc-600"
                   )}
                 >
                   <Bluetooth className="h-5 w-5 text-white" />
@@ -713,7 +738,7 @@ export function NotesTab({
                     className={cn(
                       "flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
                       notesViewMode === "list"
-                        ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/45"
+                        ? "border-zinc-400 bg-stone-100 dark:border-zinc-500 dark:bg-zinc-800"
                         : "border-stone-200/70 bg-stone-50/70 hover:bg-stone-100/85 dark:border-zinc-700/60 dark:bg-zinc-800/35 dark:hover:bg-zinc-800/55"
                     )}
                   >
@@ -733,7 +758,7 @@ export function NotesTab({
                     className={cn(
                       "flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left transition-colors",
                       notesViewMode === "thumbnails"
-                        ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/45"
+                        ? "border-zinc-400 bg-stone-100 dark:border-zinc-500 dark:bg-zinc-800"
                         : "border-stone-200/70 bg-stone-50/70 hover:bg-stone-100/85 dark:border-zinc-700/60 dark:bg-zinc-800/35 dark:hover:bg-zinc-800/55"
                     )}
                   >
@@ -787,7 +812,7 @@ export function NotesTab({
                         setShowFilterSortSheet(false)
                         toast.message("Filter applied", { description: `${row.label} (${row.count})` })
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 pr-2 text-left hover:bg-sky-50/50"
+                      className="flex w-full items-center gap-3 rounded-xl py-3.5 pl-1 pr-2 text-left hover:bg-stone-50"
                     >
                       <row.icon className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.75} />
                       <span className="flex-1 text-[15px] text-zinc-900">
@@ -815,7 +840,7 @@ export function NotesTab({
                     const cnt = notes.filter((n) => inListScope(n) && n.folderId === f.id).length
                     const Fi = folderIconComponent(f.iconKey)
                     return (
-                      <div key={f.id} className="flex items-center gap-2 rounded-xl py-2 pl-1 pr-1 hover:bg-sky-50/50">
+                      <div key={f.id} className="flex items-center gap-2 rounded-xl py-2 pl-1 pr-1 hover:bg-stone-50">
                         <button
                           type="button"
                           onClick={() => {

@@ -32,7 +32,7 @@ function VerifiedDot({ tone }: { tone: "blue" | "gold" }) {
     <span
       className={cn(
         "inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white",
-        tone === "blue" ? "bg-sky-500" : "bg-amber-400 text-amber-950"
+        tone === "blue" ? "bg-zinc-400" : "bg-mind/38 text-mind"
       )}
       title="Verified"
       aria-label="Verified"
@@ -126,9 +126,9 @@ export function LibraryPlazaView({ onBack, onPickLibrary, subtitle }: LibraryPla
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#f2f2f2] dark:bg-zinc-950">
+    <div className="flex h-full min-h-0 flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950">
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <header className="shrink-0 bg-[#f2f2f2] px-4 pb-2 pt-3 dark:bg-zinc-950">
+        <header className="shrink-0 bg-white dark:bg-zinc-950 px-4 pb-2 pt-3 dark:bg-zinc-950">
           <div className="relative flex items-center justify-center py-1">
             <button
               type="button"
@@ -158,7 +158,7 @@ export function LibraryPlazaView({ onBack, onPickLibrary, subtitle }: LibraryPla
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search libraries"
-              className="w-full rounded-full border-0 bg-white py-2.5 pl-10 pr-4 text-[14px] text-zinc-900 shadow-sm outline-none ring-1 ring-black/[0.06] placeholder:text-zinc-400 focus:ring-2 focus:ring-emerald-200/80 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-white/10 dark:focus:ring-emerald-800/40"
+              className="w-full rounded-full border-0 bg-white py-2.5 pl-10 pr-4 text-[14px] text-zinc-900 shadow-sm outline-none ring-1 ring-black/[0.06] placeholder:text-zinc-400 focus:ring-2 focus:ring-stone-200/80 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-white/10 dark:focus:ring-zinc-200/50"
             />
           </div>
         </header>
@@ -195,7 +195,7 @@ export function LibraryPlazaView({ onBack, onPickLibrary, subtitle }: LibraryPla
         </div>
 
         {!searchRows ? (
-          <div className="sticky top-0 z-20 border-y border-zinc-100/90 bg-[#f2f2f2] py-2.5 dark:border-zinc-800/80 dark:bg-zinc-950">
+          <div className="sticky top-0 z-20 border-y border-zinc-100/90 bg-white dark:bg-zinc-950 py-2.5 dark:border-zinc-800/80 dark:bg-zinc-950">
             <div className="flex gap-4 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {PLAZA_CATEGORY_TABS.map((tab) => (
                 <button

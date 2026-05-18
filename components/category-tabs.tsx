@@ -85,18 +85,18 @@ export function CategoryTabs({ activeCategory, onCategoryChange }: CategoryTabsP
             className={`
               flex flex-col items-center px-8 py-4 rounded-xl transition-all min-w-[140px]
               ${isActive 
-                ? "bg-white border-2 border-emerald-400 shadow-sm" 
+                ? "bg-white border-2 border-mind/38 shadow-sm" 
                 : "bg-transparent border-2 border-transparent hover:bg-white/50"
               }
             `}
           >
-            <div className={`mb-2 ${isActive ? "text-emerald-600" : "text-gray-400"}`}>
+            <div className={`mb-2 ${isActive ? "text-mind" : "text-zinc-400"}`}>
               {category.icon}
             </div>
-            <span className={`text-sm font-medium ${isActive ? "text-gray-900" : "text-gray-600"}`}>
+            <span className={`text-sm font-medium ${isActive ? "text-zinc-900" : "text-zinc-600"}`}>
               {category.label}
             </span>
-            <span className="text-xs text-gray-400 mt-1 text-center">
+            <span className="text-xs text-zinc-400 mt-1 text-center">
               {category.subtitle}
             </span>
           </button>

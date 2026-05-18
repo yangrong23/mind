@@ -62,10 +62,10 @@ export function NewGallery() {
       <div className="px-8 py-6 max-w-[1400px] mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 tracking-wide">
+          <h2 className="text-2xl font-bold text-zinc-900 tracking-wide">
             CASE GALLERY
           </h2>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 text-sm font-medium">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-mind/5 border border-mind/18 text-mind text-sm font-medium">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="9" rx="1" />
               <rect x="14" y="3" width="7" height="5" rx="1" />

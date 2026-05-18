@@ -10,12 +10,12 @@ import { BottomNav, type TabType } from "./bottom-nav"
 import { NotesTab, mockNotes, type Note } from "./notes-tab"
 import { NoteDetail } from "./note-detail"
 import { KnowledgeTab } from "./knowledge-tab"
-import { KnowledgeDetail } from "./knowledge-detail"
+import { KnowledgeDetail, type LibraryChatLaunchContext } from "./knowledge-detail"
 import { AgentTab, AgentChat } from "./agent-tab"
 import { MeTab } from "./me-tab"
 import { RecordingPage } from "./recording-page"
 import type { FactoryModalKind } from "./content-factory-modals"
-import type { KBCategory } from "@/lib/mock-knowledge-bases"
+import type { KBCategory, KnowledgeBase, TeamLibrarySettings } from "@/lib/mock-knowledge-bases"
 import { MindAuthScreens } from "./mind-auth-screens"
 import {
   MIND_FONT_ZOOM_DEFAULT,
@@ -45,14 +45,23 @@ type View =
         initialLikeCount?: number
         initialCommentCount?: number
         category?: KBCategory
+        teamSettings?: TeamLibrarySettings
       }
       initialView?: "content" | "graph" | "factory"
       initialFactoryModal?: FactoryModalKind
+      initialOpenTeamInfo?: boolean
+      initialOpenContentId?: number
     }
-  | { type: "agent-chat"; agent: { id: number; name: string; description: string; avatar: string; color: string } }
+  | {
+      type: "agent-chat"
+      agent: { id: number; name: string; description: string; avatar: string; color: string }
+      initialPrompt?: string
+      initialChatMode?: "dialog" | "agent"
+      initialModelLabel?: string
+    }
   | {
       type: "kb-agent-chat"
-      context: { kbName: string; contentTitle?: string }
+      context: LibraryChatLaunchContext
       /** Preserve notebook when returning from library Chat */
       kb?: {
         name: string
@@ -71,6 +80,25 @@ type View =
       }
       initialView?: "content" | "graph" | "factory"
     }
+
+function kbToDetailPayload(kb: KnowledgeBase) {
+  return {
+    name: kb.name,
+    color: kb.color,
+    description: kb.description,
+    coverImage: kb.coverImage,
+    isPublicKb: kb.category === "subscribed",
+    contentCount: kb.count,
+    subscriberCount: kb.subscribers,
+    viewCount: kb.viewCount,
+    publicTagline: kb.publicTagline,
+    publisherName: kb.publisherName,
+    initialLikeCount: kb.category === "subscribed" ? 56 : undefined,
+    initialCommentCount: kb.category === "subscribed" ? 1 : undefined,
+    category: kb.category,
+    teamSettings: kb.teamSettings,
+  }
+}
 
 const SEED_FOLDER_WELCOME = "seed-folder-welcome"
 const SEED_FOLDER_TUTORIAL = "seed-folder-tutorial"
@@ -104,7 +132,7 @@ export function MindAppV2() {
   const [activeAccountId, setActiveAccountId] = useState<MindAccountId>("work")
   const [folders, setFolders] = useState<NoteFolder[]>([
     { id: SEED_FOLDER_WELCOME, name: "Welcome", color: "#0284c7", iconKey: "folder" },
-    { id: SEED_FOLDER_TUTORIAL, name: "Tutorial", color: "#0ea5e9", iconKey: "folder" },
+    { id: SEED_FOLDER_TUTORIAL, name: "Tutorial", color: "#0284c7", iconKey: "folder" },
   ])
   const [notes, setNotes] = useState<Note[]>(() =>
     mockNotes.map((n) =>
@@ -196,8 +224,8 @@ export function MindAppV2() {
       type: "phone",
       date: `Today ${timeStr}`,
       duration: "0:00",
-      preview: "Capture saved. Transcript and summary will appear here shortly.",
-      status: "pending",
+      preview: "",
+      status: "synced",
       source: "Mind Recorder",
       folderId: null,
     }
@@ -214,7 +242,7 @@ export function MindAppV2() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50/80 via-stone-50 to-teal-50/50 p-4 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-mind/80 via-stone-50 to-mind/50 p-4 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
       {/* Phone chrome */}
       <div
         className="relative h-[844px] w-[390px] overflow-hidden rounded-[3rem] border-[14px] border-zinc-700 bg-white font-sans shadow-2xl dark:border-zinc-600 dark:bg-zinc-900"
@@ -271,24 +299,12 @@ export function MindAppV2() {
                 )}
                 {activeTab === "knowledge" && (
                   <KnowledgeTab
-                    onKBClick={(kb) =>
+                    requireAuthThen={requireAuthThen}
+                    onKBClick={(kb, options) =>
                       setCurrentView({
                         type: "kb-detail",
-                        kb: {
-                          name: kb.name,
-                          color: kb.color,
-                          description: kb.description,
-                          coverImage: kb.coverImage,
-                          isPublicKb: kb.category === "subscribed",
-                          contentCount: kb.count,
-                          subscriberCount: kb.subscribers,
-                          viewCount: kb.viewCount,
-                          publicTagline: kb.publicTagline,
-                          publisherName: kb.publisherName,
-                          initialLikeCount: kb.category === "subscribed" ? 56 : undefined,
-                          initialCommentCount: kb.category === "subscribed" ? 1 : undefined,
-                          category: kb.category,
-                        },
+                        kb: kbToDetailPayload(kb),
+                        initialOpenTeamInfo: options?.openTeamInfo,
                       })
                     }
                   />
@@ -296,11 +312,14 @@ export function MindAppV2() {
                 {activeTab === "agent" && (
                   <AgentTab
                     requireAuthThen={requireAuthThen}
-                    onAgentChat={(agent) =>
+                    onAgentChat={(agent, options) =>
                       requireAuthThen(() =>
                         setCurrentView({
                           type: "agent-chat",
                           agent,
+                          initialPrompt: options?.initialPrompt,
+                          initialChatMode: options?.initialChatMode,
+                          initialModelLabel: options?.initialModelLabel,
                         })
                       )
                     }
@@ -337,6 +356,14 @@ export function MindAppV2() {
                   setNotes((prev) => prev.filter((n) => n.id !== noteId))
                   setCurrentView({ type: "tabs" })
                 }}
+                onNoteAnalyzed={(noteId, patch) => {
+                  setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, ...patch } : n)))
+                  setCurrentView((view) =>
+                    view.type === "note-detail" && view.note?.id === noteId
+                      ? { ...view, note: { ...view.note, ...patch } }
+                      : view
+                  )
+                }}
               />
             )}
 
@@ -356,6 +383,8 @@ export function MindAppV2() {
                 knowledgeBase={currentView.kb}
                 initialView={currentView.initialView}
                 initialFactoryModal={currentView.initialFactoryModal}
+                initialOpenTeamInfo={currentView.initialOpenTeamInfo}
+                initialOpenContentId={currentView.initialOpenContentId}
                 onAgentChat={(context) =>
                   requireAuthThen(() =>
                     setCurrentView({
@@ -374,6 +403,9 @@ export function MindAppV2() {
               <AgentChat
                 requireAuthThen={requireAuthThen}
                 agent={currentView.agent}
+                initialPrompt={currentView.initialPrompt}
+                initialChatMode={currentView.initialChatMode}
+                initialModelLabel={currentView.initialModelLabel}
                 onBack={() => setCurrentView({ type: "tabs" })}
                 onNavigateToKnowledge={navigateToKnowledgeForStudio}
               />
@@ -390,29 +422,36 @@ export function MindAppV2() {
                     ? `Grounded on “${currentView.context.contentTitle}” and your library`
                     : `Grounded on “${currentView.context.kbName}” and your library`,
                   avatar: "💬",
-                  color: "from-sky-400 to-sky-700",
+                  color: "from-mind/38 to-mind",
                 }}
                 entryHint="Route what you saved into answers and artifacts: retrieve, connect, and ship outcomes—not one-off replies disconnected from your library."
                 knowledgeContext={{
                   kbName: currentView.context.kbName,
                   contentTitle: currentView.context.contentTitle,
                 }}
+                initialPrompt={currentView.context.initialPrompt}
+                initialChatMode={currentView.context.initialChatMode}
+                initialModelLabel={currentView.context.initialModelLabel}
                 onBack={() =>
                   setCurrentView({
                     type: "kb-detail",
                     kb: currentView.kb,
                     initialView: currentView.initialView,
+                    initialOpenContentId: currentView.context.contentDocId,
                   })
                 }
-                onNavigateToKnowledge={() => {
+                onNavigateToKnowledge={(factoryKind) => {
                   setCurrentView({
                     type: "kb-detail",
                     kb: currentView.kb,
                     initialView: "factory",
+                    initialFactoryModal: factoryKind,
                   })
-                  toast.message("Studio", {
-                    description: "Pick an output type from the Studio tab.",
-                  })
+                  if (!factoryKind) {
+                    toast.message("Studio", {
+                      description: "Pick an output type from the Studio tab.",
+                    })
+                  }
                 }}
               />
             )}
@@ -428,7 +467,7 @@ export function MindAppV2() {
           {/* Full-bleed auth inside device chrome (browse first; opens from gated actions) */}
           {authOverlayOpen ? (
             <div
-              className="absolute inset-0 z-[100] flex min-h-0 flex-col bg-gradient-to-b from-sky-50/95 via-white to-stone-50/95 pt-[50px] dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950"
+              className="absolute inset-0 z-[100] flex min-h-0 flex-col bg-gradient-to-b from-mind/95 via-white to-stone-50/95 pt-[50px] dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950"
               role="dialog"
               aria-modal="true"
               aria-labelledby="mind-auth-title"

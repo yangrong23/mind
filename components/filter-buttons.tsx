@@ -32,8 +32,8 @@ export function FilterButtons({ activeFilter, onFilterChange }: FilterButtonsPro
               onClick={() => onFilterChange(filter.id)}
               className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium transition-all ${
                 isActive
-                  ? "bg-blue-500 text-white shadow-sm"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  ? "bg-mind/48 text-white shadow-sm"
+                  : "bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50"
               }`}
             >
               {Icon && <Icon className="size-4" />}
@@ -45,11 +45,11 @@ export function FilterButtons({ activeFilter, onFilterChange }: FilterButtonsPro
 
       {/* Search Input */}
       <div className="relative ml-auto">
-        <SmartSearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+        <SmartSearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
         <input
           type="text"
           placeholder="Search cases..."
-          className="pl-9 pr-4 w-[180px] h-9 bg-transparent border-0 text-sm text-gray-600 placeholder:text-gray-400 outline-none"
+          className="pl-9 pr-4 w-[180px] h-9 bg-transparent border-0 text-sm text-zinc-600 placeholder:text-zinc-400 outline-none"
         />
       </div>
     </div>

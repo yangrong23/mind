@@ -203,7 +203,7 @@ export function TextNoteEditor({ onBack, onSave, note, variant = "full" }: TextN
               contentEditable
               suppressContentEditableWarning
               className={cn(
-                "min-h-[min(50vh,320px)] w-full pb-8 text-[17px] leading-[1.75] text-zinc-900 caret-sky-600 outline-none",
+                "min-h-[min(50vh,320px)] w-full pb-8 text-[17px] leading-[1.75] text-zinc-900 caret-mind outline-none",
                 "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
                 "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
                 "[&_p]:min-h-[1.4em]"
@@ -403,7 +403,7 @@ export function TextNoteEditor({ onBack, onSave, note, variant = "full" }: TextN
           suppressContentEditableWarning
           className={cn(
             "min-h-[200px] w-full rounded-xl border border-stone-200 bg-white px-3 py-3 text-[17px] leading-relaxed text-zinc-900",
-            "outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100",
+            "outline-none focus:border-mind/28 focus:ring-2 focus:ring-mind/10",
             "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
             "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
             "[&_p]:min-h-[1.4em]"
@@ -506,7 +506,7 @@ export function TextNoteEditor({ onBack, onSave, note, variant = "full" }: TextN
 
                 <div className="px-1 pb-1 pt-3 text-xs text-zinc-500">Shared</div>
                 <button type="button" className="flex w-full items-center gap-3 rounded-xl border-t border-stone-200 px-4 py-3 hover:bg-stone-100">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mind/10">
                     <span className="text-sm font-bold text-zinc-700">M</span>
                   </div>
                   <span className="text-[15px] text-zinc-900">Mind knowledge hub</span>

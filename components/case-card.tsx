@@ -14,23 +14,23 @@ interface CaseCardProps {
 const categoryConfig: Record<CaseCategory, { icon: React.ReactNode; bgColor: string; textColor: string }> = {
   "Single Cell": {
     icon: <Microscope className="size-3.5" />,
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-500",
+    bgColor: "bg-mind/5",
+    textColor: "text-mind/48",
   },
   "Graph Maker": {
     icon: <BarChart3 className="size-3.5" />,
-    bgColor: "bg-green-50",
-    textColor: "text-green-600",
+    bgColor: "bg-mind/5",
+    textColor: "text-mind",
   },
   "Paper Write": {
     icon: <FileText className="size-3.5" />,
-    bgColor: "bg-pink-50",
-    textColor: "text-pink-500",
+    bgColor: "bg-mind/5",
+    textColor: "text-mind/48",
   },
   "Code": {
     icon: <Code className="size-3.5" />,
-    bgColor: "bg-slate-100",
-    textColor: "text-slate-600",
+    bgColor: "bg-stone-100",
+    textColor: "text-stone-600",
   },
   "Clinical": {
     icon: <Stethoscope className="size-3.5" />,
@@ -39,8 +39,8 @@ const categoryConfig: Record<CaseCategory, { icon: React.ReactNode; bgColor: str
   },
   "General": {
     icon: <Sparkles className="size-3.5" />,
-    bgColor: "bg-purple-50",
-    textColor: "text-purple-500",
+    bgColor: "bg-mind/5",
+    textColor: "text-mind/48",
   },
 }
 
@@ -54,7 +54,7 @@ export function CaseCard({ category, title, description, imagePosition }: CaseCa
 
   return (
     <div 
-      className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl border border-gray-100/80 h-[200px]"
+      className="group relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl border border-zinc-100/80 h-[200px]"
       style={{
         backgroundImage: 'url(/images/card-backgrounds.png)',
         backgroundSize: '300% 300%',
@@ -76,12 +76,12 @@ export function CaseCard({ category, title, description, imagePosition }: CaseCa
         </div>
 
         {/* Title */}
-        <h3 className="mt-3 text-[15px] font-semibold text-gray-900 leading-snug line-clamp-2 max-w-[55%]">
+        <h3 className="mt-3 text-[15px] font-semibold text-zinc-900 leading-snug line-clamp-2 max-w-[55%]">
           {title}
         </h3>
 
         {/* Description */}
-        <p className="mt-2 text-[13px] text-gray-500 leading-relaxed line-clamp-2 max-w-[50%]">
+        <p className="mt-2 text-[13px] text-zinc-500 leading-relaxed line-clamp-2 max-w-[50%]">
           {description}
         </p>
       </div>

@@ -263,7 +263,7 @@ export function StudioFactoryJobsInline({
                     <div className="flex items-center justify-end gap-2 border-t border-stone-100/90 bg-stone-50/40 px-3 py-2 dark:bg-zinc-900/40">
                       {archived ? (
                         <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 dark:text-zinc-400">
-                          <Check className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" strokeWidth={2.5} aria-hidden />
+                          <Check className="h-3.5 w-3.5 text-mind dark:text-mind/38" strokeWidth={2.5} aria-hidden />
                           In Hub
                         </span>
                       ) : (
@@ -274,7 +274,7 @@ export function StudioFactoryJobsInline({
                             "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
                             mx.accentBlue,
                             mx.accentBlueHover,
-                            "hover:bg-sky-50/90 dark:hover:bg-sky-950/40"
+                            "hover:bg-mind/90 dark:hover:bg-mind/40"
                           )}
                         >
                           <FolderInput className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />

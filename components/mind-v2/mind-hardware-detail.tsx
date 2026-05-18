@@ -100,12 +100,7 @@ export function MindHardwareDetail({
           <Row label="Serial no." value={<span className="font-mono text-[13px]">MR-8810A30270024592</span>} />
           <Row
             label="Firmware"
-            value={
-              <span className="inline-flex items-center gap-1">
-                v1.4
-                <span className="h-1.5 w-1.5 rounded-full bg-red-500" title="Update available" />
-              </span>
-            }
+            value="v1.4"
             action
             onClick={() => toast.message("Firmware", { description: "Check for updates (demo)." })}
           />

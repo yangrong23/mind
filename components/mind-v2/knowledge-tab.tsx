@@ -1,33 +1,66 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
-import { Store } from "lucide-react"
+import { Plus, Store } from "lucide-react"
 import { LibraryPlazaView } from "@/components/mind-v2/library-plaza-view"
+import { CreateLibrarySheet } from "@/components/mind-v2/create-library-sheet"
 import {
   MOCK_KNOWLEDGE_BASES,
+  knowledgeBaseFromCreate,
   type KnowledgeBase,
   type KBCategory,
 } from "@/lib/mock-knowledge-bases"
+import type { CreateLibraryPayload } from "@/components/mind-v2/create-library-sheet"
 
 export { MOCK_KNOWLEDGE_BASES, type KnowledgeBase, type KBCategory } from "@/lib/mock-knowledge-bases"
 
 interface KnowledgeTabProps {
-  onKBClick: (kb: KnowledgeBase) => void
+  onKBClick: (kb: KnowledgeBase, options?: { openTeamInfo?: boolean }) => void
+  requireAuthThen?: (run: () => void) => void
 }
 
-export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
+export function KnowledgeTab({ onKBClick, requireAuthThen }: KnowledgeTabProps) {
+  const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const [activeCategory, setActiveCategory] = useState<KBCategory>("mine")
   const [showDiscover, setShowDiscover] = useState(false)
+  const [customKBs, setCustomKBs] = useState<KnowledgeBase[]>([])
+  const [createSheetOpen, setCreateSheetOpen] = useState(false)
+  const [createCategory, setCreateCategory] = useState<"mine" | "team">("mine")
 
-  const filteredKBs = MOCK_KNOWLEDGE_BASES.filter((kb) => kb.category === activeCategory)
+  const allKBs = useMemo(() => [...MOCK_KNOWLEDGE_BASES, ...customKBs], [customKBs])
+  const filteredKBs = allKBs.filter((kb) => kb.category === activeCategory)
+  const nextKbId = useMemo(
+    () => allKBs.reduce((max, kb) => Math.max(max, kb.id), 0) + 1,
+    [allKBs]
+  )
 
   const categories = [
     { id: "mine" as KBCategory, label: "Mine" },
     { id: "team" as KBCategory, label: "Team" },
     { id: "subscribed" as KBCategory, label: "Following" },
   ]
+
+  function openCreateSheet(category: "mine" | "team") {
+    runWithAuth(() => {
+      setCreateCategory(category)
+      setCreateSheetOpen(true)
+    })
+  }
+
+  function handleCreateLibrary(payload: CreateLibraryPayload) {
+    const kb = knowledgeBaseFromCreate(payload, nextKbId)
+    setCustomKBs((prev) => [kb, ...prev])
+    toast.success("Library created", {
+      description:
+        payload.category === "team"
+          ? `“${kb.name}” is ready for your team.`
+          : `“${kb.name}” is in Mine.`,
+    })
+    onKBClick(kb, payload.category === "team" ? { openTeamInfo: true } : undefined)
+  }
 
   if (showDiscover) {
     return (
@@ -51,7 +84,7 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
             onClick={() => setShowDiscover(true)}
             className={cn(
               "flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-medium transition-colors",
-              "text-sky-800 hover:bg-sky-50/90 dark:text-sky-200 dark:hover:bg-zinc-800"
+              "text-mind hover:bg-stone-50 dark:text-mind/18 dark:hover:bg-zinc-800"
             )}
           >
             <Store className="h-4 w-4" strokeWidth={1.75} aria-hidden />
@@ -70,7 +103,7 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
               className={cn(
                 "border-b-2 py-2.5 text-center text-[14px] font-medium transition-colors",
                 activeCategory === cat.id
-                  ? "border-sky-500 text-zinc-900 dark:border-sky-400 dark:text-zinc-100"
+                  ? "border-zinc-500 text-zinc-900 dark:border-zinc-400 dark:text-zinc-100"
                   : cn("border-transparent", mx.shellMuted, "hover:text-zinc-700 dark:hover:text-zinc-300")
               )}
             >
@@ -120,13 +153,27 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
             ))}
           </div>
 
+          {(activeCategory === "mine" || activeCategory === "team") && (
+            <button
+              type="button"
+              onClick={() => openCreateSheet(activeCategory)}
+              className={cn(
+                "mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed py-3.5 text-[14px] font-medium transition-colors",
+                "border-stone-200 bg-stone-50 text-mind hover:bg-stone-50 dark:border-stone-50 dark:bg-zinc-800 dark:text-mind/10 dark:hover:bg-stone-100"
+              )}
+            >
+              <Plus className="h-5 w-5" strokeWidth={1.75} />
+              {activeCategory === "team" ? "New team library" : "New library"}
+            </button>
+          )}
+
           {activeCategory === "subscribed" && (
             <button
               type="button"
               onClick={() => setShowDiscover(true)}
               className={cn(
                 "mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed py-3.5 text-[14px] font-medium transition-colors",
-                "border-sky-200/90 bg-sky-50/50 text-sky-900 hover:bg-sky-50 dark:border-sky-800/50 dark:bg-sky-950/25 dark:text-sky-100 dark:hover:bg-sky-950/40"
+                "border-stone-200 bg-stone-50 text-mind hover:bg-stone-50 dark:border-stone-50 dark:bg-zinc-800 dark:text-mind/10 dark:hover:bg-stone-100"
               )}
             >
               <Store className="h-5 w-5" strokeWidth={1.75} />
@@ -135,6 +182,13 @@ export function KnowledgeTab({ onKBClick }: KnowledgeTabProps) {
           )}
         </div>
       </div>
+
+      <CreateLibrarySheet
+        open={createSheetOpen}
+        category={createCategory}
+        onClose={() => setCreateSheetOpen(false)}
+        onCreate={handleCreateLibrary}
+      />
     </div>
   )
 }

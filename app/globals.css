@@ -4,6 +4,14 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /**
+   * Single brand blue — fixed hue/saturation/lightness (Tailwind sky-600 equivalent).
+   * Use `mind` utilities only; vary appearance via opacity / color-mix, not other palettes.
+   */
+  --mind-blue: oklch(0.588 0.158 241.966);
+  --mind-page-bg: color-mix(in oklch, var(--mind-blue) 6%, white);
+  --mind-hero-bg: color-mix(in oklch, var(--mind-blue) 8%, white);
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -41,6 +49,9 @@
 }
 
 .dark {
+  --mind-page-bg: color-mix(in oklch, var(--mind-blue) 12%, oklch(0.145 0 0));
+  --mind-hero-bg: color-mix(in oklch, var(--mind-blue) 14%, oklch(0.145 0 0));
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
@@ -78,6 +89,7 @@
 @theme inline {
   --font-sans: 'Geist', 'Geist Fallback';
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-mind: var(--mind-blue);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -122,5 +134,71 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@keyframes mind-orb-pulse {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes mind-orb-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.03);
+  }
+}
+
+@keyframes mind-orb-shimmer {
+  0% {
+    transform: rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg);
+    opacity: 0.7;
+  }
+}
+
+@keyframes mind-orb-ring {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.65;
+  }
+}
+
+@keyframes mind-label-fade {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }

@@ -8,7 +8,7 @@ interface PhoneFrameProps {
 
 export function PhoneFrame({ children }: PhoneFrameProps) {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 p-4">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-stone-100 to-stone-200 p-4">
       <div className="relative w-[375px] h-[812px] bg-black rounded-[55px] p-3 shadow-2xl">
         {/* Dynamic Island */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[120px] h-[35px] bg-black rounded-full z-50" />

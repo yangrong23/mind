@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { MindChatThinking } from "@/components/mind-v2/mind-chat-thinking"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
@@ -39,7 +40,9 @@ import {
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { CreateFolderSheet } from "./create-folder-sheet"
 import { SocialShareRow } from "./social-share-row"
+import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
 import type { Note } from "./notes-tab"
+import { isNoteAwaitingGenerate } from "@/lib/note-status"
 import { toast } from "sonner"
 import type { NoteFolder } from "@/lib/note-folders"
 import type { KBCategory } from "@/lib/mock-knowledge-bases"
@@ -71,6 +74,65 @@ interface NoteDetailProps {
   onAssignNoteToNewFolder?: (noteId: number, folder: NoteFolder) => void
   /** Move current note to trash and leave detail */
   onTrashNote?: (noteId: number) => void
+  /** After user taps Generate on a synced-but-unprocessed recording */
+  onNoteAnalyzed?: (noteId: number, patch: Partial<Note>) => void
+}
+
+const GENERATION_MS = 4200
+
+function playerDurationLabels(duration?: string) {
+  if (!duration || duration === "0:00") return { elapsed: "00:00:00", total: "00:00:54" }
+  if (/min/i.test(duration)) return { elapsed: "00:00:00", total: "00:23:45" }
+  if (/^\d+:\d{2}$/.test(duration)) {
+    const [m, s] = duration.split(":")
+    return { elapsed: "00:00:00", total: `00:${String(m).padStart(2, "0")}:${s}` }
+  }
+  return { elapsed: "00:00:00", total: "00:00:54" }
+}
+
+function noteCapturedHeading(note: Note | null | undefined) {
+  if (!note) return { dateLine: "2026-05-13", timeLine: "14:49:42" }
+  const raw = note.date.replace(/^Today\s+/i, "").trim()
+  const parts = raw.split(/\s+/)
+  if (parts.length >= 2 && /\d{1,2}:\d{2}/.test(parts[parts.length - 1] ?? "")) {
+    return { dateLine: parts.slice(0, -1).join(" ") || note.date, timeLine: parts[parts.length - 1]! }
+  }
+  return { dateLine: note.date, timeLine: note.duration ?? "" }
+}
+
+function NoteGenerationEmpty({
+  hint,
+  icon: Icon,
+}: {
+  hint: string
+  icon: typeof MessageSquare
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
+      <Icon className="h-16 w-16 text-stone-200" strokeWidth={1.25} aria-hidden />
+      <p className="mt-6 text-[17px] font-medium text-zinc-400">Notes can be generated</p>
+      <p className="mt-2 max-w-[240px] text-[14px] leading-relaxed text-zinc-400">{hint}</p>
+    </div>
+  )
+}
+
+function NoteGenerateBar({ onGenerate, disabled }: { onGenerate: () => void; disabled?: boolean }) {
+  return (
+    <div className="border-t border-stone-100 bg-white px-4 pb-4 pt-3">
+      <button
+        type="button"
+        onClick={onGenerate}
+        disabled={disabled}
+        className={cn(
+          "flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-900 py-4 text-[17px] font-semibold shadow-lg shadow-zinc-900/20 transition-opacity",
+          disabled && "pointer-events-none opacity-60"
+        )}
+      >
+        <Sparkles className="h-5 w-5 shrink-0 text-mind/38" strokeWidth={2} aria-hidden />
+        <span className="bg-gradient-to-r from-zinc-200 via-zinc-300 to-zinc-400 bg-clip-text text-transparent">Generate</span>
+      </button>
+    </div>
+  )
 }
 
 const TRANSCRIPT_BLOCKS = [
@@ -107,7 +169,14 @@ const MIND_INSIGHT_CARDS = [
   },
 ] as const
 
-export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFolder, onTrashNote }: NoteDetailProps) {
+export function NoteDetail({
+  note,
+  onBack,
+  onMovedToLibrary,
+  onAssignNoteToNewFolder,
+  onTrashNote,
+  onNoteAnalyzed,
+}: NoteDetailProps) {
   /** Source = transcript / raw; Note = summary and marks */
   const [segment, setSegment] = useState<"source" | "note">("note")
   const [noteSub, setNoteSub] = useState<"marks" | "summary">("summary")
@@ -145,6 +214,18 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
   const [showTemplatePage, setShowTemplatePage] = useState(false)
   const [templateTab, setTemplateTab] = useState<"mine" | "recommend" | "explore">("mine")
   const [askDraft, setAskDraft] = useState("")
+  const [noteChatMode, setNoteChatMode] = useState<"dialog" | "agent">("dialog")
+  const [noteModelLabel, setNoteModelLabel] = useState("DS Fast")
+  const [noteVoiceOn, setNoteVoiceOn] = useState(false)
+  const [generated, setGenerated] = useState(() => !note || !isNoteAwaitingGenerate(note))
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [thinkingPhase, setThinkingPhase] = useState(0)
+
+  const needsManualGenerate = note != null && isNoteAwaitingGenerate(note) && !generated
+  const showGenerationThinking = needsManualGenerate && isGenerating
+  const showGenerationEmpty = needsManualGenerate && !isGenerating
+  const contentReady = !needsManualGenerate
+  const playerTimes = playerDurationLabels(note?.duration)
 
   const openMoveToLibrary = () => {
     setShowToolsMenu(false)
@@ -199,6 +280,43 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
         setSelectedKB(null)
       }, 900)
     }, 1200)
+  }
+
+  useEffect(() => {
+    setGenerated(note == null || !isNoteAwaitingGenerate(note))
+    setIsGenerating(false)
+    setThinkingPhase(0)
+    if (note != null && isNoteAwaitingGenerate(note)) setSegment("source")
+  }, [note?.id, note?.status])
+
+  useEffect(() => {
+    if (!isGenerating) return
+    const phaseId = window.setInterval(() => {
+      setThinkingPhase((p) => Math.min(p + 1, 2))
+    }, 1400)
+    const doneId = window.setTimeout(() => {
+      setIsGenerating(false)
+      setGenerated(true)
+      if (note) {
+        onNoteAnalyzed?.(note.id, {
+          status: "analyzed",
+          preview: `${TRANSCRIPT_BLOCKS[0].text.slice(0, 72)}…`,
+          title: note.title === "New recording" ? "Synced recording" : note.title,
+          duration: !note.duration || note.duration === "0:00" ? "1 min" : note.duration,
+        })
+      }
+      toast.success("Generation complete", { description: "Transcript and summary are ready." })
+    }, GENERATION_MS)
+    return () => {
+      window.clearInterval(phaseId)
+      window.clearTimeout(doneId)
+    }
+  }, [isGenerating, note, onNoteAnalyzed])
+
+  const handleStartGeneration = () => {
+    if (!needsManualGenerate || isGenerating) return
+    setThinkingPhase(0)
+    setIsGenerating(true)
   }
 
   useEffect(() => {
@@ -303,15 +421,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   />
                 )
               })}
-              <div
-                className="pointer-events-none absolute bottom-0 top-0 w-0.5 rounded-full bg-zinc-500 shadow-[0_0_12px_rgba(63,63,70,0.4)]"
-                style={{ left: `calc(${playheadPct * 100}% - 1px)` }}
-                aria-hidden
-              />
             </div>
-            <div className="mb-4 flex items-center justify-between text-sm">
-              <span className="font-medium text-zinc-700">07:23</span>
-              <span className="text-zinc-400">23:45</span>
+            <div className="mb-4 flex items-center justify-between font-mono text-sm tabular-nums">
+              <span className="font-medium text-zinc-700">{playerTimes.elapsed}</span>
+              <span className="text-zinc-400">{playerTimes.total}</span>
             </div>
             <div className="flex items-center justify-center gap-4">
               <button
@@ -345,11 +458,19 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
               </button>
             </div>
           </div>
-          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="mx-auto w-full min-w-0 max-w-prose px-5 py-5">
-              <p className="mb-6 text-center text-[12px] leading-relaxed text-zinc-400">
-                View and play the recording here; the transcript highlights track playback (demo).
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="shrink-0 px-5 pt-2">
+              <p className="text-center text-[15px] font-semibold text-zinc-900">
+                <span className="inline-block border-b-2 border-zinc-900 pb-1">Transcript</span>
               </p>
+            </div>
+            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mx-auto w-full min-w-0 max-w-prose px-5 py-5">
+              {showGenerationThinking ? (
+                <MindChatThinking phase={thinkingPhase} compact className="py-8" />
+              ) : showGenerationEmpty ? (
+                <NoteGenerationEmpty hint="Transcript will appear here after generation" icon={MessageSquare} />
+              ) : (
               <div className="space-y-6">
                 {TRANSCRIPT_BLOCKS.map((block, i) => (
                   <div key={i} className="space-y-1.5">
@@ -365,6 +486,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   </div>
                 ))}
               </div>
+              )}
+            </div>
             </div>
           </div>
         </div>
@@ -412,7 +535,15 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
           </div>
 
           {noteSub === "marks" ? (
-            <div className="mx-auto w-full min-w-0 max-w-prose flex-1 overflow-y-auto overflow-x-hidden px-5 pb-8 pt-5">
+            <div className="mx-auto flex w-full min-w-0 max-w-prose flex-1 flex-col overflow-y-auto overflow-x-hidden px-5 pb-8 pt-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {!contentReady ? (
+                showGenerationThinking ? (
+                  <MindChatThinking phase={thinkingPhase} compact className="flex-1 py-8" />
+                ) : (
+                  <NoteGenerationEmpty hint="Marks will appear here after generation" icon={Flag} />
+                )
+              ) : (
+                <>
               <p className="text-center text-[12px] leading-relaxed text-zinc-400">
                 AI-generated content for reference only
               </p>
@@ -438,7 +569,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                     </p>
                     <button
                       type="button"
-                      className="mt-2.5 text-[14px] font-medium text-sky-600 hover:text-sky-700"
+                      className="mt-2.5 text-[14px] font-medium text-mind hover:text-mind"
                       onClick={() => setMarkExpand((p) => ({ ...p, [idx]: !p[idx] }))}
                     >
                       {markExpand[idx] ? "Show less" : "Show more"}
@@ -446,9 +577,32 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   </article>
                 ))}
               </div>
+                </>
+              )}
             </div>
           ) : (
-            <div className="mx-auto w-full min-w-0 max-w-prose flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-4 pb-8 pt-4 sm:space-y-6 sm:px-5 sm:pb-10 sm:pt-5">
+            <div className="mx-auto flex w-full min-w-0 max-w-prose flex-1 flex-col overflow-y-auto overflow-x-hidden px-4 pb-8 pt-4 sm:px-5 sm:pb-10 sm:pt-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {!contentReady ? (
+                showGenerationThinking ? (
+                  <MindChatThinking phase={thinkingPhase} compact className="flex-1 py-8" />
+                ) : (
+                  <>
+                    {(() => {
+                      const { dateLine, timeLine } = noteCapturedHeading(note)
+                      return (
+                        <header className="shrink-0 pb-2 pt-2 text-center">
+                          <p className="text-[28px] font-bold leading-tight tracking-tight text-zinc-900">{dateLine}</p>
+                          {timeLine ? (
+                            <p className="mt-1 text-[28px] font-bold leading-tight tracking-tight text-zinc-900">{timeLine}</p>
+                          ) : null}
+                        </header>
+                      )
+                    })()}
+                    <NoteGenerationEmpty hint="Summary will appear here after generation" icon={FileText} />
+                  </>
+                )
+              ) : (
+                <div className="space-y-5 sm:space-y-6">
               <p className="text-center text-[11px] leading-relaxed text-zinc-400 sm:text-[12px]">
                 AI-generated content for reference only
               </p>
@@ -524,15 +678,15 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                 <p className="min-w-0 break-words text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">Thanks for using Mind—enjoy exploring.</p>
                 <div className="-mx-1 overflow-x-auto pb-0.5 pt-0.5">
                   <div className="flex min-w-max items-stretch gap-1.5 px-1 sm:gap-2">
-                    <span className="shrink-0 self-center rounded-xl bg-sky-100 px-2.5 py-2 text-[11px] font-semibold leading-snug text-sky-900 sm:px-3 sm:py-2.5 sm:text-[12px]">
+                    <span className="shrink-0 self-center rounded-xl bg-stone-100 px-2.5 py-2 text-[11px] font-semibold leading-snug text-mind sm:px-3 sm:py-2.5 sm:text-[12px]">
                       How to use Mind?
                     </span>
                     {[
-                      { label: "Recording", bg: "bg-sky-100 text-sky-900" },
-                      { label: "Multimodal input", bg: "bg-cyan-100 text-cyan-900" },
-                      { label: "Files UI", bg: "bg-emerald-100 text-emerald-900" },
-                      { label: "Ask Mind", bg: "bg-blue-100 text-blue-900" },
-                      { label: "Export & share", bg: "bg-indigo-100 text-indigo-900" },
+                      { label: "Recording", bg: "bg-stone-100 text-mind" },
+                      { label: "Multimodal input", bg: "bg-stone-100 text-mind" },
+                      { label: "Files UI", bg: "bg-stone-100 text-mind" },
+                      { label: "Ask Mind", bg: "bg-stone-100 text-mind" },
+                      { label: "Export & share", bg: "bg-stone-100 text-mind" },
                     ].map((b) => (
                       <span
                         key={b.label}
@@ -554,7 +708,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   onClick={() => setSummaryFeedback((v) => (v === "up" ? null : "up"))}
                   className={cn(
                     "flex min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 rounded-xl border-2 border-stone-200 bg-white px-2 py-2.5 text-[13px] font-medium text-zinc-700 transition-colors sm:gap-2 sm:py-3 sm:text-[14px]",
-                    summaryFeedback === "up" && "border-sky-400 bg-sky-50 text-sky-900"
+                    summaryFeedback === "up" && "border-zinc-400 bg-stone-50 text-mind"
                   )}
                 >
                   <ThumbsUp className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={1.85} aria-hidden />
@@ -575,7 +729,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
 
               <section className="min-w-0 space-y-2 sm:space-y-2.5">
                 <h3 className="flex items-center gap-1.5 text-[14px] font-semibold text-zinc-900 sm:gap-2 sm:text-[15px]">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-sky-600 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-mind sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
                   Mind insights
                 </h3>
                 <div className="space-y-2 sm:space-y-2.5">
@@ -596,6 +750,8 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   ))}
                 </div>
               </section>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -694,38 +850,50 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
       )}
 
       {/* Bottom bar */}
-      <div className="p-4 border-t border-stone-100 space-y-3">
+      {needsManualGenerate ? (
+        showGenerationEmpty ? (
+          <NoteGenerateBar onGenerate={handleStartGeneration} />
+        ) : (
+          <div className="h-2 shrink-0 bg-white" aria-hidden />
+        )
+      ) : (
+      <div className="border-t border-stone-100 p-3">
         <div className="relative">
-          <span className="absolute left-3 top-0 z-10 -translate-y-1/2 rounded bg-sky-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-800">
+          <span className="absolute left-3 top-0 z-10 -translate-y-1/2 rounded bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-mind">
             Beta
           </span>
-          <input
-            type="text"
+          <MindChatComposer
+            variant="thread"
+            className="max-w-none"
             value={askDraft}
-            onChange={(e) => setAskDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                submitAskAboutNote()
-              }
-            }}
+            onChange={setAskDraft}
+            onSubmit={submitAskAboutNote}
             placeholder="Ask about this note…"
-            className="w-full rounded-xl border border-sky-200/90 bg-white px-4 py-3 pr-12 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+            chatMode={noteChatMode}
+            onChatModeChange={setNoteChatMode}
+            modelLabel={noteModelLabel}
+            onModelLabelChange={setNoteModelLabel}
+            voiceOn={noteVoiceOn}
+            onVoiceToggle={() => {
+              setNoteVoiceOn((prev) => {
+                const next = !prev
+                toast.message(next ? "Voice input" : "Voice input off", {
+                  description: next ? "Demo: tap again to stop." : "Demo: no audio sent.",
+                })
+                return next
+              })
+            }}
+            onUploadClick={() =>
+              toast.message("Upload file", { description: "Demo — pick a file from your device." })
+            }
           />
-          <button
-            type="button"
-            onClick={submitAskAboutNote}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-500 hover:bg-sky-50 hover:text-sky-700"
-            aria-label="Send question"
-          >
-            <MessageSquare className="w-5 h-5" />
-          </button>
         </div>
       </div>
+      )}
 
       {/* Template picker (fullscreen) */}
       {showTemplatePage && (
-        <div className="absolute inset-0 z-50 flex flex-col bg-stone-50 animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
+        <div className="absolute inset-0 z-50 flex flex-col bg-white dark:bg-zinc-950 animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
           {/* Top bar */}
           <div className="flex items-center justify-between border-b border-stone-100 bg-white px-4 py-3">
             <button
@@ -789,14 +957,14 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                     }
                     className={cn(
                       "relative w-full max-w-[220px] rounded-xl border bg-white p-4 text-left shadow-sm",
-                      selectedTemplate?.id === "smart-summary" ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
+                      selectedTemplate?.id === "smart-summary" ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
                     )}
                   >
-                    <span className="absolute right-2 top-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                    <span className="absolute right-2 top-2 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-mind">
                       Last used
                     </span>
                     <div className="mb-2 flex items-start justify-between gap-2 pr-16">
-                      <span className="text-sky-600" aria-hidden>
+                      <span className="text-mind" aria-hidden>
                         ✦✦
                       </span>
                       <span className="text-zinc-400" aria-hidden>
@@ -825,10 +993,10 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       }
                       className={cn(
                         "w-full max-w-[200px] rounded-xl border bg-white p-4 text-left shadow-sm",
-                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
                       )}
                     >
-                      <div className="mb-2 flex items-center gap-2 text-sky-600">
+                      <div className="mb-2 flex items-center gap-2 text-mind">
                         <Pencil className="h-4 w-4" />
                       </div>
                       <div className="mb-1 font-semibold text-zinc-900">{t.name}</div>
@@ -898,7 +1066,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
                       )}
                     >
                       <div className={cn(
@@ -950,7 +1118,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
                       )}
                     >
                       <div className={cn(
@@ -987,20 +1155,20 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                 </div>
                 <div className="grid grid-cols-2 gap-3 mb-8">
                   {[
-                    { id: "smart-summary-2", name: "Smart summary", desc: "Adaptive summaries across contexts", icon: "purple-star", author: "Plaud" },
-                    { id: "reasoning", name: "Reasoning recap", desc: "Structured recap of the essentials", icon: "purple-connect", author: "Plaud" },
+                    { id: "smart-summary-2", name: "Smart summary", desc: "Adaptive summaries across contexts", icon: "sky-star", author: "Plaud" },
+                    { id: "reasoning", name: "Reasoning recap", desc: "Structured recap of the essentials", icon: "sky-connect", author: "Plaud" },
                   ].map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
                       )}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center">
-                          {t.icon === "purple-star" ? (
+                          {t.icon === "sky-star" ? (
                             <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" />
                             </svg>
@@ -1035,20 +1203,20 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: "consultation", name: "Consultation Q&A", desc: "Capture Q&A and actions from consult calls", icon: "orange-doc", author: "Plaud" },
-                    { id: "discussion", name: "Discussion digest", desc: "Discussion summary with clear next steps", icon: "orange-people", author: "Plaud" },
+                    { id: "consultation", name: "Consultation Q&A", desc: "Capture Q&A and actions from consult calls", icon: "sky-doc", author: "Plaud" },
+                    { id: "discussion", name: "Discussion digest", desc: "Discussion summary with clear next steps", icon: "sky-people", author: "Plaud" },
                   ].map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
                       className={cn(
                         "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-sky-500 ring-1 ring-sky-100" : "border-stone-200"
+                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
                       )}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center">
-                          {t.icon === "orange-doc" ? (
+                          {t.icon === "sky-doc" ? (
                             <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <rect x="3" y="3" width="18" height="18" rx="2" />
                               <line x1="9" y1="9" x2="15" y2="9" />
@@ -1139,11 +1307,11 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                   }}
                   className="flex w-full items-center gap-3 border-b border-stone-100 py-4 text-left"
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-sky-700 text-white shadow-sm">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-zinc-600 to-zinc-700 text-white shadow-sm">
                     <ImageIcon className="h-5 w-5" strokeWidth={1.75} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="bg-gradient-to-r from-teal-600 to-emerald-600 bg-clip-text text-[16px] font-semibold text-transparent">
+                    <div className="bg-gradient-to-r from-mind to-mind bg-clip-text text-[16px] font-semibold text-transparent">
                       Photo to template
                     </div>
                     <p className="mt-0.5 text-[13px] leading-snug text-zinc-500">
@@ -1567,7 +1735,7 @@ export function NoteDetail({ note, onBack, onMovedToLibrary, onAssignNoteToNewFo
                       "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
                       selectedKB === kb.id
                         ? "border-zinc-500 bg-zinc-50/60"
-                        : "border-stone-200 bg-stone-50/80 hover:border-zinc-200/80"
+                        : "border-stone-200 bg-white dark:bg-zinc-950 hover:border-zinc-200/80"
                     )}
                   >
                     <div className={cn(

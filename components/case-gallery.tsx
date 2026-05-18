@@ -70,8 +70,8 @@ export function CaseGallery() {
     <div className="space-y-6 max-w-[1200px]">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-[32px] font-bold text-gray-900 tracking-tight">Case Gallery</h1>
-        <p className="text-gray-500 text-[15px]">
+        <h1 className="text-[32px] font-bold text-zinc-900 tracking-tight">Case Gallery</h1>
+        <p className="text-zinc-500 text-[15px]">
           Explore real-world research workflows powered by MedrixAI
         </p>
       </div>
@@ -96,7 +96,7 @@ export function CaseGallery() {
       <div className="flex justify-center pt-4">
         <Button
           variant="outline"
-          className="px-8 py-2 rounded-full text-gray-600 border-gray-200 hover:bg-gray-50"
+          className="px-8 py-2 rounded-full text-zinc-600 border-zinc-200 hover:bg-zinc-50"
         >
           Load more cases...
           <ChevronDown className="size-4 ml-2" />

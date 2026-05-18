@@ -31,25 +31,31 @@ export function MindDevicesSheet({
   if (!open) return null
 
   return (
-    <div className={cn("absolute inset-0", zOverlayClass)}>
-      <div className="absolute inset-0 bg-zinc-900/25" onClick={onClose} />
-      <div className="absolute bottom-0 left-0 right-0 flex max-h-[min(92vh,calc(100dvh-24px))] animate-in slide-in-from-bottom flex-col rounded-t-3xl bg-white duration-300">
-        <div className="flex justify-center pb-2 pt-3">
-          <div className="h-1 w-10 rounded-full bg-stone-400" />
+    <div className={cn("absolute inset-0 flex min-h-0 flex-col", zOverlayClass)}>
+      <button
+        type="button"
+        className="absolute inset-0 bg-zinc-900/25"
+        aria-label="Close devices"
+        onClick={onClose}
+      />
+      <div className="relative z-10 mt-auto flex min-h-0 max-h-[min(92%,calc(100%-8px))] w-full animate-in slide-in-from-bottom flex-col rounded-t-3xl bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.12)] duration-300 dark:bg-zinc-900">
+        <div className="sticky top-0 z-10 shrink-0 rounded-t-3xl bg-white dark:bg-zinc-900">
+          <div className="flex justify-center pb-2 pt-3">
+            <div className="h-1 w-10 rounded-full bg-stone-400 dark:bg-zinc-600" />
+          </div>
+          <div className="flex items-center justify-between border-b border-stone-100/90 px-5 pb-3 dark:border-zinc-800">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Devices</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stone-200 dark:hover:bg-zinc-800"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
+            </button>
+          </div>
         </div>
-        <div className="flex shrink-0 items-center justify-between px-5 pb-4">
-          <h3 className="text-lg font-semibold text-zinc-900">Devices</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stone-200"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5 text-zinc-600" />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="px-5 pb-4">
           <div
             role={isDeviceConnected && onConnectedDeviceOpen ? "button" : undefined}
@@ -79,7 +85,7 @@ export function MindDevicesSheet({
               <div
                 className={cn(
                   "flex h-14 w-14 items-center justify-center rounded-2xl",
-                  isDeviceConnected ? "bg-gradient-to-br from-sky-600 to-sky-800" : "bg-stone-400"
+                  isDeviceConnected ? "bg-gradient-to-br from-mind to-mind" : "bg-stone-400"
                 )}
               >
                 <Bluetooth className="h-7 w-7 text-white" />

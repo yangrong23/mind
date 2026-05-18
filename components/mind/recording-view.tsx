@@ -99,7 +99,7 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
           {bookmarks.map((bm, i) => (
             <div 
               key={i}
-              className="absolute top-0 w-1 h-2 bg-yellow-400 rounded-b"
+              className="absolute top-0 w-1 h-2 bg-mind/38 rounded-b"
               style={{ left: `${(bm / Math.max(time, 1)) * 100}%` }}
             />
           ))}
@@ -111,10 +111,10 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
                 className={cn(
                   "w-[4px] rounded-full transition-all duration-100",
                   i < waveHeights.length * 0.3 
-                    ? "bg-gradient-to-t from-cyan-400 to-cyan-300"
+                    ? "bg-gradient-to-t from-mind/38 to-mind/28"
                     : i < waveHeights.length * 0.6
-                    ? "bg-gradient-to-t from-blue-400 to-blue-300"
-                    : "bg-gradient-to-t from-purple-400 to-purple-300"
+                    ? "bg-gradient-to-t from-mind/38 to-mind/28"
+                    : "bg-gradient-to-t from-mind/38 to-mind/28"
                 )}
                 style={{ 
                   height: isPaused ? "20%" : `${height}%`,
@@ -128,8 +128,8 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
       {/* Live transcript */}
       <div className="flex-1 mx-4 mb-4 bg-white/5 backdrop-blur rounded-2xl p-4 overflow-y-auto">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-          <span className="text-emerald-400 text-xs font-medium">AI transcribing live</span>
+          <div className="w-2 h-2 bg-mind/38 rounded-full animate-pulse" />
+          <span className="text-mind/38 text-xs font-medium">AI transcribing live</span>
         </div>
         
         <div className="text-white/90 text-[15px] leading-relaxed">
@@ -137,14 +137,14 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
             seg.highlight ? (
               <span 
                 key={i}
-                className="relative inline-block mx-1 px-2 py-0.5 bg-blue-500/30 text-blue-300 rounded cursor-pointer hover:bg-blue-500/50 transition-colors"
+                className="relative inline-block mx-1 px-2 py-0.5 bg-mind/30 text-mind/28 rounded cursor-pointer hover:bg-mind/50 transition-colors"
                 onClick={() => setShowTooltip(showTooltip === seg.text ? null : seg.text)}
               >
                 {seg.text}
                 {showTooltip === seg.text && seg.tooltip && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-white rounded-lg shadow-xl text-gray-800 text-xs w-48 z-10">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-white rounded-lg shadow-xl text-zinc-800 text-xs w-48 z-10">
                     <div className="font-semibold mb-1">{seg.text}</div>
-                    <div className="text-gray-500">{seg.tooltip}</div>
+                    <div className="text-zinc-500">{seg.tooltip}</div>
                     <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45" />
                   </div>
                 )}
@@ -165,7 +165,7 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
           onClick={addBookmark}
           className="w-14 h-14 bg-white/10 backdrop-blur rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
         >
-          <Bookmark className="w-6 h-6 text-yellow-400" />
+          <Bookmark className="w-6 h-6 text-mind/38" />
         </button>
         
         <button 
@@ -173,9 +173,9 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
           className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 transition-transform"
         >
           {isPaused ? (
-            <div className="w-0 h-0 border-t-8 border-b-8 border-l-12 border-transparent border-l-gray-800 ml-1" />
+            <div className="w-0 h-0 border-t-8 border-b-8 border-l-12 border-transparent border-l-zinc-800 ml-1" />
           ) : (
-            <Pause className="w-7 h-7 text-gray-800" />
+            <Pause className="w-7 h-7 text-zinc-800" />
           )}
         </button>
         

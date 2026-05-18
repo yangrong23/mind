@@ -31,7 +31,7 @@ function PanelChrome({
   darkHeader?: boolean
 }) {
   return (
-    <div className="absolute inset-0 z-[56] flex flex-col bg-zinc-50 animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
+    <div className="absolute inset-0 z-[56] flex flex-col bg-white dark:bg-zinc-950 animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
       <div
         className={cn(
           "flex shrink-0 items-center gap-2 px-4 py-3",
@@ -87,17 +87,17 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
           </div>
           <div className="mt-3 flex flex-wrap gap-4 text-xs text-zinc-600 dark:text-zinc-400">
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" aria-hidden />
+              <span className="h-2.5 w-2.5 rounded-sm bg-mind" aria-hidden />
               Knowledge base
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" aria-hidden />
+              <span className="h-2.5 w-2.5 rounded-sm bg-mind/38" aria-hidden />
               Notes
             </span>
           </div>
           <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-            <div className="h-full bg-emerald-500" style={{ width: `${kbPct}%` }} />
-            <div className="h-full bg-blue-500" style={{ width: `${notesPct}%` }} />
+            <div className="h-full bg-mind" style={{ width: `${kbPct}%` }} />
+            <div className="h-full bg-mind/38" style={{ width: `${notesPct}%` }} />
           </div>
         </div>
 
@@ -124,7 +124,7 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
               }
               className="flex w-full items-start gap-3 rounded-2xl border border-stone-200/90 bg-white p-4 text-left shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-stone-50 text-mind dark:bg-stone-50 dark:text-mind/28">
                 <Gift className="h-5 w-5" strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
@@ -151,7 +151,7 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
               }
               className="flex w-full items-start gap-3 rounded-2xl border border-stone-200/90 bg-white p-4 text-left shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-stone-50 text-mind dark:bg-stone-50 dark:text-mind/28">
                 <UserPlus className="h-5 w-5" strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
@@ -252,7 +252,7 @@ function DocMetaBar({
         onClick={onDownload}
         className={cn(
           "inline-flex items-center gap-1 font-medium",
-          dark ? "text-emerald-300" : cn("text-emerald-700", mx.citationLink)
+          dark ? "text-mind/28" : cn("text-mind", mx.citationLink)
         )}
       >
         <Download className="h-3.5 w-3.5" />
@@ -392,7 +392,7 @@ export function MePrivacySettingsPanel({
               }}
               className={cn(
                 "relative mt-0.5 h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                personalized ? "bg-emerald-600" : cn(mx.toggleTrackOff)
+                personalized ? "bg-mind" : cn(mx.toggleTrackOff)
               )}
             >
               <span
@@ -438,7 +438,7 @@ export function MePrivacySettingsPanel({
               View detailed{" "}
               <button
                 type="button"
-                className="font-medium text-emerald-600 underline decoration-emerald-600/30 underline-offset-2 dark:text-emerald-400"
+                className="font-medium text-mind underline decoration-mind/30 underline-offset-2 dark:text-mind/38"
                 onClick={() => toast.message(perm.hint, { description: "Policy excerpt would open here (demo)." })}
               >
                 {perm.hint}
@@ -465,7 +465,7 @@ export function MePrivacySettingsPanel({
               }}
               className={cn(
                 "relative mt-0.5 h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                crashReportsEnabled ? "bg-emerald-600" : cn(mx.toggleTrackOff)
+                crashReportsEnabled ? "bg-mind" : cn(mx.toggleTrackOff)
               )}
             >
               <span

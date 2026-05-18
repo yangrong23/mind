@@ -98,6 +98,103 @@ function ModalFrame({
   )
 }
 
+/** 2-col option cards — same footprint as the Quiz settings sheet grid cells */
+const FACTORY_OPTION_CARD_CLASS =
+  "relative flex w-full min-h-[5.25rem] flex-col rounded-xl border p-3.5 text-left transition-colors"
+const FACTORY_OPTION_GRID_CLASS = "grid grid-cols-2 gap-2.5"
+const FACTORY_TOPIC_TEXTAREA_ROWS = 9
+const FACTORY_TOPIC_TEXTAREA_CLASS =
+  "w-full resize-none rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[14px] leading-relaxed text-zinc-800 placeholder:text-zinc-400"
+
+function FactoryOptionCard({
+  tone,
+  selected,
+  onClick,
+  title,
+  description,
+}: {
+  tone: FactoryModalKind
+  selected: boolean
+  onClick: () => void
+  title: string
+  description: string
+}) {
+  const tc = mx.factoryTone[tone]
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        FACTORY_OPTION_CARD_CLASS,
+        selected ? tc.cardOn : cn("border-stone-200/90 dark:border-zinc-700/90", mx.surfaceTint, tc.softHover)
+      )}
+    >
+      {selected ? (
+        <Check className={cn("absolute right-2 top-2 h-4 w-4", tc.check)} strokeWidth={3} />
+      ) : null}
+      <span className="pr-6 text-[14px] font-semibold leading-snug text-zinc-900">{title}</span>
+      <span className="mt-1.5 text-[12px] leading-snug text-zinc-600">{description}</span>
+    </button>
+  )
+}
+
+function FactoryTemplateCard({
+  tone,
+  title,
+  desc,
+  onClick,
+}: {
+  tone: FactoryModalKind
+  title: string
+  desc: string
+  onClick?: () => void
+}) {
+  const tc = mx.factoryTone[tone]
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(FACTORY_OPTION_CARD_CLASS, "border-stone-200/90 dark:border-zinc-700/90", mx.surfaceTint, tc.softHover)}
+    >
+      <span className={cn("absolute right-2 top-2 rounded-md p-1", tc.sparkle, "opacity-90")}>
+        <Pencil className="h-3.5 w-3.5" />
+      </span>
+      <span className="pr-7 text-[14px] font-semibold leading-snug text-zinc-900">{title}</span>
+      <span className="mt-1.5 text-[12px] leading-snug text-zinc-600">{desc}</span>
+    </button>
+  )
+}
+
+function FactoryStylePickCard({
+  tone,
+  selected,
+  onClick,
+  emoji,
+  label,
+}: {
+  tone: FactoryModalKind
+  selected: boolean
+  onClick: () => void
+  emoji: string
+  label: string
+}) {
+  const tc = mx.factoryTone[tone]
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex w-[calc((100%-0.625rem)/2)] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border p-3.5 text-center transition-colors min-h-[5.25rem]",
+        selected ? tc.styleCardOn : cn("border-stone-200 hover:border-stone-300 dark:border-zinc-700", mx.surfaceTint)
+      )}
+    >
+      <span className="text-xl leading-none">{emoji}</span>
+      <span className="text-[12px] font-medium leading-tight text-zinc-800">{label}</span>
+      {selected ? <Check className={cn("h-3.5 w-3.5", tc.check)} strokeWidth={3} /> : null}
+    </button>
+  )
+}
+
 function GenerateFooter({ onGenerate, onClose }: { onGenerate?: () => void; onClose: () => void }) {
   return (
     <div className="shrink-0 border-t border-stone-200/90 bg-white px-4 py-3">
@@ -235,22 +332,6 @@ function ReportModal({
     { title: "Knowledge primer", desc: "Core concepts for personal and org knowledge management." },
     { title: "Topic roundup", desc: "Pick the right tooling for different learning workflows." },
   ]
-  const Card = ({ title, desc }: { title: string; desc: string }) => (
-    <button
-      type="button"
-      className={cn(
-        "relative flex w-full flex-col rounded-xl border border-stone-200/90 p-3.5 text-left transition-colors dark:border-zinc-700/90",
-        mx.surfaceTint,
-        tc.softHover
-      )}
-    >
-      <span className={cn("absolute right-2 top-2 rounded-md p-1", tc.sparkle, "opacity-90")}>
-        <Pencil className="h-3.5 w-3.5" />
-      </span>
-      <span className="pr-7 text-[14px] font-semibold text-zinc-900">{title}</span>
-      <span className="mt-1.5 text-[12px] leading-snug text-zinc-600">{desc}</span>
-    </button>
-  )
   return (
     <ModalFrame
       tone="report"
@@ -276,9 +357,9 @@ function ReportModal({
       />
       <section className="mb-6">
         <h3 className="mb-3 text-[15px] font-semibold text-zinc-900">Formats</h3>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
+        <div className={FACTORY_OPTION_GRID_CLASS}>
           {formatCards.map((c) => (
-            <Card key={c.title} title={c.title} desc={c.desc} />
+            <FactoryTemplateCard key={c.title} tone="report" title={c.title} desc={c.desc} />
           ))}
         </div>
       </section>
@@ -287,9 +368,9 @@ function ReportModal({
           <Wand2 className={cn("h-4 w-4", tc.sparkle)} />
           Suggested formats
         </h3>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className={FACTORY_OPTION_GRID_CLASS}>
           {suggestedCards.map((c) => (
-            <Card key={c.title} title={c.title} desc={c.desc} />
+            <FactoryTemplateCard key={c.title} tone="report" title={c.title} desc={c.desc} />
           ))}
         </div>
       </section>
@@ -348,12 +429,9 @@ function FlashcardsModal({
         <textarea
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          rows={8}
+          rows={FACTORY_TOPIC_TEXTAREA_ROWS}
           placeholder={`Examples\n• Limit cards to one source (e.g. “an article about Italy”)\n• Focus on one topic (e.g. “Newton’s second law”)\n• Keep fronts short (1–5 words)`}
-          className={cn(
-            "w-full resize-none rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[14px] leading-relaxed text-zinc-800 placeholder:text-zinc-400",
-            tc.fieldFocus
-          )}
+          className={cn(FACTORY_TOPIC_TEXTAREA_CLASS, tc.fieldFocus)}
         />
       </div>
     </ModalFrame>
@@ -410,12 +488,9 @@ function QuizModal({
         <textarea
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          rows={9}
+          rows={FACTORY_TOPIC_TEXTAREA_ROWS}
           placeholder={`Examples\n• Help me study for an ancient Egypt exam\n• Exactly 30 questions (max 50)\n• Only use one source (e.g. “an article about Italy”)\n• Focus on key physics concepts`}
-          className={cn(
-            "w-full resize-none rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[14px] leading-relaxed text-zinc-800 placeholder:text-zinc-400",
-            tc.fieldFocus
-          )}
+          className={cn(FACTORY_TOPIC_TEXTAREA_CLASS, tc.fieldFocus)}
         />
       </div>
     </ModalFrame>
@@ -500,21 +575,16 @@ function InfographicModal({
       </div>
       <div className="mb-4">
         <p className="mb-2 text-[13px] text-zinc-500">Visual style</p>
-        <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2.5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {infographicStyles.map((s) => (
-            <button
+            <FactoryStylePickCard
               key={s.id}
-              type="button"
+              tone="infographic"
+              selected={style === s.id}
               onClick={() => setStyle(s.id)}
-              className={cn(
-                "flex w-[4.5rem] shrink-0 flex-col items-center gap-1 rounded-xl border p-2 text-center transition-colors",
-                style === s.id ? tc.styleCardOn : cn("border-stone-200 hover:border-stone-300 dark:border-zinc-700", mx.surfaceTint)
-              )}
-            >
-              <span className="text-xl">{s.emoji}</span>
-              <span className="text-[10px] font-medium leading-tight text-zinc-800">{s.label}</span>
-              {style === s.id && <Check className={cn("h-3 w-3", tc.check)} strokeWidth={3} />}
-            </button>
+              emoji={s.emoji}
+              label={s.label}
+            />
           ))}
         </div>
       </div>
@@ -593,25 +663,16 @@ function AudioModal({
       }
     >
       <p className="mb-2 text-[13px] font-semibold text-zinc-900">Format</p>
-      <div className="mb-4 grid grid-cols-2 gap-2">
+      <div className={cn("mb-4", FACTORY_OPTION_GRID_CLASS)}>
         {formats.map((f) => (
-          <button
+          <FactoryOptionCard
             key={f.id}
-            type="button"
+            tone="audio"
+            selected={format === f.id}
             onClick={() => setFormat(f.id)}
-            className={cn(
-              "relative flex flex-col rounded-xl border p-3 text-left text-[12px] leading-snug",
-              format === f.id ? tc.cardOn : cn("border-stone-200 hover:border-stone-300 dark:border-zinc-700", mx.surfaceTint)
-            )}
-          >
-            {format === f.id && (
-              <span className={cn("absolute right-2 top-2", tc.check)}>
-                <Check className="h-4 w-4" strokeWidth={3} />
-              </span>
-            )}
-            <span className="pr-6 text-[13px] font-semibold text-zinc-900">{f.title}</span>
-            <span className="mt-1 text-zinc-600">{f.desc}</span>
-          </button>
+            title={f.title}
+            description={f.desc}
+          />
         ))}
       </div>
       <div className="mb-4">
@@ -643,7 +704,7 @@ function AudioModal({
         <textarea
           value={focus}
           onChange={(e) => setFocus(e.target.value)}
-          rows={5}
+          rows={FACTORY_TOPIC_TEXTAREA_ROWS}
           className={cn(
             "mb-3 w-full resize-none rounded-xl border border-stone-200 px-3 py-2 text-[14px] text-zinc-800",
             tc.fieldFocus
@@ -693,39 +754,21 @@ function SlidesModal({
       }
     >
       <p className="mb-2 text-[13px] font-semibold text-zinc-900">Format</p>
-      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <button
-          type="button"
+      <div className={cn("mb-4", FACTORY_OPTION_GRID_CLASS)}>
+        <FactoryOptionCard
+          tone="slides"
+          selected={mode === "detailed"}
           onClick={() => setMode("detailed")}
-          className={cn(
-            "relative flex flex-col rounded-xl border p-3 text-left",
-            mode === "detailed" ? tc.cardOn : cn("border-stone-200 dark:border-zinc-700", mx.surfaceTint)
-          )}
-        >
-          {mode === "detailed" && (
-            <Check className={cn("absolute right-2 top-2 h-4 w-4", tc.check)} strokeWidth={3} />
-          )}
-          <span className="pr-6 text-[13px] font-semibold text-zinc-900">Detailed deck</span>
-          <span className="mt-1 text-[12px] leading-snug text-zinc-600">
-            Full narrative with detail—great to email or read on its own.
-          </span>
-        </button>
-        <button
-          type="button"
+          title="Detailed deck"
+          description="Full narrative with detail—great to email or read on its own."
+        />
+        <FactoryOptionCard
+          tone="slides"
+          selected={mode === "slides"}
           onClick={() => setMode("slides")}
-          className={cn(
-            "relative flex flex-col rounded-xl border p-3 text-left",
-            mode === "slides" ? tc.cardOn : cn("border-stone-200 dark:border-zinc-700", mx.surfaceTint)
-          )}
-        >
-          {mode === "slides" && (
-            <Check className={cn("absolute right-2 top-2 h-4 w-4", tc.check)} strokeWidth={3} />
-          )}
-          <span className="pr-6 text-[13px] font-semibold text-zinc-900">Speaker slides</span>
-          <span className="mt-1 text-[12px] leading-snug text-zinc-600">
-            Clean slides with talking points to support a live talk.
-          </span>
-        </button>
+          title="Speaker slides"
+          description="Clean slides with talking points to support a live talk."
+        />
       </div>
       <div className="mb-4">
         <p className="mb-1 text-[13px] text-zinc-500">Language</p>

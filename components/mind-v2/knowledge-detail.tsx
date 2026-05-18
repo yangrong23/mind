@@ -14,13 +14,29 @@ import {
   type FactoryJob,
 } from "@/components/mind-v2/content-factory-progress-panel"
 import { TextNoteEditor } from "@/components/mind-v2/text-note-editor"
+import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
+import {
+  MindChatFactoryRail,
+  resolveFactoryRailSelection,
+  type FactoryRailItem,
+} from "@/components/mind-v2/mind-chat-factory-rail"
+import { MindChatHeaderActions } from "@/components/mind-v2/mind-chat-header-actions"
+import {
+  MindChatQaHistoryPanel,
+  seedDemoQaHistory,
+  type MindQaHistoryItem,
+} from "@/components/mind-v2/mind-chat-qa-history-panel"
 import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
 import {
   PersonalKbInfoOverlay,
   SubscribedKbInfoOverlay,
   TeamKbInfoOverlay,
 } from "@/components/mind-v2/knowledge-base-info-overlays"
-import type { KBCategory } from "@/lib/mock-knowledge-bases"
+import {
+  DEFAULT_TEAM_LIBRARY_SETTINGS,
+  type KBCategory,
+  type TeamLibrarySettings,
+} from "@/lib/mock-knowledge-bases"
 import {
   ChevronLeft,
   MoreHorizontal,
@@ -57,9 +73,19 @@ type ShareTarget =
   | { scope: "library" }
   | { scope: "item"; title: string }
 
+export type LibraryChatLaunchContext = {
+  kbName: string
+  contentTitle?: string
+  initialPrompt?: string
+  initialModelLabel?: string
+  initialChatMode?: "dialog" | "agent"
+  /** When set, backing out of Chat re-opens this Hub article. */
+  contentDocId?: number
+}
+
 interface KnowledgeDetailProps {
   onBack: () => void
-  onAgentChat?: (context: { kbName: string; contentTitle?: string }) => void
+  onAgentChat?: (context: LibraryChatLaunchContext) => void
   knowledgeBase?: {
     name: string
     color: string
@@ -76,8 +102,13 @@ interface KnowledgeDetailProps {
     category?: KBCategory
     /** Curator line under title on subscribed / public library detail */
     publisherName?: string
+    teamSettings?: TeamLibrarySettings
   }
   initialView?: "content" | "graph" | "factory"
+  /** Open team Library information on mount (e.g. after creating a team library). */
+  initialOpenTeamInfo?: boolean
+  /** Restore a library article after returning from library Chat. */
+  initialOpenContentId?: number
   /** When set (e.g. from Agent → Studio), open this factory modal once on mount */
   initialFactoryModal?: FactoryModalKind | null
   /** Gate add-to-library / ask flows for guests who can still browse the library. */
@@ -239,7 +270,7 @@ function SwipeableLibraryDocRow({
         onMouseMove={(e) => dragging.current && onMove(e.clientX)}
         onMouseUp={onEnd}
         onMouseLeave={() => dragging.current && onEnd()}
-        className="relative z-10 flex w-full cursor-pointer select-none items-start gap-3 bg-white p-4 text-left hover:bg-stone-50/80"
+        className="relative z-10 flex w-full cursor-pointer select-none items-start gap-3 bg-white p-4 text-left hover:bg-white dark:bg-zinc-950"
         style={{
           transform: `translateX(${dx}px)`,
           transition: dragging.current ? "none" : "transform 0.2s ease-out",
@@ -281,13 +312,13 @@ function PublicKbFolderRow({ content, onOpen }: { content: LibraryDoc; onOpen: (
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full items-start gap-3.5 bg-white px-4 py-4 text-left transition-colors hover:bg-stone-50/80 active:bg-stone-100/50 dark:bg-zinc-950 dark:hover:bg-zinc-900/50"
+      className="flex w-full items-start gap-3.5 bg-white px-4 py-4 text-left transition-colors hover:bg-white dark:bg-zinc-950 active:bg-stone-100/50 dark:bg-zinc-950 dark:hover:bg-zinc-900/50"
     >
       <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[11px] bg-[#e8f7f0] dark:bg-emerald-950/40"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[11px] bg-stone-50 dark:bg-stone-100"
         aria-hidden
       >
-        <FolderOpen className="h-6 w-6 text-[#2fb27a] dark:text-emerald-400" strokeWidth={1.65} />
+        <FolderOpen className="h-6 w-6 text-mind dark:text-mind/38" strokeWidth={1.65} />
       </div>
       <div className="min-w-0 flex-1 pt-0.5">
         <h3 className="text-[16px] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -351,6 +382,8 @@ export function KnowledgeDetail({
   knowledgeBase,
   initialView = "content",
   initialFactoryModal,
+  initialOpenTeamInfo,
+  initialOpenContentId,
   requireAuthThen,
 }: KnowledgeDetailProps) {
   const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
@@ -358,11 +391,25 @@ export function KnowledgeDetail({
   const [hubRichNoteOpen, setHubRichNoteOpen] = useState(false)
   const [showNotebookAsk, setShowNotebookAsk] = useState(false)
   const [notebookAskDraft, setNotebookAskDraft] = useState("")
+  const [notebookQaHistoryOpen, setNotebookQaHistoryOpen] = useState(false)
+  const [notebookQaHistoryItems, setNotebookQaHistoryItems] = useState<MindQaHistoryItem[]>(() => seedDemoQaHistory())
+  const [notebookModelLabel, setNotebookModelLabel] = useState("DS Fast")
+  const [notebookChatMode, setNotebookChatMode] = useState<"dialog" | "agent">("dialog")
+  const [notebookVoiceOn, setNotebookVoiceOn] = useState(false)
   const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
   const [showContentDetail, setShowContentDetail] = useState<LibraryDoc | null>(null)
+  const [contentDetailAskDraft, setContentDetailAskDraft] = useState("")
+  const [contentDetailModelLabel, setContentDetailModelLabel] = useState("DS Fast")
+  const [contentDetailChatMode, setContentDetailChatMode] = useState<"dialog" | "agent">("dialog")
+  const [contentDetailVoiceOn, setContentDetailVoiceOn] = useState(false)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   const [libraryOverflowOpen, setLibraryOverflowOpen] = useState(false)
   const [kbInfoVariant, setKbInfoVariant] = useState<null | "personal" | "team" | "subscribed">(null)
+  const [kbName, setKbName] = useState(knowledgeBase?.name ?? "Notebook")
+  const [kbDescription, setKbDescription] = useState(knowledgeBase?.description ?? "")
+  const [teamSettings, setTeamSettings] = useState<TeamLibrarySettings>(
+    knowledgeBase?.teamSettings ?? DEFAULT_TEAM_LIBRARY_SETTINGS
+  )
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
   const [showCommentSheet, setShowCommentSheet] = useState(false)
   const [publicComments, setPublicComments] = useState<PublicComment[]>(() => DEMO_PUBLIC_COMMENTS.map((c) => ({ ...c })))
@@ -371,7 +418,9 @@ export function KnowledgeDetail({
   const [publicLiked, setPublicLiked] = useState(false)
   const [publicLikeCount, setPublicLikeCount] = useState(0)
   const [publicBottomDraft, setPublicBottomDraft] = useState("")
-  const [publicPlusMenuOpen, setPublicPlusMenuOpen] = useState(false)
+  const [publicChatMode, setPublicChatMode] = useState<"dialog" | "agent">("dialog")
+  const [publicModelLabel, setPublicModelLabel] = useState("DS Fast")
+  const [publicVoiceOn, setPublicVoiceOn] = useState(false)
 
   const isPublicKb = knowledgeBase?.isPublicKb ?? false
   const kbCategory = knowledgeBase?.category
@@ -399,6 +448,10 @@ export function KnowledgeDetail({
   useEffect(() => {
     if (!showNotebookAsk) setNotebookAskDraft("")
   }, [showNotebookAsk])
+
+  useEffect(() => {
+    if (!showContentDetail) setContentDetailAskDraft("")
+  }, [showContentDetail?.id])
   const [factoryUserJobs, setFactoryUserJobs] = useState<FactoryJob[]>([])
   const [factoryQuotaBanner, setFactoryQuotaBanner] = useState(false)
   const [factoryToastFailedJobId, setFactoryToastFailedJobId] = useState<string | null>(null)
@@ -408,7 +461,50 @@ export function KnowledgeDetail({
   const publicContentMetric = knowledgeBase?.contentCount ?? sourceCount
   const publicSubscribeMetric = knowledgeBase?.subscriberCount ?? 0
   const publicViewMetric = knowledgeBase?.viewCount ?? 0
-  const kbDisplayName = knowledgeBase?.name || "Notebook"
+  useEffect(() => {
+    setKbName(knowledgeBase?.name ?? "Notebook")
+    setKbDescription(knowledgeBase?.description ?? "")
+    if (knowledgeBase?.teamSettings) setTeamSettings(knowledgeBase.teamSettings)
+  }, [knowledgeBase?.name, knowledgeBase?.description, knowledgeBase?.teamSettings])
+
+  useEffect(() => {
+    if (initialOpenTeamInfo && kbCategory === "team" && !isPublicKb) {
+      setKbInfoVariant("team")
+    }
+  }, [initialOpenTeamInfo, kbCategory, isPublicKb])
+
+  useEffect(() => {
+    if (initialOpenContentId == null) return
+    const doc = contents.find((c) => c.id === initialOpenContentId)
+    if (doc) setShowContentDetail(doc)
+  }, [initialOpenContentId, contents])
+
+  const kbDisplayName = kbName
+
+  function launchLibraryChat(payload: {
+    initialPrompt?: string
+    contentTitle?: string
+    contentDocId?: number
+    modelLabel?: string
+    chatMode?: "dialog" | "agent"
+    requirePrompt?: boolean
+  }) {
+    if (!onAgentChat) return false
+    const q = payload.initialPrompt?.trim()
+    if (payload.requirePrompt && !q) {
+      toast.error("Add a question first")
+      return false
+    }
+    onAgentChat({
+      kbName: kbDisplayName,
+      contentTitle: payload.contentTitle,
+      contentDocId: payload.contentDocId,
+      initialPrompt: q,
+      initialModelLabel: payload.modelLabel,
+      initialChatMode: payload.chatMode,
+    })
+    return true
+  }
 
   function handleSubscribedUnsubscribe() {
     setLibraryOverflowOpen(false)
@@ -517,15 +613,93 @@ export function KnowledgeDetail({
     })
   }
 
-  function submitNotebookAsk() {
+  function handleChatFactoryRailSelect(id: FactoryRailItem["id"]) {
     runWithAuth(() => {
-      const q = notebookAskDraft.trim()
-      if (!q) {
-        toast.error("Add a question first")
+      const resolved = resolveFactoryRailSelection(id)
+      if (resolved.type === "mindmap") {
+        toast.message("Mind map queued", {
+          description: "Demo: added a mind map job from this library.",
+        })
         return
       }
-      toast.success("Question sent", { description: q.length > 140 ? `${q.slice(0, 140)}…` : q })
-      setNotebookAskDraft("")
+      setFactoryModal(resolved.kind)
+    })
+  }
+
+  function submitContentDetailAsk() {
+    runWithAuth(() => {
+      if (!showContentDetail) return
+      if (
+        launchLibraryChat({
+          initialPrompt: contentDetailAskDraft,
+          contentTitle: showContentDetail.title,
+          contentDocId: showContentDetail.id,
+          modelLabel: contentDetailModelLabel,
+          chatMode: contentDetailChatMode,
+          requirePrompt: true,
+        })
+      ) {
+        setContentDetailAskDraft("")
+      }
+    })
+  }
+
+  function saveAskSummaryToLibrary() {
+    const title = `${kbDisplayName} · rolling summary`
+    const now = new Date()
+    const dateStr = `${now.getMonth() + 1}/${now.getDate()}`
+    const nextId = contents.reduce((max, c) => Math.max(max, c.id), 0) + 1
+    const doc: LibraryDoc = {
+      id: nextId,
+      title,
+      excerpt:
+        notebookSummaryBody.slice(0, 160) + (notebookSummaryBody.length > 160 ? "…" : ""),
+      source: "Ask",
+      author: kbDisplayName,
+      date: dateStr,
+      image: `https://picsum.photos/seed/summary-${encodeURIComponent(kbDisplayName)}/80/80`,
+    }
+    setContents((prev) => [doc, ...prev])
+    setActiveView("content")
+    toast.success("Added to library", {
+      description: `Saved to “${kbDisplayName}”.`,
+    })
+  }
+
+  function submitNotebookAsk() {
+    runWithAuth(() => {
+      if (
+        launchLibraryChat({
+          initialPrompt: notebookAskDraft,
+          modelLabel: notebookModelLabel,
+          chatMode: notebookChatMode,
+          requirePrompt: true,
+        })
+      ) {
+        setNotebookAskDraft("")
+        setShowNotebookAsk(false)
+      }
+    })
+  }
+
+  function submitPublicBottomAsk() {
+    runWithAuth(() => {
+      const q = publicBottomDraft.trim()
+      if (!q) {
+        toast.message("Enter a question", {
+          description: "Use # to scope answers to a tag (demo).",
+        })
+        return
+      }
+      if (
+        launchLibraryChat({
+          initialPrompt: publicBottomDraft,
+          modelLabel: publicModelLabel,
+          chatMode: publicChatMode,
+        })
+      ) {
+        setPublicBottomDraft("")
+      }
     })
   }
 
@@ -592,8 +766,8 @@ export function KnowledgeDetail({
 
   if (showNotebookAsk) {
     return (
-      <div className="relative flex h-full flex-col bg-gradient-to-b from-sky-50/40 via-[#fafbfc] to-white">
-        <div className="flex shrink-0 items-center justify-between border-b border-sky-100/50 bg-white/80 px-3 py-2.5 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+      <div className="relative flex h-full flex-col bg-white dark:bg-zinc-950">
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-50 bg-white/80 px-3 py-2.5 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80">
           <button
             type="button"
             onClick={() => setShowNotebookAsk(false)}
@@ -605,18 +779,19 @@ export function KnowledgeDetail({
           <h1 className="min-w-0 flex-1 px-2 text-center text-[15px] font-semibold tracking-tight text-zinc-900 truncate">
             {kbDisplayName}
           </h1>
-          <button
-            type="button"
-            onClick={() => toast.message("More", { description: "Library actions (demo)." })}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-stone-200/60"
-            aria-label="More"
-          >
-            <MoreHorizontal className="h-5 w-5 text-zinc-600" />
-          </button>
+          <MindChatHeaderActions
+            size="compact"
+            onNewChat={() => {
+              setNotebookAskDraft("")
+              setNotebookQaHistoryOpen(false)
+              toast.message("New session", { description: "Draft cleared (demo)." })
+            }}
+            onOpenHistory={() => setNotebookQaHistoryOpen(true)}
+          />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-sky-700/90">Rolling summary</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-mind/90">Rolling summary</p>
           <h2 className="mt-1.5 text-[19px] font-semibold leading-snug tracking-tight text-zinc-900">{kbDisplayName}</h2>
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-100/90 px-2.5 py-1 text-[12px] font-medium text-zinc-600">
             <span className="tabular-nums">{sourceCount}</span>
@@ -654,19 +829,16 @@ export function KnowledgeDetail({
               </button>
               <button
                 type="button"
-                title="Library chat—retrieve, compare, and cite across your sources"
-                aria-label="Open Chat (library-grounded)"
-                onClick={() => {
-                  setShowNotebookAsk(false)
-                  onAgentChat?.({ kbName: kbDisplayName })
-                }}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-sky-600 transition-colors hover:bg-sky-100/90 hover:text-sky-800 dark:text-sky-400 dark:hover:bg-sky-950/50 dark:hover:text-sky-200"
+                title="Save this summary into your knowledge library"
+                aria-label="Add to library"
+                onClick={() => runWithAuth(saveAskSummaryToLibrary)}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-mind transition-colors hover:bg-stone-50 hover:text-mind dark:text-mind/28 dark:hover:bg-stone-50 dark:hover:text-mind/10"
               >
-                <MessageCircle className="h-5 w-5" strokeWidth={1.85} />
+                <Library className="h-5 w-5" strokeWidth={1.85} />
               </button>
             </div>
-            <p className="max-w-[14rem] text-[11px] leading-snug text-sky-800/80 dark:text-sky-200/70 sm:max-w-none">
-              Open Chat for library-grounded Q&amp;A—it gets stronger as your library grows.
+            <p className="max-w-[14rem] text-[11px] leading-snug text-mind/80 dark:text-mind/70 sm:max-w-none">
+              Add this answer to your library so it stays grounded with your sources.
             </p>
           </div>
 
@@ -679,8 +851,8 @@ export function KnowledgeDetail({
             })}
             className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-full border border-stone-200/90 bg-white py-3 text-[15px] font-medium text-zinc-800 shadow-sm shadow-stone-900/5 transition-colors hover:bg-stone-50"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100" aria-hidden>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-sky-600">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100" aria-hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-mind">
                 <path
                   d="M4 12h2l1.5-4 2 8 1.5-6H12l1 3 1-3h2l1.5 5 1.5-5H22"
                   stroke="currentColor"
@@ -694,45 +866,58 @@ export function KnowledgeDetail({
           </button>
         </div>
 
-        <div className="shrink-0 border-t border-sky-100/60 bg-white/85 px-3 pb-3 pt-2 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/85">
-          <div className="flex items-end gap-2">
-            <label className="sr-only" htmlFor="notebook-ask-sources">
-              Ask sources
-            </label>
-            <input
-              id="notebook-ask-sources"
-              type="text"
-              value={notebookAskDraft}
-              onChange={(e) => setNotebookAskDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  submitNotebookAsk()
-                }
-              }}
-              placeholder={`Ask ${sourceCount} sources…`}
-              className="min-h-[44px] min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200/60"
-            />
-            <button
-              type="button"
-              onClick={() => toast.message("Sources", { description: `Covers ${sourceCount} items (demo).` })}
-              className="flex shrink-0 items-center gap-1 rounded-xl border border-stone-200 bg-white px-2.5 py-2 text-[13px] font-medium text-zinc-700 shadow-sm"
-              aria-label="Sources"
-            >
-              <FileText className="h-4 w-4 text-zinc-500" />
-              <span>{sourceCount}</span>
-              <ChevronDown className="h-4 w-4 text-zinc-400" />
-            </button>
-            <button
-              type="button"
-              onClick={submitNotebookAsk}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-md shadow-sky-600/25 transition-colors hover:bg-sky-700"
-              aria-label="Send question"
-            >
-              <ArrowUp className="h-5 w-5" strokeWidth={2.25} />
-            </button>
-          </div>
+        <div className="shrink-0 border-t border-stone-200 bg-white/85 px-3 pb-2 pt-1.5 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/85">
+          <MindChatFactoryRail onSelect={handleChatFactoryRailSelect} className="mb-1 max-w-none" />
+          <MindChatComposer
+            variant="thread"
+            className="max-w-none"
+            value={notebookAskDraft}
+            onChange={setNotebookAskDraft}
+            onSubmit={submitNotebookAsk}
+            placeholder={`Ask ${sourceCount} sources…`}
+            chatMode={notebookChatMode}
+            onChatModeChange={setNotebookChatMode}
+            modelLabel={notebookModelLabel}
+            onModelLabelChange={setNotebookModelLabel}
+            voiceOn={notebookVoiceOn}
+            onVoiceToggle={() =>
+              runWithAuth(() => {
+                setNotebookVoiceOn((prev) => {
+                  const next = !prev
+                  toast.message(next ? "Voice input" : "Voice input off", {
+                    description: next ? "Demo: tap again to stop." : "Demo: no audio sent.",
+                  })
+                  return next
+                })
+              })
+            }
+            atTitle={`${sourceCount} sources`}
+            onAtClick={() =>
+              toast.message("Sources", { description: `Covers ${sourceCount} items (demo).` })
+            }
+            onUploadClick={() =>
+              runWithAuth(() =>
+                toast.message("Upload file", { description: "Demo — pick a file from your device." })
+              )
+            }
+          />
         </div>
+
+        <MindChatQaHistoryPanel
+          open={notebookQaHistoryOpen}
+          onClose={() => setNotebookQaHistoryOpen(false)}
+          items={notebookQaHistoryItems}
+          title="Q&A history"
+          retentionHint="Keeps the last 90 days of history for you."
+          locale="en-US"
+        />
+
+        <ContentFactoryModals
+          open={factoryModal}
+          onClose={() => setFactoryModal(null)}
+          libraryName={kbDisplayName}
+          onGenerateSubmit={handleFactoryGenerateSubmit}
+        />
       </div>
     )
   }
@@ -746,11 +931,11 @@ export function KnowledgeDetail({
   if (showContentDetail) {
     return (
       <div className="relative flex flex-col h-full bg-white">
-        <div className="flex items-center justify-between border-b border-sky-100/80 bg-white px-4 py-3 dark:border-sky-900/40 dark:bg-zinc-950">
+        <div className="flex items-center justify-between border-b border-stone-80 bg-white px-4 py-3 dark:border-stone-40 dark:bg-zinc-950">
           <button
             type="button"
             onClick={() => setShowContentDetail(null)}
-            className="-ml-2 rounded-full p-2 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+            className="-ml-2 rounded-full p-2 hover:bg-stone-50 dark:hover:bg-stone-100"
             aria-label="Back"
           >
             <ChevronLeft className="h-6 w-6 text-zinc-700 dark:text-zinc-200" />
@@ -761,14 +946,18 @@ export function KnowledgeDetail({
               title="Chat—answers grounded in this item and your library"
               aria-label="Open Chat for this item"
               onClick={() =>
-                onAgentChat?.({
-                  kbName: knowledgeBase?.name || "Medrix Mind",
-                  contentTitle: showContentDetail.title,
-                })
+                runWithAuth(() =>
+                  launchLibraryChat({
+                    contentTitle: showContentDetail.title,
+                    contentDocId: showContentDetail.id,
+                    modelLabel: contentDetailModelLabel,
+                    chatMode: contentDetailChatMode,
+                  })
+                )
               }
               className={cn(
-                "flex items-center gap-1.5 rounded-full border border-sky-200/90 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-900 shadow-sm shadow-sky-900/5 transition-colors",
-                "hover:bg-sky-100/90 dark:border-sky-800/60 dark:bg-sky-950/45 dark:text-sky-50 dark:hover:bg-sky-900/55"
+                "flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold text-mind shadow-sm shadow-stone-900/5 transition-colors",
+                "hover:bg-stone-50 dark:border-stone-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
               )}
             >
               <MessageCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
@@ -777,7 +966,7 @@ export function KnowledgeDetail({
             <button
               type="button"
               onClick={() => setShareTarget({ scope: "item", title: showContentDetail.title })}
-              className="rounded-full p-2 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+              className="rounded-full p-2 hover:bg-stone-50 dark:hover:bg-stone-100"
               aria-label="Share"
             >
               <MoreHorizontal className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
@@ -809,7 +998,54 @@ export function KnowledgeDetail({
             ))}
           </div>
         </div>
+
+        <div className="shrink-0 border-t border-stone-200/80 bg-white px-3 pb-2 pt-1.5 dark:border-zinc-800 dark:bg-zinc-950">
+          <MindChatFactoryRail onSelect={handleChatFactoryRailSelect} className="mb-1 max-w-none" />
+          <MindChatComposer
+            variant="thread"
+            className="max-w-none"
+            value={contentDetailAskDraft}
+            onChange={setContentDetailAskDraft}
+            onSubmit={submitContentDetailAsk}
+            placeholder={`Ask about “${showContentDetail.title.slice(0, 28)}${showContentDetail.title.length > 28 ? "…" : ""}"…`}
+            chatMode={contentDetailChatMode}
+            onChatModeChange={setContentDetailChatMode}
+            modelLabel={contentDetailModelLabel}
+            onModelLabelChange={setContentDetailModelLabel}
+            voiceOn={contentDetailVoiceOn}
+            onVoiceToggle={() =>
+              runWithAuth(() => {
+                setContentDetailVoiceOn((prev) => {
+                  const next = !prev
+                  toast.message(next ? "Voice input" : "Voice input off", {
+                    description: next ? "Demo: tap again to stop." : "Demo: no audio sent.",
+                  })
+                  return next
+                })
+              })
+            }
+            atTitle={`「${showContentDetail.title}」· ${kbDisplayName}`}
+            onAtClick={() =>
+              toast.message("Sources", {
+                description: `Grounded on “${showContentDetail.title}” and ${kbDisplayName} (demo).`,
+              })
+            }
+            onUploadClick={() =>
+              runWithAuth(() =>
+                toast.message("Upload file", { description: "Demo — pick a file from your device." })
+              )
+            }
+          />
+        </div>
+
         {shareSheet}
+
+        <ContentFactoryModals
+          open={factoryModal}
+          onClose={() => setFactoryModal(null)}
+          libraryName={`「${showContentDetail.title}」· ${kbDisplayName}`}
+          onGenerateSubmit={handleFactoryGenerateSubmit}
+        />
       </div>
     )
   }
@@ -1050,7 +1286,7 @@ export function KnowledgeDetail({
               </h1>
               <div className="mt-2 flex min-w-0 items-center gap-1.5">
                 <div
-                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-[8px] font-bold text-white shadow-sm"
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-zinc-600 to-zinc-700 text-[8px] font-bold text-white shadow-sm"
                   aria-hidden
                 >
                   {(knowledgeBase?.publisherName ?? "Publisher").trim().charAt(0).toUpperCase() || "P"}
@@ -1100,12 +1336,12 @@ export function KnowledgeDetail({
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full border border-stone-200/95 bg-white px-2.5 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300",
                       publicLiked &&
-                        "border-emerald-200/90 bg-emerald-50/95 text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-100"
+                        "border-stone-200 bg-stone-50 text-mind dark:border-stone-50 dark:bg-stone-50 dark:text-mind/10"
                     )}
                     aria-pressed={publicLiked}
                   >
                     <Heart
-                      className={cn("h-3.5 w-3.5", publicLiked && "fill-current text-emerald-600")}
+                      className={cn("h-3.5 w-3.5", publicLiked && "fill-current text-mind")}
                       strokeWidth={2}
                       aria-hidden
                     />
@@ -1114,7 +1350,6 @@ export function KnowledgeDetail({
                   <button
                     type="button"
                     onClick={() => {
-                      setPublicPlusMenuOpen(false)
                       setShowCommentSheet(true)
                     }}
                     className="inline-flex items-center gap-1 rounded-full border border-stone-200/95 bg-white px-2.5 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors hover:bg-stone-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
@@ -1160,14 +1395,14 @@ export function KnowledgeDetail({
 
       <div className={cn("flex-1 flex flex-col min-h-0", activeView === "content" ? "overflow-hidden" : "overflow-y-auto")}>
         {activeView === "content" && (
-          <div className={cn("flex min-h-0 flex-1 flex-col", isPublicKb ? "bg-[#f2f2f4] dark:bg-zinc-950" : "bg-stone-50/80")}>
+          <div className={cn("flex min-h-0 flex-1 flex-col", isPublicKb ? "bg-[#f2f2f4] dark:bg-zinc-950" : "bg-white dark:bg-zinc-950")}>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className={cn("pb-2", isPublicKb ? "px-3 pt-2" : "px-4 pt-3")}>
                 {!isPublicKb ? (
-                  <div className="mb-4 overflow-hidden rounded-2xl border border-sky-100/60 bg-gradient-to-br from-white via-white to-sky-50/50 p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_24px_-12px_rgba(14,165,233,0.1)] ring-1 ring-sky-100/40 dark:border-zinc-700 dark:from-zinc-900 dark:via-zinc-900 dark:to-sky-950/20 dark:ring-zinc-700/60">
+                  <div className="mb-4 overflow-hidden rounded-2xl border border-stone-200 bg-gradient-to-br from-white via-white to-stone-50 p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_24px_-12px_rgba(2, 132, 199,0.1)] ring-1 ring-zinc-200/50 dark:border-zinc-700 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 dark:ring-zinc-700/60">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700/90 dark:text-sky-300/90">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-mind/90 dark:text-mind/90">
                           Overview
                         </p>
                         <h2 className="mt-1 text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -1218,89 +1453,42 @@ export function KnowledgeDetail({
             </div>
             {isPublicKb ? (
               <div className="relative shrink-0 border-t border-stone-200/50 bg-[#f2f2f4] px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 dark:border-zinc-800/60 dark:bg-zinc-950">
-                <p className="mb-2.5 rounded-xl bg-[#e6f4ec] px-3 py-2 text-center text-[11px] font-medium leading-snug text-emerald-900/95 dark:bg-emerald-950/35 dark:text-emerald-100/90">
+                <p className="mb-2.5 rounded-xl bg-stone-50 px-3 py-2 text-center text-[11px] font-medium leading-snug text-mind/95 dark:bg-stone-50 dark:text-mind/90">
                   This library can assist with patent Q&A, translation, and brief answers (demo).
                 </p>
-                <div className="relative flex items-center gap-1 rounded-full border border-stone-200/70 bg-white py-1 pl-4 pr-1 shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900 dark:shadow-none">
-                  {publicPlusMenuOpen ? (
-                    <div className="absolute bottom-full right-2 z-20 mb-2 w-[11.5rem] overflow-hidden rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                      <button
-                        type="button"
-                        className="flex w-full px-3 py-2.5 text-left text-[13px] text-zinc-800 hover:bg-stone-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                        onClick={() => {
-                          setPublicPlusMenuOpen(false)
-                          toast.message("Dialog mode", {
-                            description: "Match tags to intent for grounded replies (demo).",
-                          })
-                        }}
-                      >
-                        Dialog mode
-                      </button>
-                      <button
-                        type="button"
-                        className="flex w-full px-3 py-2.5 text-left text-[13px] text-zinc-800 hover:bg-stone-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                        onClick={() => {
-                          setPublicPlusMenuOpen(false)
-                          toast.message("Task mode", {
-                            description: "Bundle multi-step work into one prompt (demo).",
-                          })
-                        }}
-                      >
-                        Task mode
-                      </button>
-                    </div>
-                  ) : null}
-                  <label htmlFor="public-kb-quick-ask" className="sr-only">
-                    Ask this library
-                  </label>
-                  <input
-                    id="public-kb-quick-ask"
-                    type="text"
-                    value={publicBottomDraft}
-                    onChange={(e) => setPublicBottomDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        runWithAuth(() => {
-                          const q = publicBottomDraft.trim()
-                          if (!q) {
-                            toast.message("Enter a question", {
-                              description: "Use # to scope answers to a tag (demo).",
-                            })
-                            return
-                          }
-                          onAgentChat?.({ kbName: kbDisplayName })
-                          setPublicBottomDraft("")
+                <MindChatFactoryRail onSelect={handleChatFactoryRailSelect} className="mb-1 max-w-none" />
+                <MindChatComposer
+                  variant="thread"
+                  className="max-w-none"
+                  value={publicBottomDraft}
+                  onChange={setPublicBottomDraft}
+                  onSubmit={submitPublicBottomAsk}
+                  placeholder="Enter # to specify tag for Q&A"
+                  chatMode={publicChatMode}
+                  onChatModeChange={setPublicChatMode}
+                  modelLabel={publicModelLabel}
+                  onModelLabelChange={setPublicModelLabel}
+                  voiceOn={publicVoiceOn}
+                  onVoiceToggle={() =>
+                    runWithAuth(() => {
+                      setPublicVoiceOn((prev) => {
+                        const next = !prev
+                        toast.message(next ? "Voice input" : "Voice input off", {
+                          description: next
+                            ? "Use system dictation or an external mic (demo)."
+                            : "Demo: no audio uploaded.",
                         })
-                      }
-                    }}
-                    placeholder="Enter # to specify tag for Q&A"
-                    className="min-h-[40px] min-w-0 flex-1 border-0 bg-transparent py-2 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
-                  />
-                  <button
-                    type="button"
-                    aria-label="Voice input"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                    onClick={() =>
-                      runWithAuth(() =>
-                        toast.message("Voice input", {
-                          description: "Use system dictation or an external mic (demo).",
-                        })
-                      )
-                    }
-                  >
-                    <Mic className="h-5 w-5" strokeWidth={2} />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Modes"
-                    aria-expanded={publicPlusMenuOpen}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-stone-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                    onClick={() => setPublicPlusMenuOpen((o) => !o)}
-                  >
-                    <Plus className="h-5 w-5" strokeWidth={2} />
-                  </button>
-                </div>
+                        return next
+                      })
+                    })
+                  }
+                  atTitle={kbDisplayName}
+                  onUploadClick={() =>
+                    runWithAuth(() =>
+                      toast.message("Upload file", { description: "Demo — pick a file from your device." })
+                    )
+                  }
+                />
               </div>
             ) : null}
           </div>
@@ -1366,7 +1554,7 @@ export function KnowledgeDetail({
         )}
 
         {activeView === "factory" && (
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-stone-50/80 px-4 pb-10 pt-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-white dark:bg-zinc-950 px-4 pb-10 pt-4">
             <h3 className="mb-3 text-[15px] font-semibold tracking-tight text-zinc-800">Create new content</h3>
 
             <div className="space-y-2">
@@ -1534,7 +1722,7 @@ export function KnowledgeDetail({
 
             {factoryUserJobs.length === 0 ? (
               <div className="mt-10 flex flex-col items-center text-center">
-                <Sparkles className="mb-2 h-7 w-7 text-sky-700/30" strokeWidth={1.5} />
+                <Sparkles className="mb-2 h-7 w-7 text-mind/30" strokeWidth={1.5} />
                 <p className="max-w-[260px] text-[13px] leading-relaxed text-zinc-500">
                   Choose a format above to generate. Runs and results stack here so you can start another anytime—no
                   extra screen.
@@ -1588,7 +1776,7 @@ export function KnowledgeDetail({
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">{c.user}</span>
                           {c.isAuthor ? (
-                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
+                            <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-stone-500 dark:text-mind/18">
                               Author
                             </span>
                           ) : null}
@@ -1600,7 +1788,7 @@ export function KnowledgeDetail({
                         {long ? (
                           <button
                             type="button"
-                            className="mt-1.5 text-[13px] font-medium text-emerald-600 dark:text-emerald-400"
+                            className="mt-1.5 text-[13px] font-medium text-mind dark:text-mind/38"
                             onClick={() =>
                               setCommentExpandedIds((prev) => {
                                 const next = new Set(prev)
@@ -1641,7 +1829,7 @@ export function KnowledgeDetail({
                     }
                   }}
                   placeholder="Write a comment…"
-                  className="min-h-[44px] flex-1 rounded-full border border-transparent bg-stone-100 px-4 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:ring-emerald-900/40"
+                  className="min-h-[44px] flex-1 rounded-full border border-transparent bg-stone-100 px-4 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/60 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:ring-zinc-200/50"
                 />
                 <button
                   type="button"
@@ -1649,7 +1837,7 @@ export function KnowledgeDetail({
                   className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
                     commentComposerDraft.trim()
-                      ? "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                      ? "text-mind hover:bg-stone-50 dark:hover:bg-stone-100"
                       : "text-zinc-300 dark:text-zinc-600"
                   )}
                   aria-label="Send"
@@ -1686,9 +1874,13 @@ export function KnowledgeDetail({
         open={kbInfoVariant === "team"}
         onClose={() => setKbInfoVariant(null)}
         name={kbDisplayName}
-        description={knowledgeBase?.description}
+        description={kbDescription}
         coverImage={knowledgeBase?.coverImage}
         colorClass={knowledgeBase?.color}
+        settings={teamSettings}
+        onSettingsChange={setTeamSettings}
+        onNameChange={setKbName}
+        onDescriptionChange={setKbDescription}
       />
       <SubscribedKbInfoOverlay
         open={kbInfoVariant === "subscribed"}

@@ -1,5 +1,22 @@
 export type KBCategory = "mine" | "team" | "subscribed"
 
+export type TeamMemberPermissions = "View & export" | "View only"
+export type TeamJoinMode = "Open join" | "Admin approval"
+
+export type TeamLibrarySettings = {
+  isPrivate: boolean
+  memberPermissions: TeamMemberPermissions
+  joinMode: TeamJoinMode
+  recommendedQuestions: string[]
+}
+
+export const DEFAULT_TEAM_LIBRARY_SETTINGS: TeamLibrarySettings = {
+  isPrivate: false,
+  memberPermissions: "View & export",
+  joinMode: "Open join",
+  recommendedQuestions: [],
+}
+
 export type KnowledgeBase = {
   id: number
   name: string
@@ -18,6 +35,27 @@ export type KnowledgeBase = {
   publisherName?: string
   /** Cover art for list / plaza (photo avatar) */
   coverImage: string
+  /** Team libraries only — Library information screen */
+  teamSettings?: TeamLibrarySettings
+}
+
+/** Demo helper when creating a library from the Knowledge tab sheet. */
+export function knowledgeBaseFromCreate(
+  payload: Pick<KnowledgeBase, "name" | "description" | "color" | "category">,
+  id: number
+): KnowledgeBase {
+  const seed = encodeURIComponent(`${payload.name}-${id}`)
+  return {
+    id,
+    name: payload.name,
+    description: payload.description,
+    category: payload.category,
+    count: 0,
+    lastUpdate: "Just now",
+    color: payload.color,
+    coverImage: `https://picsum.photos/seed/mindkb-new-${seed}/384/384`,
+    ...(payload.category === "team" ? { teamSettings: { ...DEFAULT_TEAM_LIBRARY_SETTINGS } } : {}),
+  }
 }
 
 export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
@@ -28,7 +66,7 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     category: "mine",
     count: 156,
     lastUpdate: "Just now",
-    color: "from-sky-400/90 to-teal-500/85",
+    color: "from-zinc-500 to-zinc-600",
     coverImage: "https://picsum.photos/seed/mindkb01/384/384",
   },
   {
@@ -38,7 +76,7 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     category: "mine",
     count: 89,
     lastUpdate: "1h ago",
-    color: "from-teal-400/90 to-cyan-600/80",
+    color: "from-zinc-500 to-zinc-600",
     coverImage: "https://picsum.photos/seed/mindkb02/384/384",
   },
   {
@@ -48,7 +86,7 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     category: "mine",
     count: 45,
     lastUpdate: "Yesterday",
-    color: "from-emerald-400/85 to-teal-600/80",
+    color: "from-zinc-500 to-zinc-600",
     coverImage: "https://picsum.photos/seed/mindkb03/384/384",
   },
   {
@@ -58,8 +96,9 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     category: "team",
     count: 234,
     lastUpdate: "2h ago",
-    color: "from-sky-500/85 to-indigo-500/80",
+    color: "from-zinc-500 to-zinc-600",
     coverImage: "https://picsum.photos/seed/mindkb04/384/384",
+    teamSettings: { ...DEFAULT_TEAM_LIBRARY_SETTINGS },
   },
   {
     id: 5,
@@ -68,8 +107,12 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     category: "team",
     count: 67,
     lastUpdate: "3d ago",
-    color: "from-violet-400/80 to-indigo-500/85",
+    color: "from-zinc-500 to-zinc-600",
     coverImage: "https://picsum.photos/seed/mindkb05/384/384",
+    teamSettings: {
+      ...DEFAULT_TEAM_LIBRARY_SETTINGS,
+      joinMode: "Admin approval",
+    },
   },
   {
     id: 6,
@@ -79,7 +122,7 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     category: "subscribed",
     count: 4505,
     lastUpdate: "Today",
-    color: "from-cyan-500/80 to-blue-600/80",
+    color: "from-zinc-500 to-zinc-600",
     subscribers: 2527,
     viewCount: 8750,
     publicTagline: "Curated · prosecution-ready briefs",
@@ -94,7 +137,7 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     category: "subscribed",
     count: 892,
     lastUpdate: "Yesterday",
-    color: "from-sky-500/80 to-violet-500/75",
+    color: "from-zinc-500 to-zinc-600",
     subscribers: 8900,
     viewCount: 5120,
     publicTagline: "Playbooks and annotated wins",

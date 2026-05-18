@@ -18,27 +18,27 @@ const projects = [
 
 export function Sidebar() {
   return (
-    <aside className="w-[220px] h-screen bg-white border-r border-gray-100 flex flex-col">
+    <aside className="w-[220px] h-screen bg-white border-r border-zinc-100 flex flex-col">
       {/* Logo */}
       <div className="h-14 px-4 flex items-center gap-3">
-        <button className="p-1 hover:bg-gray-100 rounded text-gray-500">
+        <button className="p-1 hover:bg-zinc-100 rounded text-zinc-500">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <path d="M2 4h14M2 9h14M2 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>
         <div className="flex items-center gap-1.5">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="4" width="7" height="16" rx="1" fill="#2563eb"/>
-            <rect x="11" y="4" width="5" height="16" rx="1" fill="#60a5fa"/>
-            <rect x="18" y="4" width="4" height="16" rx="1" fill="#93c5fd"/>
+            <rect x="2" y="4" width="7" height="16" rx="1" fill="#0284c7"/>
+            <rect x="11" y="4" width="5" height="16" rx="1" fill="#0284c7" fillOpacity="0.72"/>
+            <rect x="18" y="4" width="4" height="16" rx="1" fill="#0284c7" fillOpacity="0.45"/>
           </svg>
-          <span className="font-semibold text-sm text-gray-900">Medrix Scientist</span>
+          <span className="font-semibold text-sm text-zinc-900">Medrix Scientist</span>
         </div>
       </div>
 
       {/* New Project Button */}
       <div className="px-3 pt-2 pb-3">
-        <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+        <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 rounded-lg transition-colors">
           <Plus className="size-4" />
           <span>New Project</span>
         </button>
@@ -46,7 +46,7 @@ export function Sidebar() {
 
       {/* Projects Label */}
       <div className="px-3 mb-1">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3">
+        <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider px-3">
           PROJECTS
         </p>
       </div>
@@ -59,8 +59,8 @@ export function Sidebar() {
               key={project.id}
               className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors ${
                 project.active
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-600 hover:bg-gray-50"
+                  ? "bg-mind/5 text-mind"
+                  : "text-zinc-600 hover:bg-zinc-50"
               }`}
             >
               <MessageSquare className="size-4" />
@@ -71,14 +71,14 @@ export function Sidebar() {
       </ScrollArea>
 
       {/* Footer */}
-      <div className="border-t border-gray-100 p-3">
+      <div className="border-t border-zinc-100 p-3">
         {/* Credit */}
         <div className="flex items-center justify-between px-3 py-2.5">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-zinc-600">
             <Zap className="size-4" />
             <span>Credit</span>
           </div>
-          <span className="text-sm font-medium text-blue-500">100/100</span>
+          <span className="text-sm font-medium text-mind/48">100/100</span>
         </div>
         
         {/* User */}
@@ -88,8 +88,8 @@ export function Sidebar() {
               R
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm text-gray-700">rong yang</span>
-          <button className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs text-blue-500 border border-blue-200 rounded-full hover:bg-blue-50 transition-colors">
+          <span className="text-sm text-zinc-700">rong yang</span>
+          <button className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs text-mind/48 border border-mind/18 rounded-full hover:bg-mind/5 transition-colors">
             <Zap className="size-3" />
             <span>Upgrade</span>
           </button>

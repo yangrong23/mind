@@ -1,18 +1,31 @@
 /**
- * Medrix Mind — mostly neutral with restrained sky / emerald accents (work = sky family).
+ * Medrix Mind — one canonical blue (`mind` / --mind-blue). Only opacity & color-mix vary.
  */
 
 import { cn } from "@/lib/utils"
 
-export const mx = {
-  pageBg: "bg-stone-50",
+/** Tailwind `mind` @ 100% — do not use sky-* or other blues in product UI */
+export const MIND_BLUE_OKLCH = "oklch(0.588 0.158 241.966)"
 
-  /**
-   * App shell — soft, bright, low saturation (aligned with Studio pastel wells).
-   * Prefer over raw `gray-*` for cross-tab consistency.
-   */
-  shellCanvas:
-    "bg-gradient-to-b from-sky-50/55 via-white to-teal-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950",
+const FACTORY_MIND_TONE = {
+  well: "bg-mind/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
+  icon: "text-mind",
+  sparkle: "text-mind",
+  pillOn: "border-mind/25 bg-mind/8 text-mind",
+  cardOn: "border-mind/25 bg-mind/8",
+  check: "text-mind",
+  styleCardOn: "border-mind/30 bg-mind/10 ring-1 ring-mind/15",
+  fieldFocus: "focus:border-mind/30 focus:outline-none focus:ring-1 focus:ring-mind/20",
+  softHover: "hover:border-mind/20 hover:bg-mind/6",
+} as const
+
+/** Neutral page surfaces — no blue wash on tab backgrounds */
+const PAGE_BG = "bg-white dark:bg-zinc-950"
+
+export const mx = {
+  pageBg: PAGE_BG,
+
+  shellCanvas: PAGE_BG,
   shellSurface: "bg-white/90 dark:bg-zinc-900/95",
   shellHairline: "border-stone-200/85 dark:border-zinc-700/90",
   shellInk: "text-zinc-900 dark:text-zinc-100",
@@ -23,67 +36,59 @@ export const mx = {
     "rounded-2xl border border-stone-200/70 bg-white shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_8px_28px_-16px_rgba(15,23,42,0.08)] dark:border-zinc-700 dark:bg-zinc-900/80",
   shellPillInactive: "bg-stone-100/90 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
 
-  brandHero: "bg-gradient-to-b from-sky-50/80 via-white to-teal-50/40",
-  brandHeroBorder: "border-b border-sky-100/85",
+  brandHero: "bg-gradient-to-b from-stone-50/90 via-white to-white dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-950",
+  brandHeroBorder: "border-b border-stone-200/85 dark:border-zinc-800",
 
   brandOnHero: "text-zinc-900",
   brandOnHeroMuted: "text-zinc-500",
-  brandAccentOnHero: "text-sky-700",
+  brandAccentOnHero: "text-mind",
 
   brandAvatarBg: "bg-gradient-to-br from-stone-200 to-stone-300",
-  brandHeroHover: "hover:bg-sky-50/90",
+  brandHeroHover: "hover:bg-stone-100/90 dark:hover:bg-zinc-800/60",
 
-  /** Links & lightweight emphasis (keeps chroma low) */
-  accentBlue: "text-sky-600",
-  accentBlueHover: "hover:text-sky-700",
-  accentBlueMuted: "text-sky-600/90",
-  accentBlueBg: "bg-sky-600",
-  accentBlueSoft: "bg-sky-50",
+  accentBlue: "text-mind",
+  accentBlueHover: "hover:text-mind/90",
+  accentBlueMuted: "text-mind/90",
+  accentBlueBg: "bg-mind",
+  accentBlueSoft: "bg-mind/8",
 
-  accentPersonalAvatar: "bg-emerald-500 text-white",
-  accentPersonalSoft: "bg-emerald-50",
-  accentPersonalRing: "ring-2 ring-emerald-200/80",
+  accentPersonalAvatar: "bg-mind text-white",
+  accentPersonalSoft: "bg-mind/8",
+  accentPersonalRing: "ring-2 ring-mind/20",
 
-  accentWorkSoft: "bg-sky-50",
-  accentWorkIcon: "text-sky-700",
+  accentWorkSoft: "bg-mind/8",
+  accentWorkIcon: "text-mind",
 
-  brandAccent: "text-sky-700",
-  brandAccentHover: "hover:text-sky-800",
-  brandAccentMuted: "text-sky-700/90",
+  brandAccent: "text-mind",
+  brandAccentHover: "hover:text-mind/90",
+  brandAccentMuted: "text-mind/90",
   brandMutedBg: "bg-stone-100",
   brandMutedBgHover: "hover:bg-stone-200/85",
   brandSubtleBorder: "border-stone-200",
 
-  /**
-   * UI chrome — prefer over raw `gray-*` / `slate-*` so every page reads the same cool-neutral temperature.
-   */
   surfaceTint: "bg-stone-50 dark:bg-zinc-900/92",
   surfaceTintHover: "hover:bg-stone-100/90 dark:hover:bg-zinc-800/70",
   settingsIconWell: "bg-stone-100 dark:bg-zinc-800",
   settingsIconInk: "text-zinc-600 dark:text-zinc-300",
   toggleTrackOff: "bg-stone-200 dark:bg-zinc-600",
-  /** Studio / factory soft callouts (aligned with nav sky, not warm peach) */
   studioQuotaBanner:
-    "rounded-2xl border border-sky-100/95 bg-gradient-to-br from-sky-50/95 via-white to-cyan-50/35 p-4 shadow-sm shadow-sky-900/[0.04] dark:border-sky-900/45 dark:from-sky-950/40 dark:via-zinc-900/90 dark:to-cyan-950/20",
+    "rounded-2xl border border-stone-200/90 bg-stone-50/95 p-4 shadow-sm shadow-stone-900/[0.04] dark:border-zinc-700 dark:bg-zinc-900/90",
 
   brandCta:
-    "bg-sky-600 text-white hover:bg-sky-700 active:bg-sky-800 shadow-sm shadow-sky-600/20 border border-sky-700/40",
-  brandCtaSoft:
-    "bg-sky-50 text-sky-900 border border-sky-100 hover:bg-sky-100/90",
+    "bg-mind text-white hover:bg-mind/90 active:bg-mind/85 shadow-sm shadow-mind/20 border border-mind/30",
+  brandCtaSoft: "bg-mind/8 text-mind border border-mind/15 hover:bg-mind/12",
 
-  brandFocusRing: "focus-visible:ring-2 focus-visible:ring-sky-400/40 focus-visible:ring-offset-2",
+  brandFocusRing: "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2",
 
-  settingsOnHero:
-    "bg-white/70 hover:bg-white border border-sky-100/90 shadow-sm shadow-sky-900/5",
+  settingsOnHero: "bg-white/70 hover:bg-white border border-mind/15 shadow-sm shadow-mind/5",
 
-  citationLink: "text-sky-700 hover:text-sky-800",
+  citationLink: "text-mind hover:text-mind/90",
   citationMuted: "text-zinc-500",
   citationSubtleBg: "bg-stone-50",
   citationBorder: "border border-stone-200/90",
 
-  libraryCta:
-    "bg-sky-600 text-white hover:bg-sky-700 border border-sky-700/50 shadow-sm shadow-sky-600/15",
-  libraryCtaSoft: "bg-sky-50 text-sky-900 border border-sky-100 hover:bg-sky-100/85",
+  libraryCta: "bg-mind text-white hover:bg-mind/90 border border-mind/30 shadow-sm shadow-mind/15",
+  libraryCtaSoft: "bg-mind/8 text-mind border border-mind/15 hover:bg-mind/12",
 
   warningDot: "bg-zinc-600",
   warningText: "text-zinc-900",
@@ -93,125 +98,68 @@ export const mx = {
   commercePrimaryCta: "bg-zinc-900 text-white hover:bg-zinc-800",
   commerceSecondaryCta: "bg-zinc-800 text-white hover:bg-zinc-900",
 
-  creditsCard: "bg-white border border-stone-200/90 border-l-[3px] border-l-sky-600",
+  creditsCard: "bg-white border border-stone-200/90 border-l-[3px] border-l-mind",
   creditsProgressTrack: "bg-stone-200",
-  creditsProgressFill: "bg-sky-600",
+  creditsProgressFill: "bg-mind",
 
   navIconNotes: "text-zinc-600",
   navIconLibrary: "text-zinc-700",
   navIconInsight: "text-zinc-600",
 
-  /** Bottom tab: active pill */
-  navActiveWell: "bg-sky-100/95",
-  navActiveIcon: "text-sky-800",
-  navActiveLabel: "text-sky-900",
+  navActiveWell: "bg-mind/10",
+  navActiveIcon: "text-mind",
+  navActiveLabel: "text-mind",
 
-  /**
-   * Content Studio / factory: one hue per format.
-   * Wells use the same *weight* as `navActiveWell` (pastel ~100, ~95% opacity); icons use matching ~800 ink.
-   * Hues stay in the app’s cool band (sky → cyan → teal → emerald → blue → indigo → violet) so nothing clashes with the nav.
-   */
+  /** Soft sky bloom — bottom nav active tab & Notes record control */
+  navBloomOuter:
+    "pointer-events-none absolute -inset-[10px] rounded-full bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.26)_0%,rgba(125,211,252,0.1)_38%,transparent_68%)] dark:bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.2)_0%,rgba(2,132,199,0.08)_40%,transparent_70%)]",
+  navBloomInner:
+    "pointer-events-none absolute -inset-px rounded-2xl bg-[radial-gradient(ellipse_100%_95%_at_50%_8%,rgba(255,255,255,0.92)_0%,rgba(186,230,253,0.42)_32%,rgba(125,211,252,0.14)_58%,transparent_78%)] dark:bg-[radial-gradient(ellipse_100%_95%_at_50%_12%,rgba(56,189,248,0.32)_0%,rgba(2,132,199,0.12)_45%,transparent_74%)]",
+  navIconGlow:
+    "text-mind drop-shadow-[0_0_10px_rgba(56,189,248,0.55),0_0_22px_rgba(125,211,252,0.35)] dark:text-mind/90 dark:drop-shadow-[0_0_12px_rgba(56,189,248,0.45),0_0_28px_rgba(2,132,199,0.2)]",
+  navGlassShell:
+    "bg-white/65 shadow-[0_-6px_28px_-10px_rgba(15,23,42,0.1),0_8px_28px_-14px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:bg-zinc-900/55 dark:shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.35)]",
+  navEase: "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+
   factoryTone: {
-    report: {
-      well: "bg-sky-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
-      icon: "text-sky-800",
-      sparkle: "text-sky-600",
-      pillOn: "border-sky-400 bg-sky-50 text-sky-900",
-      cardOn: "border-sky-400 bg-sky-50/90",
-      check: "text-sky-600",
-      styleCardOn: "border-sky-500 bg-sky-50/80 ring-1 ring-sky-200",
-      fieldFocus: "focus:border-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-200",
-      softHover: "hover:border-sky-200/80 hover:bg-sky-50/40",
-    },
-    audio: {
-      well: "bg-cyan-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
-      icon: "text-cyan-800",
-      sparkle: "text-cyan-600",
-      pillOn: "border-cyan-400 bg-cyan-50 text-cyan-900",
-      cardOn: "border-cyan-400 bg-cyan-50/90",
-      check: "text-cyan-600",
-      styleCardOn: "border-cyan-500 bg-cyan-50/80 ring-1 ring-cyan-200",
-      fieldFocus: "focus:border-cyan-300 focus:outline-none focus:ring-1 focus:ring-cyan-200",
-      softHover: "hover:border-cyan-200/80 hover:bg-cyan-50/40",
-    },
-    flashcards: {
-      well: "bg-emerald-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
-      icon: "text-emerald-800",
-      sparkle: "text-emerald-600",
-      pillOn: "border-emerald-400 bg-emerald-50 text-emerald-900",
-      cardOn: "border-emerald-400 bg-emerald-50/90",
-      check: "text-emerald-600",
-      styleCardOn: "border-emerald-500 bg-emerald-50/80 ring-1 ring-emerald-200",
-      fieldFocus: "focus:border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-200",
-      softHover: "hover:border-emerald-200/80 hover:bg-emerald-50/40",
-    },
-    quiz: {
-      well: "bg-blue-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
-      icon: "text-blue-800",
-      sparkle: "text-blue-600",
-      pillOn: "border-blue-400 bg-blue-50 text-blue-900",
-      cardOn: "border-blue-400 bg-blue-50/90",
-      check: "text-blue-600",
-      styleCardOn: "border-blue-500 bg-blue-50/80 ring-1 ring-blue-200",
-      fieldFocus: "focus:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-200",
-      softHover: "hover:border-blue-200/80 hover:bg-blue-50/40",
-    },
-    infographic: {
-      well: "bg-indigo-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
-      icon: "text-indigo-800",
-      sparkle: "text-indigo-600",
-      pillOn: "border-indigo-400 bg-indigo-50 text-indigo-900",
-      cardOn: "border-indigo-400 bg-indigo-50/90",
-      check: "text-indigo-600",
-      styleCardOn: "border-indigo-500 bg-indigo-50/80 ring-1 ring-indigo-200",
-      fieldFocus: "focus:border-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-200",
-      softHover: "hover:border-indigo-200/80 hover:bg-indigo-50/40",
-    },
-    slides: {
-      well: "bg-violet-100/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]",
-      icon: "text-violet-800",
-      sparkle: "text-violet-600",
-      pillOn: "border-violet-400 bg-violet-50 text-violet-900",
-      cardOn: "border-violet-400 bg-violet-50/90",
-      check: "text-violet-600",
-      styleCardOn: "border-violet-500 bg-violet-50/80 ring-1 ring-violet-200",
-      fieldFocus: "focus:border-violet-300 focus:outline-none focus:ring-1 focus:ring-violet-200",
-      softHover: "hover:border-violet-200/80 hover:bg-violet-50/40",
-    },
+    report: FACTORY_MIND_TONE,
+    audio: FACTORY_MIND_TONE,
+    flashcards: FACTORY_MIND_TONE,
+    quiz: FACTORY_MIND_TONE,
+    infographic: FACTORY_MIND_TONE,
+    slides: FACTORY_MIND_TONE,
   } as const,
 
-  /** Knowledge header “Ask” — same family as nav, lighter than primary CTA */
   knowledgeAskPill:
-    "border border-sky-200/90 bg-sky-50/95 text-sky-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] hover:border-sky-300/90 hover:bg-sky-100/80",
-  knowledgeAskSparkle: "text-sky-700",
+    "border border-mind/20 bg-mind/8 text-mind shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] hover:border-mind/25 hover:bg-mind/12",
+  knowledgeAskSparkle: "text-mind",
 
-  /** Generating-job row shells — cool pastels only (no pink/peach drift) */
   studioJobShell: [
-    "bg-sky-50/90 shadow-sm shadow-sky-900/[0.03] dark:bg-sky-950/25 dark:shadow-black/20",
-    "bg-cyan-50/85 shadow-sm shadow-cyan-900/[0.03] dark:bg-cyan-950/20 dark:shadow-black/20",
-    "bg-teal-50/80 shadow-sm shadow-teal-900/[0.03] dark:bg-teal-950/20 dark:shadow-black/20",
+    "bg-mind/8 shadow-sm shadow-mind/5 dark:bg-mind/15 dark:shadow-black/20",
+    "bg-mind/8 shadow-sm shadow-mind/5 dark:bg-mind/15 dark:shadow-black/20",
+    "bg-mind/8 shadow-sm shadow-mind/5 dark:bg-mind/15 dark:shadow-black/20",
   ] as const,
 } as const
 
-/** Heatmap: slight cool tint at higher activity */
+/** Heatmap — same `mind` blue, opacity only */
 export function mxHeatmapCell(value: number) {
   return cn(
-    "w-full aspect-square rounded-sm min-h-[10px] min-w-0 focus:outline-none focus:ring-2 focus:ring-sky-400/35 focus:ring-offset-1",
+    "w-full aspect-square rounded-sm min-h-[10px] min-w-0 focus:outline-none focus:ring-2 focus:ring-mind/30 focus:ring-offset-1",
     value === 0 && "bg-stone-100 hover:bg-stone-200/80",
-    value === 1 && "bg-sky-700/[0.10] hover:bg-sky-700/[0.16]",
-    value === 2 && "bg-sky-700/[0.22] hover:bg-sky-700/[0.30]",
-    value === 3 && "bg-sky-700/[0.34] hover:bg-sky-700/[0.42]",
-    value >= 4 && "bg-sky-800/[0.48] hover:bg-sky-800/[0.56]"
+    value === 1 && "bg-mind/10 hover:bg-mind/16",
+    value === 2 && "bg-mind/22 hover:bg-mind/30",
+    value === 3 && "bg-mind/34 hover:bg-mind/42",
+    value >= 4 && "bg-mind/48 hover:bg-mind/56"
   )
 }
 
 export function mxHeatmapCellTiny(value: number) {
   return cn(
-    "rounded-[1px] min-w-[8px] p-0 border-0 focus:outline-none focus:ring-1 focus:ring-sky-400/40",
+    "rounded-[1px] min-w-[8px] p-0 border-0 focus:outline-none focus:ring-1 focus:ring-mind/30",
     value === 0 && "bg-stone-100 hover:bg-stone-200",
-    value === 1 && "bg-sky-700/14 hover:bg-sky-700/22",
-    value === 2 && "bg-sky-700/26 hover:bg-sky-700/36",
-    value === 3 && "bg-sky-800/40 hover:bg-sky-800/48",
-    value >= 4 && "bg-sky-800/54 hover:bg-sky-800/62"
+    value === 1 && "bg-mind/14 hover:bg-mind/22",
+    value === 2 && "bg-mind/26 hover:bg-mind/36",
+    value === 3 && "bg-mind/40 hover:bg-mind/48",
+    value >= 4 && "bg-mind/54 hover:bg-mind/62"
   )
 }
