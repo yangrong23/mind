@@ -7,6 +7,13 @@ import { mx } from "@/lib/medrix-design-tokens"
 import { MOCK_KNOWLEDGE_BASES, type KnowledgeBase } from "@/lib/mock-knowledge-bases"
 import { LibraryPlazaView } from "@/components/mind-v2/library-plaza-view"
 import { ContentFactoryModals, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
+import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
+import { MindChatHeaderActions } from "@/components/mind-v2/mind-chat-header-actions"
+import {
+  MindChatQaHistoryPanel,
+  seedDemoQaHistory,
+  type MindQaHistoryItem,
+} from "@/components/mind-v2/mind-chat-qa-history-panel"
 import {
   normalizeStudioFromAgentHandoff,
   resolveAgentStudioLibraryName,
@@ -25,12 +32,13 @@ import {
   MessageCircle,
   Share2,
   MoreHorizontal,
-  FolderInput,
   Check,
   Bot,
   Globe,
   AtSign,
   AudioLines,
+  Network,
+  SquareArrowOutUpRight,
 } from "lucide-react"
 
 const STUDIO_OUTPUTS: { id: FactoryModalKind; label: string; sub: string }[] = [
@@ -113,26 +121,10 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
   const [libraryPlazaFromAgent, setLibraryPlazaFromAgent] = useState(false)
   /** Home composer — ima-style: dialog vs agent, model, @ KB, voice, upload */
   const [agentHomeChatMode, setAgentHomeChatMode] = useState<"dialog" | "agent">("dialog")
-  const [agentHomeModeMenuOpen, setAgentHomeModeMenuOpen] = useState(false)
-  const [agentHomeModelMenuOpen, setAgentHomeModelMenuOpen] = useState(false)
   const [agentHomeModelLabel, setAgentHomeModelLabel] = useState("DS 快速")
   const [agentHomeVoiceOn, setAgentHomeVoiceOn] = useState(false)
-  const homeComposerRef = useRef<HTMLDivElement>(null)
 
   const linkSummary = libraryLinkSummary(libraryLinkMode, pickedKbIds)
-
-  useEffect(() => {
-    if (!agentHomeModeMenuOpen && !agentHomeModelMenuOpen) return
-    function onDocMouseDown(e: MouseEvent) {
-      const el = homeComposerRef.current
-      if (el && !el.contains(e.target as Node)) {
-        setAgentHomeModeMenuOpen(false)
-        setAgentHomeModelMenuOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", onDocMouseDown)
-    return () => document.removeEventListener("mousedown", onDocMouseDown)
-  }, [agentHomeModeMenuOpen, agentHomeModelMenuOpen])
 
   function handlePlazaPick(kb: KnowledgeBase) {
     setLibraryLinkMode("pick")
@@ -157,8 +149,6 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
         toast.error("Add a prompt first")
         return
       }
-      setAgentHomeModeMenuOpen(false)
-      setAgentHomeModelMenuOpen(false)
       const modeLabel = agentHomeChatMode === "dialog" ? "Dialog" : "Agent"
       toast.success("Queued", {
         description: `${q.length > 100 ? `${q.slice(0, 100)}…` : q} · ${modeLabel} · ${agentHomeModelLabel}`,
@@ -167,13 +157,8 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
     })
   }
 
-  const homePillBtn =
-    "inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-zinc-200/85 bg-white/95 px-2.5 text-[12px] font-medium text-zinc-800 shadow-none transition-colors hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800/90 dark:text-zinc-100 dark:hover:bg-zinc-700"
-  const homeRoundBtn =
-    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#fafaf9] font-sans text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
+    <div className="relative flex h-full min-h-0 flex-col overflow-x-hidden bg-[#fafaf9] font-sans text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
       {/* Left drawer */}
       <div 
         className={cn(
@@ -269,7 +254,7 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
       )}
 
       {/* Main surface — centered composer, neutral backdrop */}
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible">
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center pt-4">
           <div
             className="aspect-[4/3] w-[min(100%,380px)] max-h-[48vh] bg-[radial-gradient(ellipse_70%_58%_at_50%_45%,rgba(24,24,27,0.06),transparent_68%)] dark:bg-[radial-gradient(ellipse_70%_58%_at_50%_45%,rgba(255,255,255,0.05),transparent_68%)]"
@@ -312,188 +297,36 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
                 </div>
               </div>
 
-              <div
-                ref={homeComposerRef}
-                className="relative overflow-hidden rounded-[1.75rem] border border-zinc-200/55 bg-white/92 shadow-[0_16px_48px_-20px_rgba(15,23,42,0.14),0_2px_12px_-4px_rgba(15,23,42,0.06)] backdrop-blur-md dark:border-zinc-700/65 dark:bg-zinc-900/72 dark:shadow-[0_20px_50px_-24px_rgba(0,0,0,0.55)]"
-              >
-                <textarea
-                  value={agentHomeDraft}
-                  onChange={(e) => setAgentHomeDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter" || e.shiftKey) return
-                    e.preventDefault()
-                    submitAgentHomePrompt()
-                  }}
-                  rows={2}
-                  placeholder="Send a message or hold to speak"
-                  className="max-h-36 min-h-[3.25rem] w-full resize-none border-0 bg-transparent px-4 pb-2 pt-3.5 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400/90 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
-                  aria-label="Message"
-                />
-                <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                    <span className="relative inline-flex">
-                      {agentHomeModeMenuOpen ? (
-                        <div
-                          className="absolute bottom-full left-0 z-20 mb-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
-                          role="listbox"
-                        >
-                          <button
-                            type="button"
-                            role="option"
-                            aria-selected={agentHomeChatMode === "dialog"}
-                            onClick={() => {
-                              setAgentHomeChatMode("dialog")
-                              setAgentHomeModeMenuOpen(false)
-                            }}
-                            className={cn(
-                              "flex w-full items-start gap-3 border-b border-zinc-100 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/80",
-                              agentHomeChatMode === "dialog" && "bg-sky-50/70 dark:bg-sky-950/35"
-                            )}
-                          >
-                            <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
-                            <span className="min-w-0 flex-1">
-                              <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
-                                对话模式
-                                {agentHomeChatMode === "dialog" ? (
-                                  <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
-                                ) : null}
-                              </span>
-                              <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
-                                Multi-turn chat
-                              </span>
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            role="option"
-                            aria-selected={agentHomeChatMode === "agent"}
-                            onClick={() => {
-                              setAgentHomeChatMode("agent")
-                              setAgentHomeModeMenuOpen(false)
-                            }}
-                            className={cn(
-                              "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80",
-                              agentHomeChatMode === "agent" && "bg-sky-50/70 dark:bg-sky-950/35"
-                            )}
-                          >
-                            <Bot className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
-                            <span className="min-w-0 flex-1">
-                              <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
-                                智能体模式
-                                {agentHomeChatMode === "agent" ? (
-                                  <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
-                                ) : null}
-                              </span>
-                              <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
-                                Agent-style delivery (demo)
-                              </span>
-                            </span>
-                          </button>
-                        </div>
-                      ) : null}
-                      <button
-                        type="button"
-                        className={homePillBtn}
-                        aria-expanded={agentHomeModeMenuOpen}
-                        aria-haspopup="listbox"
-                        onClick={() => {
-                          setAgentHomeModeMenuOpen((v) => !v)
-                          setAgentHomeModelMenuOpen(false)
-                        }}
-                      >
-                        {agentHomeChatMode === "dialog" ? "对话" : "智能体"}
-                        <ChevronDown className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} aria-hidden />
-                      </button>
-                    </span>
-                    <span className="relative inline-flex">
-                      {agentHomeModelMenuOpen ? (
-                        <div className="absolute bottom-full left-0 z-20 mb-2 min-w-[10.5rem] overflow-hidden rounded-xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                          {(["DS 快速", "Mind Pro", "Balanced"] as const).map((m) => (
-                            <button
-                              key={m}
-                              type="button"
-                              onClick={() => {
-                                setAgentHomeModelLabel(m)
-                                setAgentHomeModelMenuOpen(false)
-                              }}
-                              className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                            >
-                              {m}
-                              {agentHomeModelLabel === m ? (
-                                <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
-                              ) : (
-                                <span className="w-4" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                      <button
-                        type="button"
-                        className={homePillBtn}
-                        aria-expanded={agentHomeModelMenuOpen}
-                        onClick={() => {
-                          setAgentHomeModelMenuOpen((v) => !v)
-                          setAgentHomeModeMenuOpen(false)
-                        }}
-                      >
-                        <Globe className="h-3.5 w-3.5 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
-                        <span className="max-w-[6.5rem] truncate">{agentHomeModelLabel}</span>
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
-                      </button>
-                    </span>
-                  </div>
-                  <div className="ml-auto flex shrink-0 items-center gap-0.5">
-                    <button
-                      type="button"
-                      className={homeRoundBtn}
-                      aria-label="Choose knowledge libraries"
-                      title={linkSummary}
-                      onClick={() => {
-                        setAgentHomeModeMenuOpen(false)
-                        setAgentHomeModelMenuOpen(false)
-                        setShowKBSelect(true)
-                      }}
-                    >
-                      <AtSign className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={agentHomeVoiceOn}
-                      aria-label={agentHomeVoiceOn ? "Stop voice input" : "Voice input"}
-                      onClick={() =>
-                        runWithAuth(() => {
-                          setAgentHomeVoiceOn((prev) => {
-                            const next = !prev
-                            toast.message(next ? "Voice input" : "Voice input off", {
-                              description: next ? "Demo: tap again to stop." : "Demo: no audio sent.",
-                            })
-                            return next
-                          })
-                        })
-                      }
-                      className={cn(
-                        homeRoundBtn,
-                        agentHomeVoiceOn && "bg-sky-50 text-sky-800 dark:bg-sky-950/45 dark:text-sky-200"
-                      )}
-                    >
-                      <AudioLines className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      className={homeRoundBtn}
-                      aria-label="Upload file"
-                      onClick={() =>
-                        runWithAuth(() =>
-                          toast.message("Upload file", { description: "Demo — pick a file from your device." })
-                        )
-                      }
-                    >
-                      <Plus className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <MindChatComposer
+                variant="home"
+                value={agentHomeDraft}
+                onChange={setAgentHomeDraft}
+                onSubmit={submitAgentHomePrompt}
+                placeholder=""
+                chatMode={agentHomeChatMode}
+                onChatModeChange={setAgentHomeChatMode}
+                modelLabel={agentHomeModelLabel}
+                onModelLabelChange={setAgentHomeModelLabel}
+                voiceOn={agentHomeVoiceOn}
+                onVoiceToggle={() =>
+                  runWithAuth(() => {
+                    setAgentHomeVoiceOn((prev) => {
+                      const next = !prev
+                      toast.message(next ? "Voice input" : "Voice input off", {
+                        description: next ? "Demo: tap again to stop." : "Demo: no audio sent.",
+                      })
+                      return next
+                    })
+                  })
+                }
+                atTitle={linkSummary}
+                onAtClick={() => setShowKBSelect(true)}
+                onUploadClick={() =>
+                  runWithAuth(() =>
+                    toast.message("Upload file", { description: "Demo — pick a file from your device." })
+                  )
+                }
+              />
 
               <div className="mt-4 w-full">
                 <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
@@ -957,6 +790,94 @@ function agentAvatarIsRemoteUrl(avatar: string) {
   return typeof avatar === "string" && /^https?:\/\//i.test(avatar)
 }
 
+type ChatMsg = { id: string; role: "user" | "ai"; content: string }
+
+function lastAssistantContent(messages: ChatMsg[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]!.role === "ai") return messages[i]!.content
+  }
+  return null
+}
+
+function KnowledgeLibraryChatActionsBar({
+  messages,
+  runWithAuth,
+  onSaveToLibrary,
+  onShareReply,
+}: {
+  messages: ChatMsg[]
+  runWithAuth: (fn: () => void) => void
+  onSaveToLibrary: (text: string) => void
+  onShareReply: (text: string) => void
+}) {
+  const lastAi = lastAssistantContent(messages)
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-stone-200/80 bg-[#f7f7f8] px-3 py-2 dark:border-zinc-700/80 dark:bg-zinc-900/50">
+      <button
+        type="button"
+        onClick={() =>
+          runWithAuth(() =>
+            toast.message("生成脑图", {
+              description: "演示：已根据当前对话加入脑图生成队列。",
+            })
+          )
+        }
+        className="flex min-w-0 items-center gap-1.5 rounded-lg px-1 py-1 text-left text-[13px] font-medium text-zinc-800 transition-colors hover:bg-stone-200/70 dark:text-zinc-100 dark:hover:bg-zinc-800/80"
+      >
+        <Network className="h-4 w-4 shrink-0 text-zinc-700 dark:text-zinc-200" strokeWidth={2} aria-hidden />
+        <span className="truncate">生成脑图</span>
+      </button>
+      <div className="flex shrink-0 items-center gap-0.5">
+        <button
+          type="button"
+          title="存入知识库"
+          aria-label="存入知识库"
+          onClick={() =>
+            runWithAuth(() => {
+              if (!lastAi) {
+                toast.message("暂无助手回复", { description: "先发一条消息，收到回复后再存入知识库。" })
+                return
+              }
+              onSaveToLibrary(lastAi)
+            })
+          }
+          className="rounded-lg p-2 text-zinc-600 transition-colors hover:bg-stone-200/80 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        >
+          <SquareArrowOutUpRight className="h-[18px] w-[18px]" strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          aria-label="分享"
+          onClick={() =>
+            runWithAuth(() => {
+              if (!lastAi) {
+                toast.message("暂无助手回复", { description: "收到回复后再分享。" })
+                return
+              }
+              onShareReply(lastAi)
+            })
+          }
+          className="rounded-lg p-2 text-zinc-600 transition-colors hover:bg-stone-200/80 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        >
+          <Share2 className="h-[18px] w-[18px]" strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          aria-label="更多"
+          onClick={() =>
+            runWithAuth(() =>
+              toast.message("更多", { description: "演示：可复制、举报或重新生成。" })
+            )
+          }
+          className="rounded-lg p-2 text-zinc-600 transition-colors hover:bg-stone-200/80 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        >
+          <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // Agent chat screen
 interface AgentChatProps {
   agent: Agent
@@ -970,7 +891,6 @@ interface AgentChatProps {
   knowledgeContext?: { kbName: string; contentTitle?: string }
 }
 
-type ChatMsg = { id: string; role: "user" | "ai"; content: string }
 /** 对话 = multi-turn chat; 智能体 = agent-style autonomous delivery (demo). */
 type AgentComposerMode = "dialog" | "agent"
 
@@ -994,37 +914,21 @@ export function AgentChat({
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [chatMode, setChatMode] = useState<AgentComposerMode>("dialog")
-  const [modeMenuOpen, setModeMenuOpen] = useState(false)
-  const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const [kbMenuOpen, setKbMenuOpen] = useState(false)
   const [modelLabel, setModelLabel] = useState("DS 快速")
   const [voiceOn, setVoiceOn] = useState(false)
   /** Optional KB grounding chosen via @ (demo; parent `knowledgeContext` still drives library entry). */
   const [pickedKbName, setPickedKbName] = useState<string | null>(null)
-  const composerShellRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!modeMenuOpen && !modelMenuOpen && !kbMenuOpen) return
-    function onDocMouseDown(e: MouseEvent) {
-      const el = composerShellRef.current
-      if (el && !el.contains(e.target as Node)) {
-        setModeMenuOpen(false)
-        setModelMenuOpen(false)
-        setKbMenuOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", onDocMouseDown)
-    return () => document.removeEventListener("mousedown", onDocMouseDown)
-  }, [modeMenuOpen, modelMenuOpen, kbMenuOpen])
+  const [qaHistoryOpen, setQaHistoryOpen] = useState(false)
+  const [qaHistoryItems, setQaHistoryItems] = useState<MindQaHistoryItem[]>(() => seedDemoQaHistory())
 
   const handleSend = () => {
     if (!input.trim()) return
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content: input.trim() }
     const modeAtSend = chatMode
     setMessages((prev) => [...prev, userMsg])
+    setQaHistoryItems((prev) => [{ id: `qa-${Date.now()}`, at: Date.now(), query: userMsg.content }, ...prev])
     setInput("")
-    setModeMenuOpen(false)
-    setModelMenuOpen(false)
     setKbMenuOpen(false)
     setTimeout(() => {
       const agentNote =
@@ -1045,6 +949,15 @@ export function AgentChat({
   }
 
   const trySend = () => runWithAuth(handleSend)
+
+  function startNewChat() {
+    setMessages([])
+    setInput("")
+    setKbMenuOpen(false)
+    setPickedKbName(null)
+    setQaHistoryOpen(false)
+    toast.message("New chat", { description: "Started a fresh thread (demo)." })
+  }
 
   function saveAiReplyToLibrary(text: string) {
     runWithAuth(() =>
@@ -1071,241 +984,74 @@ export function AgentChat({
 
   const displayKbName = pickedKbName ?? (isLibraryChat ? kbLabel : null)
 
-  const pillBtn =
-    "inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-zinc-200/85 bg-white px-2.5 text-[12px] font-medium text-zinc-800 shadow-none transition-colors hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-
-  const roundToolBtn =
-    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-
-  const composer = (
-    <div ref={composerShellRef} className="relative w-full max-w-md">
-      <div
-        className={cn(
-          "overflow-hidden rounded-[26px] border bg-white dark:bg-zinc-900",
-          "border-zinc-200/80 dark:border-zinc-700/90"
-        )}
-      >
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key !== "Enter") return
-            if (e.shiftKey) return
-            e.preventDefault()
-            trySend()
+  const kbAtMenu = (
+    <div className="max-h-52 w-[min(17.5rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+      <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+        Knowledge base
+      </p>
+      {MOCK_KNOWLEDGE_BASES.slice(0, 8).map((kb) => (
+        <button
+          key={kb.id}
+          type="button"
+          onClick={() => {
+            setPickedKbName(kb.name)
+            setKbMenuOpen(false)
+            toast.message("Knowledge base", { description: `Grounding set to “${kb.name}” (demo).` })
           }}
-          rows={2}
-          placeholder={
-            isLibraryChat
-              ? "Ask this knowledge base…"
-              : entryHint
-                ? "Turn saved knowledge into an outcome…"
-                : "Send a message or hold to talk"
-          }
-          className="max-h-36 min-h-[3.25rem] w-full resize-none border-0 bg-transparent px-4 pb-2 pt-3.5 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
-          aria-label="Message"
-        />
-
-        <div className="flex flex-wrap items-center gap-2 px-2.5 py-2">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-            <span className="relative inline-flex">
-              {modeMenuOpen ? (
-                <div
-                  className="absolute bottom-full left-0 z-20 mb-2 w-[min(20rem,calc(100vw-2.5rem))] overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-lg shadow-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900"
-                  role="listbox"
-                >
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={chatMode === "dialog"}
-                    onClick={() => {
-                      setChatMode("dialog")
-                      setModeMenuOpen(false)
-                    }}
-                    className={cn(
-                      "flex w-full items-start gap-3 border-b border-zinc-100 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/80",
-                      chatMode === "dialog" && "bg-sky-50/70 dark:bg-sky-950/35"
-                    )}
-                  >
-                    <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
-                        对话模式
-                        {chatMode === "dialog" ? <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} /> : null}
-                      </span>
-                      <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
-                        Multi-turn chat and reasoning
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={chatMode === "agent"}
-                    onClick={() => {
-                      setChatMode("agent")
-                      setModeMenuOpen(false)
-                    }}
-                    className={cn(
-                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80",
-                      chatMode === "agent" && "bg-sky-50/70 dark:bg-sky-950/35"
-                    )}
-                  >
-                    <Bot className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} aria-hidden />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
-                        智能体模式
-                        {chatMode === "agent" ? <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} /> : null}
-                      </span>
-                      <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
-                        Agent-style steps and structured delivery (demo)
-                      </span>
-                    </span>
-                  </button>
-                </div>
-              ) : null}
-              <button
-                type="button"
-                className={pillBtn}
-                aria-expanded={modeMenuOpen}
-                aria-haspopup="listbox"
-                onClick={() => {
-                  setModeMenuOpen((v) => !v)
-                  setModelMenuOpen(false)
-                  setKbMenuOpen(false)
-                }}
-              >
-                {chatMode === "dialog" ? "对话" : "智能体"}
-                <ChevronDown className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} aria-hidden />
-              </button>
-            </span>
-
-            <span className="relative inline-flex">
-              {modelMenuOpen ? (
-                <div className="absolute bottom-full left-0 z-20 mb-2 min-w-[10.5rem] overflow-hidden rounded-xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                  {(["DS 快速", "Mind Pro", "Balanced"] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => {
-                        setModelLabel(m)
-                        setModelMenuOpen(false)
-                      }}
-                      className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                    >
-                      {m}
-                      {modelLabel === m ? (
-                        <Check className="h-4 w-4 text-sky-600" strokeWidth={2.5} />
-                      ) : (
-                        <span className="w-4" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              <button
-                type="button"
-                className={pillBtn}
-                aria-expanded={modelMenuOpen}
-                onClick={() => {
-                  setModelMenuOpen((v) => !v)
-                  setModeMenuOpen(false)
-                  setKbMenuOpen(false)
-                }}
-              >
-                <Globe className="h-3.5 w-3.5 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
-                <span className="max-w-[6.5rem] truncate">{modelLabel}</span>
-                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
-              </button>
-            </span>
-          </div>
-
-          <div className="ml-auto flex shrink-0 items-center gap-0.5">
-            <span className="relative inline-flex">
-              {kbMenuOpen ? (
-                <div className="absolute bottom-full right-0 z-20 mb-2 max-h-52 w-[min(17.5rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                  <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    Knowledge base
-                  </p>
-                  {MOCK_KNOWLEDGE_BASES.slice(0, 8).map((kb) => (
-                    <button
-                      key={kb.id}
-                      type="button"
-                      onClick={() => {
-                        setPickedKbName(kb.name)
-                        setKbMenuOpen(false)
-                        toast.message("Knowledge base", { description: `Grounding set to “${kb.name}” (demo).` })
-                      }}
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                    >
-                      <span className="truncate">{kb.name}</span>
-                      {(pickedKbName === kb.name || (isLibraryChat && kbLabel === kb.name && !pickedKbName)) ? (
-                        <Check className="h-4 w-4 shrink-0 text-sky-600" strokeWidth={2.5} />
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              <button
-                type="button"
-                className={roundToolBtn}
-                aria-label={displayKbName ? `Knowledge base: ${displayKbName}` : "Pick knowledge base"}
-                title={displayKbName ?? "Pick knowledge base"}
-                onClick={() =>
-                  runWithAuth(() => {
-                    setKbMenuOpen((v) => !v)
-                    setModeMenuOpen(false)
-                    setModelMenuOpen(false)
-                  })
-                }
-              >
-                <AtSign className="h-[18px] w-[18px]" strokeWidth={2} />
-              </button>
-            </span>
-
-            <button
-              type="button"
-              aria-pressed={voiceOn}
-              aria-label={voiceOn ? "Stop voice input" : "Voice input"}
-              onClick={() =>
-                runWithAuth(() => {
-                  setVoiceOn((prev) => {
-                    const next = !prev
-                    toast.message(next ? "Voice input" : "Voice input off", {
-                      description: next ? "Demo: speak, tap again to stop." : "Demo: no audio uploaded.",
-                    })
-                    return next
-                  })
-                })
-              }
-              className={cn(
-                roundToolBtn,
-                voiceOn && "bg-sky-50 text-sky-800 dark:bg-sky-950/45 dark:text-sky-200"
-              )}
-            >
-              <AudioLines className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
-            </button>
-
-            <button
-              type="button"
-              className={roundToolBtn}
-              aria-label="Upload file"
-              onClick={() =>
-                runWithAuth(() =>
-                  toast.message("Upload file", { description: "Demo — pick a file from your device." })
-                )
-              }
-            >
-              <Plus className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
-            </button>
-          </div>
-        </div>
-      </div>
+          className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
+        >
+          <span className="truncate">{kb.name}</span>
+          {(pickedKbName === kb.name || (isLibraryChat && kbLabel === kb.name && !pickedKbName)) ? (
+            <Check className="h-4 w-4 shrink-0 text-sky-600" strokeWidth={2.5} />
+          ) : null}
+        </button>
+      ))}
     </div>
   )
 
+  const composer = (
+    <MindChatComposer
+      variant="thread"
+      value={input}
+      onChange={setInput}
+      onSubmit={trySend}
+      placeholder={
+        isLibraryChat
+          ? "Ask this knowledge base…"
+          : entryHint
+            ? "Turn saved knowledge into an outcome…"
+            : ""
+      }
+      chatMode={chatMode}
+      onChatModeChange={setChatMode}
+      modelLabel={modelLabel}
+      onModelLabelChange={setModelLabel}
+      voiceOn={voiceOn}
+      onVoiceToggle={() =>
+        runWithAuth(() => {
+          setVoiceOn((prev) => {
+            const next = !prev
+            toast.message(next ? "Voice input" : "Voice input off", {
+              description: next ? "Demo: speak, tap again to stop." : "Demo: no audio uploaded.",
+            })
+            return next
+          })
+        })
+      }
+      atTitle={displayKbName ?? undefined}
+      atMenu={kbAtMenu}
+      atMenuOpen={kbMenuOpen}
+      onAtMenuOpenChange={(open) => runWithAuth(() => setKbMenuOpen(open))}
+      onUploadClick={() =>
+        runWithAuth(() =>
+          toast.message("Upload file", { description: "Demo — pick a file from your device." })
+        )
+      }
+    />
+  )
+
   return (
-    <div className="flex h-full flex-col bg-stone-50 font-sans dark:bg-zinc-950">
+    <div className="relative flex h-full flex-col bg-stone-50 font-sans dark:bg-zinc-950">
       {/* Header */}
       <div className="flex shrink-0 items-center gap-3 border-b border-stone-200/90 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
         <button type="button" onClick={onBack} className="-ml-2 rounded-full p-2 hover:bg-stone-100 dark:hover:bg-zinc-800">
@@ -1327,6 +1073,10 @@ export function AgentChat({
           <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{agent.name}</h3>
           <p className="line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">{agent.description}</p>
         </div>
+        <MindChatHeaderActions
+          onNewChat={() => runWithAuth(startNewChat)}
+          onOpenHistory={() => runWithAuth(() => setQaHistoryOpen(true))}
+        />
       </div>
 
       {entryHint ? (
@@ -1352,12 +1102,31 @@ export function AgentChat({
           <h3 className="mb-1 text-center text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
             Hi, I&apos;m {agent.name}
           </h3>
-          <p className="mb-8 max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            {entryHint
-              ? "Flexible AI on your sources—toward concrete outcomes."
-              : "Send a message to start"}
-          </p>
-          <div className="w-full max-w-md">{composer}</div>
+          {entryHint ? (
+            <p className="mb-8 max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              Flexible AI on your sources—toward concrete outcomes.
+            </p>
+          ) : (
+            <div className="mb-8" aria-hidden />
+          )}
+          <div className="w-full max-w-md space-y-0">
+            {isLibraryChat ? (
+              <>
+                <KnowledgeLibraryChatActionsBar
+                  messages={messages}
+                  runWithAuth={runWithAuth}
+                  onSaveToLibrary={(t) => saveAiReplyToLibrary(t)}
+                  onShareReply={(t) => shareAiReply(t)}
+                />
+                {composer}
+                <p className="pt-1.5 text-center text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
+                  内容由AI生成仅供参考
+                </p>
+              </>
+            ) : (
+              composer
+            )}
+          </div>
         </div>
       ) : (
         <>
@@ -1373,48 +1142,41 @@ export function AgentChat({
                   )}
                 >
                   <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
-                  {msg.role === "ai" && isLibraryChat ? (
-                    <div className="mt-3 flex justify-end gap-0.5 border-t border-stone-100 pt-2.5 dark:border-zinc-700/90">
-                      <button
-                        type="button"
-                        className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-stone-50 hover:text-sky-700 dark:hover:bg-zinc-800 dark:hover:text-sky-400"
-                        aria-label="Save reply to knowledge base"
-                        title="存入知识库"
-                        onClick={() => saveAiReplyToLibrary(msg.content)}
-                      >
-                        <FolderInput className="h-[18px] w-[18px]" strokeWidth={2} />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-stone-50 hover:text-sky-700 dark:hover:bg-zinc-800 dark:hover:text-sky-400"
-                        aria-label="Share"
-                        onClick={() => shareAiReply(msg.content)}
-                      >
-                        <Share2 className="h-[18px] w-[18px]" strokeWidth={2} />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-stone-50 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                        aria-label="More"
-                        onClick={() =>
-                          runWithAuth(() =>
-                            toast.message("更多", { description: "演示：可复制、举报或重新生成。" })
-                          )
-                        }
-                      >
-                        <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2} />
-                      </button>
-                    </div>
-                  ) : null}
                 </div>
               </div>
             ))}
           </div>
-          <div className="shrink-0 border-t border-stone-200/90 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-            {composer}
+          <div className="shrink-0 border-t border-stone-200/90 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            {isLibraryChat ? (
+              <>
+                <KnowledgeLibraryChatActionsBar
+                  messages={messages}
+                  runWithAuth={runWithAuth}
+                  onSaveToLibrary={(t) => saveAiReplyToLibrary(t)}
+                  onShareReply={(t) => shareAiReply(t)}
+                />
+                <div className="p-2 pt-1.5">{composer}</div>
+                <p className="px-3 pb-2 text-center text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
+                  内容由AI生成仅供参考
+                </p>
+              </>
+            ) : (
+              <div className="p-2">{composer}</div>
+            )}
           </div>
         </>
       )}
+
+      <MindChatQaHistoryPanel
+        open={qaHistoryOpen}
+        onClose={() => setQaHistoryOpen(false)}
+        items={qaHistoryItems}
+        title={knowledgeContext ? "问答历史" : "Q&A history"}
+        retentionHint={
+          knowledgeContext ? "为你保留最近90天历史记录" : "Keeps the last 90 days of history for you."
+        }
+        locale={knowledgeContext ? "zh-CN" : "en-US"}
+      />
     </div>
   )
 }
