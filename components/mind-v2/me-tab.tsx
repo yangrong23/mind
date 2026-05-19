@@ -11,10 +11,21 @@ import {
   accountSpaceLabel,
   type MindAccountId,
 } from "@/lib/mind-accounts"
-import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
 import { MeAiInsights } from "@/components/mind-v2/me-ai-insights"
-import { MeDailyReview } from "@/components/mind-v2/me-daily-review"
+import {
+  DAILY_REVIEW_HEADLINE,
+  DAILY_REVIEW_HIGHLIGHTS,
+  MeDailyReview,
+} from "@/components/mind-v2/me-daily-review"
+import { MindShareSheet } from "@/components/mind-v2/mind-share-sheet"
+import {
+  SettingsGroup,
+  SettingsLinkRow,
+  SettingsScreenShell,
+  SettingsToggleRow,
+} from "@/components/mind-v2/me-settings-ui"
+import { buildTimelineSharePayload, type MindSharePayload } from "@/lib/mind-share-payload"
 import {
   MeCollectedPersonalInfoPanel,
   MePrivacyGuideSummaryPanel,
@@ -22,6 +33,7 @@ import {
   MeStorageSpacePanel,
   MeThirdPartySharingPanel,
 } from "@/components/mind-v2/me-settings-panels"
+import { MeCreditsPlansScreen } from "@/components/mind-v2/me-credits-billing"
 import {
   MIND_FONT_ZOOM_MAX,
   MIND_FONT_ZOOM_MIN,
@@ -362,7 +374,7 @@ export function MeTab({
 }: MeTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
   const [heatmapDayDetail, setHeatmapDayDetail] = useState<{ date: string; value: number } | null>(null)
-  const [insightShareSheet, setInsightShareSheet] = useState<{ title: string; preview: string } | null>(null)
+  const [shareSheet, setShareSheet] = useState<MindSharePayload | null>(null)
   const [personalizedFeed, setPersonalizedFeed] = useState<null | { type: "daily" }>(null)
   const [showAiInsights, setShowAiInsights] = useState(false)
   const [showShareCard, setShowShareCard] = useState(false)
@@ -392,7 +404,9 @@ export function MeTab({
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
-  const [settingsExtra, setSettingsExtra] = useState<null | "display" | "notifications" | "help">(null)
+  const [settingsExtra, setSettingsExtra] = useState<
+    null | "display" | "notifications" | "storage" | "features" | "privacy" | "account" | "help"
+  >(null)
   const [showStorageSpace, setShowStorageSpace] = useState(false)
   const [privacyDetail, setPrivacyDetail] = useState<
     null | "guide" | "thirdParty" | "collected" | "privacySettings"
@@ -957,571 +971,302 @@ export function MeTab({
         </div>
       )}
 
-      {/* Settings hub (below membership) */}
+      {/* Settings hub — level 1 */}
       {showSettingsHub && (
-        <div className="absolute inset-0 z-50 flex flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <button
-              type="button"
+        <SettingsScreenShell
+          zClass="z-50"
+          title="Settings"
+          onBack={() => {
+            setShowSettingsHub(false)
+            setPrivacyDetail(null)
+            setShowStorageSpace(false)
+          }}
+        >
+          <SettingsGroup>
+            <SettingsLinkRow
+              label="Display"
+              value={`${appearanceLabel} · ${fontZoomPercent}%`}
               onClick={() => {
                 setShowSettingsHub(false)
-                setPrivacyDetail(null)
-                setShowStorageSpace(false)
+                setSettingsExtra("display")
               }}
-              className="p-1"
-            >
-              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
-            </button>
-            <h1 className="text-lg font-semibold text-zinc-900">Settings</h1>
-            <div className="w-8" />
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-5 pb-10">
-            <div className="mb-5">
-              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                General
-              </p>
-              <div className="overflow-hidden rounded-2xl border border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSettingsHub(false)
-                    setSettingsExtra("display")
-                  }}
-                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-                >
-                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Display</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm text-zinc-500">{appearanceLabel}</span>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSettingsHub(false)
-                    setSettingsExtra("display")
-                  }}
-                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-                >
-                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Text size</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm tabular-nums text-zinc-500">{fontZoomPercent}%</span>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowStorageSpace(true)}
-                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100 dark:bg-zinc-800">
-                      <HardDrive className="h-5 w-5 text-zinc-600" />
-                    </div>
-                    <div className="min-w-0 text-left">
-                      <div className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Storage space</div>
-                      <div className="text-xs text-zinc-500">Notes & knowledge base</div>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    toast.success("Cache cleared", { description: "Freed 7.7 MB (demo)." })
-                  }
-                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-                >
-                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Clear cache</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm tabular-nums text-zinc-500">7.7 MB</span>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSettingsHub(false)
-                    setSettingsExtra("notifications")
-                  }}
-                  className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:hover:bg-zinc-800/50"
-                >
-                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Notifications</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm text-zinc-500">{notifStatusLabel}</span>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-5">
-              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                Features
-              </p>
-              <div className="overflow-hidden rounded-2xl border border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-                <button
-                  type="button"
-                  onClick={() =>
-                    toast.message("Model settings", {
-                      description: "Custom models and routing would open here (demo).",
-                    })
-                  }
-                  className="flex w-full items-center gap-3 border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100 dark:bg-zinc-800">
-                    <Cpu className="h-5 w-5 text-zinc-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Model settings</div>
-                    <div className="text-xs text-zinc-500">Supports custom models</div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                </button>
-                <div className="flex items-center justify-between px-4 py-3.5">
-                  <div className="min-w-0 pr-3">
-                    <div className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Frontier insights</div>
-                    <div className="mt-0.5 text-xs leading-snug text-zinc-500">
-                      When on, the Frontier insights card appears on the home tab by default.
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={frontierInsights}
-                    onClick={() => {
-                      setFrontierInsights((v) => !v)
-                      toast.success("Saved")
-                    }}
-                    className={cn(
-                      "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                      frontierInsights ? "bg-mind" : cn(mx.toggleTrackOff)
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
-                        frontierInsights ? "translate-x-5" : "translate-x-0"
-                      )}
-                    />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-5">
-              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                Privacy
-              </p>
-              <div className="overflow-hidden rounded-2xl border border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-                <button
-                  type="button"
-                  onClick={() => setPrivacyDetail("guide")}
-                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-                >
-                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">
-                    Privacy protection guide (summary)
-                  </span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrivacyDetail("privacySettings")}
-                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-                >
-                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Privacy settings</span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrivacyDetail("collected")}
-                  className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:hover:bg-zinc-800/50"
-                >
-                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">
-                    Personal information collected
-                  </span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrivacyDetail("thirdParty")}
-                  className="flex w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:hover:bg-zinc-800/50"
-                >
-                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">
-                    Personal information shared with third parties
-                  </span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-2">
-              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                More
-              </p>
-              <div className="overflow-hidden rounded-2xl border border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-                {(
-                  [
-                    {
-                      icon: User,
-                      label: "Personalization",
-                      desc: "Preferences and custom instructions",
-                      onClick: () => {
-                        setShowSettingsHub(false)
-                        setShowPersonalization(true)
-                      },
-                    },
-                    {
-                      icon: Cloud,
-                      label: "Cloud sync",
-                      desc: "Private cloud backup and storage",
-                      onClick: () => {
-                        setShowSettingsHub(false)
-                        setShowCloudSync(true)
-                      },
-                    },
-                    {
-                      icon: Smartphone,
-                      label: "Devices",
-                      desc: "Recorder, pairing, lexicon, offline",
-                      onClick: () => {
-                        setShowSettingsHub(false)
-                        setShowDeviceSheet(true)
-                      },
-                    },
-                    {
-                      icon: HelpCircle,
-                      label: "Help & feedback",
-                      desc: "Guides and support",
-                      onClick: () => {
-                        setShowSettingsHub(false)
-                        setSettingsExtra("help")
-                      },
-                    },
-                  ] as const
-                ).map((item, i, arr) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={item.onClick}
-                    className={cn(
-                      "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white dark:bg-zinc-950 dark:hover:bg-zinc-800/50",
-                      i !== arr.length - 1 && "border-b border-stone-100/85 dark:border-zinc-800"
-                    )}
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100 dark:bg-zinc-800">
-                      <item.icon className="h-5 w-5 text-zinc-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-zinc-900 dark:text-zinc-100">{item.label}</div>
-                      <div className="text-xs text-zinc-500">{item.desc}</div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {settingsExtra && (
-        <div className="absolute inset-0 z-[51] flex flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
-          <div className="flex shrink-0 items-center gap-2 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 px-4 py-3">
-            <button
-              type="button"
+            />
+            <SettingsLinkRow
+              label="Notifications"
+              value={notifStatusLabel}
               onClick={() => {
-                setSettingsExtra(null)
-                setShowSettingsHub(true)
+                setShowSettingsHub(false)
+                setSettingsExtra("notifications")
               }}
-              className="rounded-full p-1 hover:bg-stone-100"
-              aria-label="Back to settings"
-            >
-              <ChevronRight className="h-6 w-6 rotate-180 text-zinc-600" />
-            </button>
-            <h1 className="text-lg font-semibold text-zinc-900">
-              {settingsExtra === "display" && "Display"}
-              {settingsExtra === "notifications" && "Notifications"}
-              {settingsExtra === "help" && "Help & feedback"}
-            </h1>
-          </div>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
-            {settingsExtra === "display" && (
-              <>
-                <p className="text-sm text-zinc-500">
-                  Switch theme and overall scale here. You can still toggle dark mode quickly from the status bar icon.
-                </p>
-                <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
-                  <div className="border-b border-stone-100/85 px-4 py-4">
-                    <p className="text-[15px] font-medium text-zinc-900">Appearance</p>
-                    <p className="mt-1 text-xs text-zinc-500">Choose light or dark interface</p>
-                    <DisplayThemeSegment />
-                  </div>
-                  <div className="px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[15px] font-medium text-zinc-900">Text size</p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Scale the entire phone preview (body text, lists, and controls together).
-                        </p>
-                      </div>
-                      <span className="shrink-0 tabular-nums text-[17px] font-semibold text-mind dark:text-mind/28">
-                        {fontZoomPercent}%
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-stone-200 accent-mind dark:bg-zinc-700 dark:accent-mind/48"
-                      min={MIND_FONT_ZOOM_MIN}
-                      max={MIND_FONT_ZOOM_MAX}
-                      step={1}
-                      value={fontZoomPercent}
-                      onChange={(e) =>
-                        onFontZoomPercentChange?.(clampFontZoomPercent(Number(e.target.value)))
-                      }
-                      aria-valuemin={MIND_FONT_ZOOM_MIN}
-                      aria-valuemax={MIND_FONT_ZOOM_MAX}
-                      aria-valuenow={fontZoomPercent}
-                      aria-label="Text size"
-                    />
-                    <div className="mt-1 flex justify-between text-[11px] text-zinc-400">
-                      <span>Smaller</span>
-                      <span>Default</span>
-                      <span>Larger</span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-            {settingsExtra === "notifications" && (
-              <>
-                <p className="text-sm text-zinc-500">
-                  Demo toggles; turning them on or off shows a short confirmation.
-                </p>
-                <div className="overflow-hidden rounded-xl border border-stone-100/85 bg-white">
-                  <div className="flex items-center justify-between px-4 py-4 border-b border-stone-100/85">
-                    <div>
-                      <div className="text-[15px] text-zinc-900">Recording ready</div>
-                      <div className="mt-1 text-xs text-zinc-400">Notify when a capture finishes processing</div>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={notifCaptureReady}
-                      onClick={() => {
-                        setNotifCaptureReady((v) => !v)
-                        toast.success("Saved")
-                      }}
-                      className={cn(
-                        "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                        notifCaptureReady ? "bg-mind" : cn(mx.toggleTrackOff)
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
-                          notifCaptureReady ? "translate-x-5" : "translate-x-0"
-                        )}
-                      />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between px-4 py-4">
-                    <div>
-                      <div className="text-[15px] text-zinc-900">Weekly digest</div>
-                      <div className="mt-1 text-xs text-zinc-400">Summary of your capture activity</div>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={notifDigest}
-                      onClick={() => {
-                        setNotifDigest((v) => !v)
-                        toast.success("Saved")
-                      }}
-                      className={cn(
-                        "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                        notifDigest ? "bg-mind" : cn(mx.toggleTrackOff)
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
-                          notifDigest ? "translate-x-5" : "translate-x-0"
-                        )}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-            {settingsExtra === "help" && (
-              <div className="space-y-2">
-                <p className="text-sm text-zinc-500">When you need help, start from one of these.</p>
-                {[
-                  { label: "User guide", hint: "Getting started and FAQs" },
-                  { label: "Contact support", hint: "Email / ticket (demo)" },
-                  { label: "Rate Mind", hint: "App Store rating prompt" },
-                ].map((row) => (
-                  <button
-                    key={row.label}
-                    type="button"
-                    onClick={() => toast.message(row.label, { description: row.hint })}
-                    className="flex w-full flex-col items-start rounded-xl border border-stone-100/85 bg-white px-4 py-3 text-left hover:bg-white dark:bg-zinc-950"
-                  >
-                    <span className="text-[15px] font-medium text-zinc-900">{row.label}</span>
-                    <span className="mt-0.5 text-xs text-zinc-500">{row.hint}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+            />
+            <SettingsLinkRow
+              label="Storage"
+              value="11.2 MB"
+              onClick={() => {
+                setShowSettingsHub(false)
+                setSettingsExtra("storage")
+              }}
+            />
+            <SettingsLinkRow
+              label="AI"
+              value={frontierInsights ? "Frontier on" : "Standard"}
+              onClick={() => {
+                setShowSettingsHub(false)
+                setSettingsExtra("features")
+              }}
+            />
+            <SettingsLinkRow
+              label="Privacy"
+              onClick={() => {
+                setShowSettingsHub(false)
+                setSettingsExtra("privacy")
+              }}
+            />
+            <SettingsLinkRow
+              label="Account"
+              onClick={() => {
+                setShowSettingsHub(false)
+                setSettingsExtra("account")
+              }}
+            />
+            <SettingsLinkRow
+              label="Help"
+              onClick={() => {
+                setShowSettingsHub(false)
+                setSettingsExtra("help")
+              }}
+              last
+            />
+          </SettingsGroup>
+        </SettingsScreenShell>
       )}
 
-      {/* Preferences */}
-      {showPreferences && (
-        <div className="absolute inset-0 z-50 flex flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
-          {/* Top bar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <button onClick={() => setShowPreferences(false)} className="p-1">
-              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
-            </button>
-            <h1 className="text-lg font-semibold text-zinc-900">Preferences</h1>
-            <div className="w-8" />
-          </div>
+      {/* Settings — level 2 */}
+      {settingsExtra && (
+        <SettingsScreenShell
+          title={
+            settingsExtra === "display"
+              ? "Display"
+              : settingsExtra === "notifications"
+                ? "Notifications"
+                : settingsExtra === "storage"
+                  ? "Storage"
+                  : settingsExtra === "features"
+                    ? "AI"
+                    : settingsExtra === "privacy"
+                      ? "Privacy"
+                      : settingsExtra === "account"
+                        ? "Account"
+                        : "Help"
+          }
+          onBack={() => {
+            setSettingsExtra(null)
+            setShowSettingsHub(true)
+          }}
+        >
+          {settingsExtra === "display" && (
+            <SettingsGroup>
+              <div className="border-b border-stone-100/90 px-4 py-3.5 dark:border-zinc-800">
+                <p className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Appearance</p>
+                <DisplayThemeSegment />
+              </div>
+              <div className="px-4 py-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Text size</p>
+                  <span className="shrink-0 tabular-nums text-[15px] font-semibold text-mind">{fontZoomPercent}%</span>
+                </div>
+                <input
+                  type="range"
+                  className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-stone-200 accent-mind dark:bg-zinc-700"
+                  min={MIND_FONT_ZOOM_MIN}
+                  max={MIND_FONT_ZOOM_MAX}
+                  step={1}
+                  value={fontZoomPercent}
+                  onChange={(e) => onFontZoomPercentChange?.(clampFontZoomPercent(Number(e.target.value)))}
+                  aria-label="Text size"
+                />
+              </div>
+            </SettingsGroup>
+          )}
 
-          <div className="flex-1 overflow-y-auto">
-            {/* Transcribe & summarize */}
-            <div className="px-5 pt-6 pb-2">
-              <div className="text-sm text-zinc-400 mb-2">Transcription & summary</div>
-            </div>
-            <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => {
-                  setTranscribeLang((v) =>
-                    v === "Not set" ? "English" : v === "English" ? "Chinese (Simplified)" : "Not set"
-                  )
-                  toast.success("Default transcription language updated")
-                }}
-                className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-4 text-left hover:bg-white dark:bg-zinc-950"
-              >
-                <div>
-                  <div className="text-left text-[15px] text-zinc-900">Transcription language</div>
-                  <div className="mt-1 text-left text-xs text-zinc-400">Default language for overview, transcription, and summaries. You can override per recording.</div>
-                </div>
-                <div className="ml-4 flex shrink-0 items-center gap-1">
-                  <span className="text-[15px] text-zinc-400">{transcribeLang}</span>
-                  <ChevronRight className="h-5 w-5 text-zinc-300" />
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAutoSpeaker((v) => !v)
+          {settingsExtra === "notifications" && (
+            <SettingsGroup>
+              <SettingsToggleRow
+                label="Recording ready"
+                checked={notifCaptureReady}
+                onChange={() => {
+                  setNotifCaptureReady((v) => !v)
                   toast.success("Saved")
                 }}
-                className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-4 text-left hover:bg-white dark:bg-zinc-950"
-              >
-                <span className="text-[15px] text-zinc-900">Auto speaker labels</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-[15px] text-zinc-400">{autoSpeaker ? "On" : "Off"}</span>
-                  <ChevronRight className="h-5 w-5 text-zinc-300" />
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCustomTerms((v) => !v)
+              />
+              <SettingsToggleRow
+                label="Weekly digest"
+                checked={notifDigest}
+                onChange={() => {
+                  setNotifDigest((v) => !v)
                   toast.success("Saved")
                 }}
-                className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-white dark:bg-zinc-950"
-              >
-                <span className="text-[15px] text-zinc-900">Custom vocabulary</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-[15px] text-zinc-400">{customTerms ? "On" : "Off"}</span>
-                  {!customTerms && <div className={cn("h-2 w-2 shrink-0 rounded-full", mx.warningDot)} />}
-                  <ChevronRight className="h-5 w-5 text-zinc-300" />
-                </div>
-              </button>
-            </div>
+                last
+              />
+            </SettingsGroup>
+          )}
 
-            {/* Notifications */}
-            <div className="px-5 pt-6 pb-2">
-              <div className="text-sm text-zinc-400 mb-2">Notifications</div>
-            </div>
-            <div className="mx-5 bg-white rounded-xl border border-stone-100/85 overflow-hidden">
-              <button
-                type="button"
+          {settingsExtra === "storage" && (
+            <SettingsGroup>
+              <SettingsLinkRow
+                label="Storage breakdown"
+                onClick={() => setShowStorageSpace(true)}
+              />
+              <SettingsLinkRow
+                label="Clear cache"
+                value="7.7 MB"
+                onClick={() => toast.success("Cache cleared", { description: "Freed 7.7 MB (demo)." })}
+                last
+              />
+            </SettingsGroup>
+          )}
+
+          {settingsExtra === "features" && (
+            <SettingsGroup>
+              <SettingsLinkRow
+                label="Model"
+                value="Light"
                 onClick={() =>
-                  toast.message("Messages & alerts", {
-                    description: "Would open notification categories (demo).",
+                  toast.message("Model settings", {
+                    description: "Custom models and routing (demo).",
                   })
                 }
-                className="flex w-full items-center justify-between px-4 py-4 text-left hover:bg-white dark:bg-zinc-950"
-              >
-                <span className="text-[15px] text-zinc-900">Messages & alerts</span>
-                <ChevronRight className="h-5 w-5 text-zinc-300" />
-              </button>
-            </div>
-
-            {/* Security */}
-            <div className="px-5 pt-6 pb-2">
-              <div className="text-sm text-zinc-400 mb-2">Security</div>
-            </div>
-            <div className="mx-5 mb-6 overflow-hidden rounded-xl border border-stone-100/85 bg-white">
-              <button
-                type="button"
-                onClick={() => {
-                  setAppLock((v) => !v)
+              />
+              <SettingsToggleRow
+                label="Frontier insights"
+                checked={frontierInsights}
+                onChange={() => {
+                  setFrontierInsights((v) => !v)
                   toast.success("Saved")
                 }}
-                className="flex w-full items-center justify-between border-b border-stone-100/85 px-4 py-4 text-left hover:bg-white dark:bg-zinc-950"
-              >
-                <div>
-                  <div className="text-left text-[15px] text-zinc-900">App lock</div>
-                  <div className="mt-1 text-left text-xs text-zinc-400">Unlock with Face ID, Touch ID, or device passcode</div>
-                </div>
-                <div className="ml-4 flex shrink-0 items-center gap-1">
-                  <span className="text-[15px] text-zinc-400">{appLock ? "On" : "Off"}</span>
-                  <ChevronRight className="h-5 w-5 text-zinc-300" />
-                </div>
-              </button>
-              <div className="flex w-full items-center justify-between px-4 py-4">
-                <div className="flex-1">
-                  <div className="text-left text-[15px] text-zinc-900">Help improve AI</div>
-                  <div className="mt-1 text-left text-xs text-zinc-400">
-                    Share limited diagnostics to improve transcription and summaries while protecting privacy.
-                    <button
-                      type="button"
-                      className={cn("ml-1 underline underline-offset-2 decoration-stone-300", mx.citationLink)}
-                      onClick={() =>
-                        toast.message("About the data", {
-                          description: "Only anonymous diagnostics are uploaded (demo).",
-                        })
-                      }
-                    >
-                      Learn more
-                    </button>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setHelpImprove(!helpImprove)}
-                  className={cn(
-                    "w-12 h-7 rounded-full transition-colors shrink-0 ml-4 relative",
-                    helpImprove ? "bg-mind" : cn(mx.toggleTrackOff)
-                  )}
-                >
-                  <div className={cn(
-                    "absolute top-1 w-5 h-5 bg-white rounded-full transition-transform shadow",
-                    helpImprove ? "right-1" : "left-1"
-                  )} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+                last
+              />
+            </SettingsGroup>
+          )}
+
+          {settingsExtra === "privacy" && (
+            <SettingsGroup>
+              <SettingsLinkRow label="Protection guide" onClick={() => setPrivacyDetail("guide")} />
+              <SettingsLinkRow label="Privacy settings" onClick={() => setPrivacyDetail("privacySettings")} />
+              <SettingsLinkRow label="Data collected" onClick={() => setPrivacyDetail("collected")} />
+              <SettingsLinkRow label="Third-party sharing" onClick={() => setPrivacyDetail("thirdParty")} last />
+            </SettingsGroup>
+          )}
+
+          {settingsExtra === "account" && (
+            <SettingsGroup>
+              <SettingsLinkRow
+                label="Personalization"
+                onClick={() => {
+                  setSettingsExtra(null)
+                  setShowPersonalization(true)
+                }}
+              />
+              <SettingsLinkRow
+                label="Cloud sync"
+                onClick={() => {
+                  setSettingsExtra(null)
+                  setShowCloudSync(true)
+                }}
+              />
+              <SettingsLinkRow
+                label="Devices"
+                onClick={() => {
+                  setSettingsExtra(null)
+                  setShowDeviceSheet(true)
+                }}
+              />
+              <SettingsLinkRow
+                label="Recording & security"
+                onClick={() => {
+                  setSettingsExtra(null)
+                  setShowPreferences(true)
+                }}
+                last
+              />
+            </SettingsGroup>
+          )}
+
+          {settingsExtra === "help" && (
+            <SettingsGroup>
+              {[
+                "User guide",
+                "Contact support",
+                "Rate Mind",
+              ].map((label, i, arr) => (
+                <SettingsLinkRow
+                  key={label}
+                  label={label}
+                  onClick={() => toast.message(label, { description: "Demo." })}
+                  last={i === arr.length - 1}
+                />
+              ))}
+            </SettingsGroup>
+          )}
+        </SettingsScreenShell>
+      )}
+
+      {/* Recording & security (from Account) */}
+      {showPreferences && (
+        <SettingsScreenShell
+          zClass="z-50"
+          title="Recording & security"
+          onBack={() => setShowPreferences(false)}
+        >
+          <SettingsGroup className="mb-3">
+            <SettingsLinkRow
+              label="Transcription language"
+              value={transcribeLang}
+              onClick={() => {
+                setTranscribeLang((v) =>
+                  v === "Not set" ? "English" : v === "English" ? "Chinese (Simplified)" : "Not set"
+                )
+                toast.success("Language updated")
+              }}
+            />
+            <SettingsLinkRow
+              label="Speaker labels"
+              value={autoSpeaker ? "On" : "Off"}
+              onClick={() => {
+                setAutoSpeaker((v) => !v)
+                toast.success("Saved")
+              }}
+            />
+            <SettingsLinkRow
+              label="Custom vocabulary"
+              value={customTerms ? "On" : "Off"}
+              onClick={() => {
+                setCustomTerms((v) => !v)
+                toast.success("Saved")
+              }}
+              last
+            />
+          </SettingsGroup>
+          <SettingsGroup>
+            <SettingsLinkRow
+              label="App lock"
+              value={appLock ? "On" : "Off"}
+              onClick={() => {
+                setAppLock((v) => !v)
+                toast.success("Saved")
+              }}
+            />
+            <SettingsToggleRow
+              label="Help improve AI"
+              checked={helpImprove}
+              onChange={() => {
+                setHelpImprove((v) => !v)
+                toast.success("Saved")
+              }}
+              last
+            />
+          </SettingsGroup>
+        </SettingsScreenShell>
       )}
 
       {/* Private cloud sync */}
@@ -1729,100 +1474,14 @@ export function MeTab({
 
       {/* Credits & plan purchase */}
       {showCreditsPlans && (
-        <div className="absolute inset-0 z-50 flex flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowCreditsPlans(false)}
-              className="p-1 rounded-full hover:bg-stone-100"
-              aria-label="Back"
-            >
-              <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
-            </button>
-            <h1 className="text-lg font-semibold text-zinc-900">Credits & plans</h1>
-            <div className="w-8" />
-          </div>
-
-          <div className="flex-1 overflow-y-auto pb-8">
-            <div className={cn("mx-5 mt-4 p-4 rounded-2xl shadow-sm", mx.creditsCard)}>
-              <div className="text-sm text-zinc-500 mb-1">Available balance</div>
-              <div className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                {stats.creditsRemaining.toLocaleString("en-US")}
-                <span className="text-lg font-semibold text-zinc-500 ml-1.5">credits</span>
-              </div>
-              <div className="mt-3 text-xs text-zinc-500">
-                Included this cycle: {stats.creditsMonthlyAllowance.toLocaleString("en-US")} credits ·
-                resets monthly
-              </div>
-              <div className={cn("mt-3 h-2 rounded-full overflow-hidden", mx.creditsProgressTrack)}>
-                <div
-                  className={cn("h-full rounded-full", mx.creditsProgressFill)}
-                  style={{
-                    width: `${Math.min(100, Math.round((stats.creditsRemaining / stats.creditsMonthlyAllowance) * 100))}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="px-5 mt-6 mb-2">
-              <h2 className="text-sm font-semibold text-zinc-900">Buy more credits</h2>
-              <p className="text-xs text-zinc-500 mt-1">
-                One-time packs. Credits apply to transcription, AI summaries, and agents.
-              </p>
-            </div>
-
-            <div className="px-5 space-y-3">
-              {creditPlans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className={cn(
-                    "rounded-2xl border bg-white p-4 shadow-sm",
-                    plan.highlight ? mx.commercePopularRing : "border-stone-100/85"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-zinc-900">{plan.name}</span>
-                        {plan.highlight && (
-                          <span
-                            className={cn(
-                              "text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full",
-                              mx.commercePopularBadge
-                            )}
-                          >
-                            Popular
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-zinc-500 mt-1">{plan.blurb}</p>
-                      <p className="text-sm font-medium text-zinc-800 mt-2">
-                        +{plan.credits.toLocaleString("en-US")} credits
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-lg font-bold text-zinc-900">{plan.price}</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className={cn(
-                      "mt-4 w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-                      plan.highlight ? mx.commercePrimaryCta : mx.commerceSecondaryCta
-                    )}
-                    onClick={() => setShowCreditsPlans(false)}
-                  >
-                    Purchase
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <p className="px-5 mt-6 text-xs text-zinc-400 text-center leading-relaxed">
-              Payments are processed securely. Mock checkout — connect your billing provider here.
-            </p>
-          </div>
-        </div>
+        <MeCreditsPlansScreen
+          onClose={() => setShowCreditsPlans(false)}
+          stats={{
+            creditsRemaining: stats.creditsRemaining,
+            creditsMonthlyAllowance: stats.creditsMonthlyAllowance,
+          }}
+          creditPlans={creditPlans}
+        />
       )}
 
       {/* Profile screen */}
@@ -1890,17 +1549,14 @@ export function MeTab({
 
       {personalizedFeed?.type === "daily" && (
         <MeDailyReview
+          displayName={activeAccount.displayName}
           body={PERSONALIZED_DAILY_REVIEW_LATEST}
+          headline={DAILY_REVIEW_HEADLINE}
+          highlights={DAILY_REVIEW_HIGHLIGHTS}
           streakDays={stats.consecutiveDays}
           captureCountToday={Math.min(getTodayHeatmapEntry().value + 1, 5)}
           onClose={() => setPersonalizedFeed(null)}
-          onShare={() => {
-            const body = PERSONALIZED_DAILY_REVIEW_LATEST
-            setInsightShareSheet({
-              title: "Daily review",
-              preview: body.slice(0, 200) + (body.length > 200 ? "…" : ""),
-            })
-          }}
+          onShare={setShareSheet}
           onOpenTodayActivity={() => {
             const day = getTodayHeatmapEntry()
             setPersonalizedFeed(null)
@@ -1911,12 +1567,13 @@ export function MeTab({
 
       {showAiInsights && (
         <MeAiInsights
+          displayName={activeAccount.displayName}
           onClose={() => setShowAiInsights(false)}
           noteCount={stats.totalNotes}
           libraryItemCount={stats.knowledgeItems}
           tagCount={12}
           dayCount={stats.totalDays}
-          onShare={(title, preview) => setInsightShareSheet({ title, preview })}
+          onShare={setShareSheet}
         />
       )}
 
@@ -1931,11 +1588,22 @@ export function MeTab({
             activeAccount.displayName,
             stats.consecutiveDays
           )
+          const captures = getDayUploads(d.date, d.value).length
+          const activityLine =
+            d.value > 0
+              ? `${captures} capture${captures === 1 ? "" : "s"} · level ${d.value}`
+              : "A quiet day on my timeline"
           const openDayShare = () =>
-            setInsightShareSheet({
-              title: getDayViralSlogan(d.date, d.value).replace(/\n/g, " "),
-              preview: sharePreview,
-            })
+            setShareSheet(
+              buildTimelineSharePayload({
+                displayName: activeAccount.displayName,
+                dateLabel: title,
+                slogan: getDayViralSlogan(d.date, d.value),
+                activityLine,
+                streakDays: stats.consecutiveDays,
+                body: sharePreview,
+              })
+            )
           return (
             <div className="absolute inset-0 z-[60] flex flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950 animate-in fade-in duration-150">
               <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 shrink-0">
@@ -2103,37 +1771,7 @@ export function MeTab({
         </div>
       </MindDevicesSheet>
 
-      {insightShareSheet && (
-        <div className="absolute inset-0 z-[70]">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setInsightShareSheet(null)} />
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl animate-in slide-in-from-bottom duration-200">
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-stone-300 rounded-full" />
-            </div>
-            <div className="px-5 pb-2">
-              <h3 className="text-lg font-semibold text-zinc-900">Share</h3>
-              <p className="text-sm font-medium text-zinc-800 mt-1">{insightShareSheet.title}</p>
-              <p className="text-sm text-zinc-500 mt-2 line-clamp-4">{insightShareSheet.preview}</p>
-            </div>
-            <div className="px-5 pb-4">
-              <SocialShareRow
-                title={insightShareSheet.title}
-                body={insightShareSheet.preview}
-                onAfterAction={() => setInsightShareSheet(null)}
-              />
-            </div>
-            <div className="px-5 pb-6">
-              <button
-                type="button"
-                onClick={() => setInsightShareSheet(null)}
-                className="w-full py-3 bg-stone-100 rounded-xl text-zinc-700 font-medium text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <MindShareSheet open={shareSheet != null} payload={shareSheet} onClose={() => setShareSheet(null)} />
 
       {showStorageSpace && <MeStorageSpacePanel onBack={() => setShowStorageSpace(false)} />}
       {privacyDetail === "guide" && <MePrivacyGuideSummaryPanel onBack={() => setPrivacyDetail(null)} />}
