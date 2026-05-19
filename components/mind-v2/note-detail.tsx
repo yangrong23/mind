@@ -40,7 +40,6 @@ import {
   Calendar,
   Users,
   BarChart2,
-  ListTodo,
   Quote,
   Scale,
 } from "lucide-react"
@@ -48,6 +47,12 @@ import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { CreateFolderSheet } from "./create-folder-sheet"
 import { SocialShareRow } from "./social-share-row"
 import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
+import { NoteAskPromptRail } from "@/components/mind-v2/note-ask-prompt-rail"
+import {
+  NOTE_ASK_PROMPTS,
+  type NoteAskPromptId,
+  type NoteAskPromptItem,
+} from "@/lib/note-ask-prompts"
 import type { Note } from "./notes-tab"
 import { isNoteAwaitingGenerate } from "@/lib/note-status"
 import { toast } from "sonner"
@@ -176,18 +181,7 @@ const MIND_INSIGHT_CARDS = [
   },
 ] as const
 
-type SummaryInsightView = "todos" | "quotes" | "speakers" | "decisions"
-
-const SUMMARY_INSIGHT_VIEWS: {
-  id: SummaryInsightView
-  label: string
-  hint: string
-}[] = [
-  { id: "todos", label: "My action items", hint: "Action items extracted from this meeting" },
-  { id: "quotes", label: "Meeting quotes", hint: "Memorable lines worth revisiting" },
-  { id: "speakers", label: "Speaker summaries", hint: "Points grouped by who spoke" },
-  { id: "decisions", label: "Key decisions", hint: "Confirmed and pending decisions" },
-]
+type SummaryInsightView = NoteAskPromptId
 
 const SUMMARY_OVERVIEW =
   "The team reviewed knowledge-graph visualization—how it helps organize information, surface relationships, and compound learning. The graph should speed up processing and support decisions while helping users build a personal knowledge system."
@@ -263,7 +257,7 @@ function NoteSummaryInsightPanel({ view }: { view: SummaryInsightView }) {
     return (
       <section className="min-w-0 space-y-2.5 sm:space-y-3">
         <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">
-          {SUMMARY_INSIGHT_VIEWS.find((v) => v.id === "todos")?.hint}
+          {NOTE_ASK_PROMPTS.find((v) => v.id === "todos")?.hint}
         </p>
         <div className="space-y-2 sm:space-y-2.5">
           {SUMMARY_TODOS.map((row) => (
@@ -291,7 +285,7 @@ function NoteSummaryInsightPanel({ view }: { view: SummaryInsightView }) {
     return (
       <section className="min-w-0 space-y-2.5 sm:space-y-3">
         <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">
-          {SUMMARY_INSIGHT_VIEWS.find((v) => v.id === "quotes")?.hint}
+          {NOTE_ASK_PROMPTS.find((v) => v.id === "quotes")?.hint}
         </p>
         <div className="space-y-2.5 sm:space-y-3">
           {SUMMARY_QUOTES.map((row) => (
@@ -317,7 +311,7 @@ function NoteSummaryInsightPanel({ view }: { view: SummaryInsightView }) {
     return (
       <section className="min-w-0 space-y-2.5 sm:space-y-3">
         <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">
-          {SUMMARY_INSIGHT_VIEWS.find((v) => v.id === "speakers")?.hint}
+          {NOTE_ASK_PROMPTS.find((v) => v.id === "speakers")?.hint}
         </p>
         <div className="space-y-2.5 sm:space-y-3">
           {SUMMARY_SPEAKERS.map((speaker) => (
@@ -352,7 +346,7 @@ function NoteSummaryInsightPanel({ view }: { view: SummaryInsightView }) {
   return (
     <section className="min-w-0 space-y-2.5 sm:space-y-3">
       <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">
-        {SUMMARY_INSIGHT_VIEWS.find((v) => v.id === "decisions")?.hint}
+        {NOTE_ASK_PROMPTS.find((v) => v.id === "decisions")?.hint}
       </p>
       <div className="space-y-2 sm:space-y-2.5">
         {SUMMARY_DECISIONS.map((row) => (
@@ -580,7 +574,7 @@ export function NoteDetail({
   const [segment, setSegment] = useState<"source" | "note">("note")
   const [noteSub, setNoteSub] = useState<"marks" | "summary">("summary")
   const [summaryFeedback, setSummaryFeedback] = useState<"up" | "down" | null>(null)
-  const [summaryInsightView, setSummaryInsightView] = useState<SummaryInsightView>("todos")
+  const [summaryInsightView, setSummaryInsightView] = useState<SummaryInsightView | null>(null)
   const [markExpand, setMarkExpand] = useState<Record<number, boolean>>({})
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadPct, setPlayheadPct] = useState(0.32)
@@ -639,14 +633,19 @@ export function NoteDetail({
     setShowCreateFolderSheet(true)
   }
 
-  const submitAskAboutNote = () => {
-    const q = askDraft.trim()
+  const submitAskAboutNote = (text?: string) => {
+    const q = (text ?? askDraft).trim()
     if (!q) {
       toast.error("Enter a question")
       return
     }
     toast.success("Sent to AI", { description: q.length > 120 ? `${q.slice(0, 120)}…` : q })
     setAskDraft("")
+  }
+
+  const handleAskPromptPick = (item: NoteAskPromptItem) => {
+    setSummaryInsightView(item.id)
+    setAskDraft(item.prompt)
   }
 
   const closeAllOverlays = () => {
@@ -1031,48 +1030,6 @@ export function NoteDetail({
                 </p>
               </section>
 
-              <section className="min-w-0 space-y-3 sm:space-y-3.5" aria-label="Structured insights">
-                <div
-                  role="tablist"
-                  aria-label="Summary insights"
-                  className="scrollbar-hide -mx-0.5 flex gap-2 overflow-x-auto pb-0.5 pt-0.5"
-                >
-                  {SUMMARY_INSIGHT_VIEWS.map((view) => {
-                    const selected = summaryInsightView === view.id
-                    const Icon =
-                      view.id === "todos"
-                        ? ListTodo
-                        : view.id === "quotes"
-                          ? Quote
-                          : view.id === "speakers"
-                            ? Users
-                            : Scale
-                    return (
-                      <button
-                        key={view.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={selected}
-                        id={`summary-insight-${view.id}`}
-                        onClick={() => setSummaryInsightView(view.id)}
-                        className={cn(
-                          "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors sm:px-3.5 sm:py-2 sm:text-[13px]",
-                          selected
-                            ? "border-mind/25 bg-mind/8 text-mind shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
-                            : "border-stone-200/90 bg-white text-zinc-600 hover:border-stone-300 hover:bg-stone-50"
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" strokeWidth={2} aria-hidden />
-                        {view.label}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div role="tabpanel" aria-labelledby={`summary-insight-${summaryInsightView}`}>
-                  <NoteSummaryInsightPanel view={summaryInsightView} />
-                </div>
-              </section>
-
               <section className="min-w-0 space-y-2 rounded-2xl border border-stone-200/90 bg-white p-3 shadow-sm shadow-stone-900/[0.04] sm:space-y-2.5 sm:p-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-[14px] font-semibold text-zinc-900 sm:text-[15px]">Mind map</h3>
@@ -1262,9 +1219,10 @@ export function NoteDetail({
           <div className="h-2 shrink-0 bg-white" aria-hidden />
         )
       ) : (
-      <div className="border-t border-stone-100 p-3">
-        <div className="relative">
-          <span className="absolute left-3 top-0 z-10 -translate-y-1/2 rounded bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-mind">
+      <div className="shrink-0 border-t border-stone-100 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        <NoteAskPromptRail activeId={summaryInsightView} onSelect={handleAskPromptPick} />
+        <div className="relative p-3 pt-1">
+          <span className="absolute left-6 top-1 z-10 -translate-y-1/2 rounded bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-mind dark:bg-zinc-800">
             Beta
           </span>
           <MindChatComposer
@@ -1272,7 +1230,7 @@ export function NoteDetail({
             className="max-w-none"
             value={askDraft}
             onChange={setAskDraft}
-            onSubmit={submitAskAboutNote}
+            onSubmit={() => submitAskAboutNote()}
             placeholder="Ask about this note…"
             chatMode={noteChatMode}
             onChatModeChange={setNoteChatMode}

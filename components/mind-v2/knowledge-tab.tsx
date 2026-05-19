@@ -84,32 +84,45 @@ export function KnowledgeTab({ onKBClick, requireAuthThen }: KnowledgeTabProps) 
             onClick={() => setShowDiscover(true)}
             className={cn(
               "flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-medium transition-colors",
-              "text-zinc-600 hover:bg-stone-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              mx.brandAccent,
+              "hover:bg-mind/8 dark:hover:bg-mind/12"
             )}
           >
-            <Store className="h-4 w-4 text-zinc-500 dark:text-zinc-400" strokeWidth={1.75} aria-hidden />
+            <Store className={cn("h-4 w-4", mx.brandAccent)} strokeWidth={1.75} aria-hidden />
             Plaza
           </button>
         </div>
       </div>
 
-      <div className={cn("shrink-0 px-5 py-2", mx.shellSurface)}>
+      <div className={cn("shrink-0 px-5 py-0", mx.shellSurface)}>
         <div className="grid grid-cols-3 gap-0">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setActiveCategory(cat.id)}
-              className={cn(
-                "border-b-2 py-2.5 text-center text-[14px] font-medium transition-colors",
-                activeCategory === cat.id
-                  ? "border-zinc-500 text-zinc-900 dark:border-zinc-400 dark:text-zinc-100"
-                  : cn("border-transparent", mx.shellMuted, "hover:text-zinc-700 dark:hover:text-zinc-300")
-              )}
-            >
-              {cat.label}
-            </button>
-          ))}
+          {categories.map((cat) => {
+            const selected = activeCategory === cat.id
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setActiveCategory(cat.id)}
+                className={cn(
+                  "relative flex items-center justify-center border-b-2 border-transparent py-2.5 text-center text-[14px] font-medium transition-colors",
+                  selected
+                    ? "text-zinc-900 dark:text-zinc-100"
+                    : cn(mx.shellMuted, "hover:text-zinc-700 dark:hover:text-zinc-300")
+                )}
+              >
+                {cat.label}
+                {selected ? (
+                  <span
+                    className={cn(
+                      "absolute bottom-0 left-1/2 h-[2px] w-10 -translate-x-1/2 rounded-full",
+                      mx.knowledgeTabRule
+                    )}
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -129,7 +142,7 @@ export function KnowledgeTab({ onKBClick, requireAuthThen }: KnowledgeTabProps) 
                     alt=""
                     width={48}
                     height={48}
-                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                    className="h-12 w-12 shrink-0 rounded-xl object-cover ring-1 ring-stone-200/90 dark:ring-zinc-700/80"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="mb-0.5">

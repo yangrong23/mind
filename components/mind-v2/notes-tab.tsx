@@ -11,7 +11,7 @@ import { folderIconComponent } from "@/lib/note-folders"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
 import { MindHardwareDetail } from "@/components/mind-v2/mind-hardware-detail"
-import { isNoteProcessing, type NoteStatus } from "@/lib/note-status"
+import { isNoteProcessing, isNoteRecording, type NoteStatus } from "@/lib/note-status"
 import { MOCK_KNOWLEDGE_BASES, type KnowledgeBase } from "@/lib/mock-knowledge-bases"
 
 export type { NoteStatus }
@@ -39,7 +39,38 @@ export interface Note {
   processingFailed?: boolean
 }
 
+function formatRecordingListTitle(d = new Date()) {
+  const y = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  const h = String(d.getHours()).padStart(2, "0")
+  const mi = String(d.getMinutes()).padStart(2, "0")
+  const s = String(d.getSeconds()).padStart(2, "0")
+  return `${y}-${mo}-${day} ${h}:${mi}:${s}`
+}
+
+export function createRecordingNote(id: number, startedAt = new Date()): Note {
+  const timeStr = startedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+  return {
+    id,
+    title: formatRecordingListTitle(startedAt),
+    type: "phone",
+    date: timeStr,
+    listSubtitle: timeStr,
+    preview: "",
+    status: "recording",
+    source: "Phone mic",
+  }
+}
+
+/** Demo row: in-progress capture visible at top of All files (Plaud-style). */
+export const DEMO_ACTIVE_RECORDING_NOTE = createRecordingNote(
+  2000,
+  new Date(2026, 4, 19, 15, 10, 41)
+)
+
 export const mockNotes: Note[] = [
+  DEMO_ACTIVE_RECORDING_NOTE,
   {
     id: 100,
     title: "Dream_It_Possible-05-12 15:49:55",
@@ -162,7 +193,8 @@ export const mockNotes: Note[] = [
   },
 ]
 
-function isRecordingNote(note: Note) {
+/** Hardware / phone capture (not text note) — used for list meta layout. */
+function isAudioCaptureNote(note: Note) {
   return note.type === "hardware" || note.type === "phone"
 }
 
@@ -371,6 +403,50 @@ interface SwipeableMemoCardProps {
   onDelete?: () => void
 }
 
+function RecordingMemoRow({
+  note,
+  onOpen,
+  onMenu,
+}: {
+  note: Note
+  onOpen: () => void
+  onMenu: () => void
+}) {
+  return (
+    <div className="relative border-b border-zinc-100/90 bg-white dark:border-zinc-800/80 dark:bg-zinc-950">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="w-full py-4 pl-0 pr-4 text-left active:bg-zinc-50/70 dark:active:bg-zinc-900/80"
+      >
+        <h3 className="line-clamp-2 pr-16 text-[16px] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
+          {note.title}
+        </h3>
+        {note.listSubtitle ? (
+          <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">{note.listSubtitle}</p>
+        ) : null}
+      </button>
+      <div className="absolute bottom-4 right-0 flex items-center gap-0.5">
+        <span className="inline-flex items-center gap-1.5 pr-0.5 text-[12px] font-medium text-red-500">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden />
+          Recording
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onMenu()
+          }}
+          className="flex h-8 w-8 items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+          aria-label="Open recording"
+        >
+          <MoreHorizontal className="h-5 w-5" strokeWidth={1.75} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: SwipeableMemoCardProps) {
   const folder = note.folderId ? folders.find((f) => f.id === note.folderId) : undefined
   const FolderIcon = folder ? folderIconComponent(folder.iconKey) : null
@@ -481,7 +557,7 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
           >
             {note.title}
           </h3>
-          {!isRecordingNote(note) ? (
+          {!isAudioCaptureNote(note) ? (
             <p className="mt-1 line-clamp-1 text-[13px] leading-relaxed text-zinc-500">{note.preview}</p>
           ) : null}
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[13px] tabular-nums text-zinc-400">
@@ -555,7 +631,37 @@ function NoteThumbnailCell({
   }
 
   const TypeIcon = note.type === "hardware" ? Mic : note.type === "phone" ? Smartphone : FileText
-  const recording = isRecordingNote(note)
+  const inProgress = isNoteRecording(note)
+
+  if (inProgress) {
+    return (
+      <div className="relative flex min-h-[100px] flex-col rounded-xl border border-red-200/60 bg-white p-2.5 shadow-sm dark:border-red-900/40 dark:bg-zinc-950">
+        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left active:opacity-80">
+          <p className="line-clamp-2 pr-10 text-[11px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">{note.title}</p>
+          {note.listSubtitle ? (
+            <p className="mt-1 text-[10px] text-zinc-400">{note.listSubtitle}</p>
+          ) : null}
+        </button>
+        <div className="absolute bottom-2 right-2 flex items-center gap-0.5">
+          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-red-500">
+            <span className="h-1 w-1 rounded-full bg-red-500 animate-pulse" aria-hidden />
+            Recording
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpen()
+            }}
+            className="flex h-7 w-7 items-center justify-center text-zinc-400"
+            aria-label="Open recording"
+          >
+            <MoreHorizontal className="h-4 w-4" strokeWidth={1.75} />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <button
@@ -590,7 +696,7 @@ function NoteThumbnailCell({
         </div>
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">{note.title}</p>
-          {recording ? (
+          {isAudioCaptureNote(note) ? (
             <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-zinc-500 dark:text-zinc-400">
               {note.date}
               {note.duration ? ` · ${note.duration}` : ""}
@@ -661,6 +767,11 @@ export function NotesTab({
         if (fileScope === "phone") return n.type === "phone"
         if (fileScope === "device") return n.type === "hardware"
         return true
+      })
+      .sort((a, b) => {
+        if (isNoteRecording(a) && !isNoteRecording(b)) return -1
+        if (!isNoteRecording(a) && isNoteRecording(b)) return 1
+        return 0
       })
   })()
 
@@ -771,6 +882,13 @@ export function NotesTab({
             {filteredNotes.map((note) =>
               isNoteProcessing(note) ? (
                 <NoteCardSkeleton key={note.id} />
+              ) : isNoteRecording(note) ? (
+                <RecordingMemoRow
+                  key={note.id}
+                  note={note}
+                  onOpen={() => onNoteClick(note)}
+                  onMenu={() => onNoteClick(note)}
+                />
               ) : (
                 <SwipeableMemoCard
                   key={note.id}

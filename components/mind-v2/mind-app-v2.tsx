@@ -7,13 +7,14 @@ import { Moon, Sun } from "lucide-react"
 import type { MindAccountId } from "@/lib/mind-accounts"
 import type { NoteFolder } from "@/lib/note-folders"
 import { BottomNav, type TabType } from "./bottom-nav"
-import { NotesTab, mockNotes, type Note } from "./notes-tab"
+import { NotesTab, createRecordingNote, mockNotes, type Note } from "./notes-tab"
 import { NoteDetail } from "./note-detail"
 import { KnowledgeTab } from "./knowledge-tab"
 import { KnowledgeDetail, type LibraryChatLaunchContext } from "./knowledge-detail"
 import { AgentTab, AgentChat } from "./agent-tab"
 import { MeTab } from "./me-tab"
-import { RecordingPage } from "./recording-page"
+import { ActiveRecordingView, type RecordingCaptureEntry } from "./active-recording-view"
+import { isNoteRecording } from "@/lib/note-status"
 import type { FactoryModalKind } from "./content-factory-modals"
 import type { KBCategory, KnowledgeBase, TeamLibrarySettings } from "@/lib/mock-knowledge-bases"
 import { MindAuthScreens } from "./mind-auth-screens"
@@ -28,7 +29,7 @@ const DEMO_AUTH_SESSION_KEY = "mind-v2-demo-auth"
 type View = 
   | { type: "tabs" }
   | { type: "note-detail"; note?: Note }
-  | { type: "recording" }
+  | { type: "active-recording"; note: Note; entries?: RecordingCaptureEntry[] }
   | {
       type: "kb-detail"
       kb?: {
@@ -140,6 +141,9 @@ export function MindAppV2() {
     )
   )
   const [fontZoomPercent, setFontZoomPercent] = useState(MIND_FONT_ZOOM_DEFAULT)
+  const [recordingEntriesByNoteId, setRecordingEntriesByNoteId] = useState<
+    Record<number, RecordingCaptureEntry[]>
+  >({})
 
   useEffect(() => {
     setFontZoomPercent(readStoredFontZoomPercent())
@@ -214,23 +218,44 @@ export function MindAppV2() {
     toast.message("Signed out", { description: "Sign in again to continue the demo." })
   }
 
-  function handleRecordingStopped() {
+  function startRecordingFlow() {
     const nextId = notes.reduce((max, n) => Math.max(max, n.id), 0) + 1
-    const now = new Date()
-    const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-    const newNote: Note = {
-      id: nextId,
-      title: "New recording",
-      type: "phone",
-      date: `Today ${timeStr}`,
-      duration: "0:00",
-      preview: "",
-      status: "synced",
-      source: "Mind Recorder",
-      folderId: null,
-    }
+    const newNote = createRecordingNote(nextId)
     setNotes((prev) => [newNote, ...prev])
-    setCurrentView({ type: "note-detail", note: newNote })
+    setCurrentView({ type: "active-recording", note: newNote, entries: [] })
+  }
+
+  function openNoteFromList(note: Note) {
+    if (isNoteRecording(note)) {
+      setCurrentView({
+        type: "active-recording",
+        note,
+        entries: recordingEntriesByNoteId[note.id] ?? [],
+      })
+      return
+    }
+    requireAuthThen(() => setCurrentView({ type: "note-detail", note }))
+  }
+
+  function finishActiveRecording(
+    note: Note,
+    payload: { durationSec: number; entries: RecordingCaptureEntry[] }
+  ) {
+    const mins = Math.floor(payload.durationSec / 60)
+    const secs = payload.durationSec % 60
+    const duration = `${mins}:${String(secs).padStart(2, "0")}`
+    const markCount = payload.entries.filter((e) => e.kind === "mark").length
+    const updated: Note = {
+      ...note,
+      status: "synced",
+      duration,
+      highlightCount: markCount > 0 ? markCount : undefined,
+      listSubtitle: undefined,
+    }
+    setRecordingEntriesByNoteId((prev) => ({ ...prev, [note.id]: payload.entries }))
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? updated : n)))
+    setCurrentView({ type: "note-detail", note: updated })
+    toast.success("Recording saved", { description: "Open the note to generate a summary." })
   }
 
   function navigateToKnowledgeForStudio() {
@@ -289,12 +314,8 @@ export function MindAppV2() {
                     notes={notes}
                     folders={folders}
                     onNotesChange={setNotes}
-                    onNoteClick={(note) =>
-                      requireAuthThen(() => setCurrentView({ type: "note-detail", note }))
-                    }
-                    onStartRecording={() =>
-                      requireAuthThen(() => setCurrentView({ type: "recording" }))
-                    }
+                    onNoteClick={openNoteFromList}
+                    onStartRecording={startRecordingFlow}
                   />
                 )}
                 {activeTab === "knowledge" && (
@@ -367,10 +388,19 @@ export function MindAppV2() {
               />
             )}
 
-            {/* Recording */}
-            {currentView.type === "recording" && (
-              <RecordingPage
-                onStop={handleRecordingStopped}
+            {/* Active recording (in-progress note) */}
+            {currentView.type === "active-recording" && (
+              <ActiveRecordingView
+                key={currentView.note.id}
+                title={currentView.note.title}
+                initialEntries={currentView.entries}
+                onEnd={(payload) => finishActiveRecording(currentView.note, payload)}
+                onPersist={(payload) => {
+                  setRecordingEntriesByNoteId((prev) => ({
+                    ...prev,
+                    [currentView.note.id]: payload.entries,
+                  }))
+                }}
                 onClose={() => setCurrentView({ type: "tabs" })}
               />
             )}

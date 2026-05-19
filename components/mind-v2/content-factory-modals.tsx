@@ -325,12 +325,14 @@ function FactoryStylePickCard({
   onClick,
   emoji,
   label,
+  compact = false,
 }: {
   tone: FactoryModalKind
   selected: boolean
   onClick: () => void
   emoji: string
   label: string
+  compact?: boolean
 }) {
   const tc = useFactoryTone(tone)
   const filled = useFactoryOptionSurface() === "filled"
@@ -339,7 +341,10 @@ function FactoryStylePickCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex h-[5rem] w-[calc((100%-0.625rem)/2)] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border p-3.5 text-center transition-colors",
+        "relative flex shrink-0 flex-col items-center justify-center border text-center transition-colors",
+        compact
+          ? "h-[3.25rem] w-[4.5rem] gap-0.5 rounded-lg p-2"
+          : "h-[5rem] w-[calc((100%-0.625rem)/2)] gap-1.5 rounded-xl p-3.5",
         filled
           ? selected
             ? tc.styleCardOn
@@ -349,9 +354,25 @@ function FactoryStylePickCard({
             : "border-stone-200 bg-transparent hover:border-stone-300 dark:border-zinc-700 dark:hover:border-zinc-600"
       )}
     >
-      <span className="text-xl leading-none">{emoji}</span>
-      <span className="text-[12px] font-medium leading-tight text-zinc-800">{label}</span>
-      {selected ? <Check className={cn("h-3.5 w-3.5", tc.check)} strokeWidth={3} /> : null}
+      {selected ? (
+        <Check
+          className={cn(
+            "absolute",
+            compact ? "right-1 top-1 h-2.5 w-2.5" : "right-2 top-2 h-3.5 w-3.5",
+            tc.check
+          )}
+          strokeWidth={3}
+        />
+      ) : null}
+      <span className={cn("leading-none", compact ? "text-base" : "text-xl")}>{emoji}</span>
+      <span
+        className={cn(
+          "font-medium leading-tight text-zinc-800",
+          compact ? "max-w-full truncate text-[10px]" : "text-[12px]"
+        )}
+      >
+        {label}
+      </span>
     </button>
   )
 }
@@ -670,9 +691,11 @@ const infographicStyles = [
 function InfographicModal({
   onClose,
   onSubmitFactory,
+  compact = false,
 }: {
   onClose: () => void
   onSubmitFactory?: (settings: FactoryGenerationSettings) => void
+  compact?: boolean
 }) {
   const [lang, setLang] = useState("English")
   const [orient, setOrient] = useState("landscape")
@@ -694,26 +717,34 @@ function InfographicModal({
         />
       }
     >
-      <div className="mb-4">
-        <p className="mb-1.5 text-[13px] text-zinc-500">Language</p>
+      <div className={compact ? "mb-3" : "mb-4"}>
+        <p className={cn("text-zinc-500", compact ? "mb-1 text-[12px]" : "mb-1.5 text-[13px]")}>Language</p>
         <div className="relative">
           <select
             value={lang}
             onChange={(e) => setLang(e.target.value)}
             className={cn(
-              "w-full appearance-none rounded-xl border border-stone-200 bg-white py-2.5 pl-3 pr-9 text-[14px] text-zinc-900",
+              "w-full appearance-none border border-stone-200 bg-white text-zinc-900",
+              compact
+                ? "rounded-lg py-1.5 pl-2.5 pr-8 text-[12px]"
+                : "rounded-xl py-2.5 pl-3 pr-9 text-[14px]",
               tc.fieldFocus
             )}
           >
             <option>English</option>
             <option>Chinese</option>
           </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <ChevronDown
+            className={cn(
+              "pointer-events-none absolute top-1/2 -translate-y-1/2 text-zinc-500",
+              compact ? "right-2.5 h-3.5 w-3.5" : "right-3 h-4 w-4"
+            )}
+          />
         </div>
       </div>
-      <div className="mb-4">
-        <p className="mb-2 text-[13px] text-zinc-500">Orientation</p>
-        <div className="flex flex-wrap gap-2">
+      <div className={compact ? "mb-3" : "mb-4"}>
+        <p className={cn("text-zinc-500", compact ? "mb-1.5 text-[12px]" : "mb-2 text-[13px]")}>Orientation</p>
+        <div className={cn("flex flex-wrap", compact ? "gap-1.5" : "gap-2")}>
           {[
             { id: "landscape", label: "Landscape" },
             { id: "portrait", label: "Portrait" },
@@ -724,19 +755,27 @@ function InfographicModal({
               type="button"
               onClick={() => setOrient(o.id)}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-medium",
+                "flex items-center rounded-full border font-medium",
+                compact ? "gap-1 px-2.5 py-1 text-[12px]" : "gap-1.5 px-3 py-2 text-[13px]",
                 orient === o.id ? tc.pillOn : "border-stone-200 bg-white text-zinc-700"
               )}
             >
-              {orient === o.id && <Check className={cn("h-3.5 w-3.5", tc.check)} strokeWidth={3} />}
+              {orient === o.id && (
+                <Check className={cn(compact ? "h-3 w-3" : "h-3.5 w-3.5", tc.check)} strokeWidth={3} />
+              )}
               {o.label}
             </button>
           ))}
         </div>
       </div>
-      <div className="mb-4">
-        <p className="mb-2 text-[13px] text-zinc-500">Visual style</p>
-        <div className="flex gap-2.5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className={compact ? "mb-3" : "mb-4"}>
+        <p className={cn("text-zinc-500", compact ? "mb-1.5 text-[12px]" : "mb-2 text-[13px]")}>Visual style</p>
+        <div
+          className={cn(
+            "flex overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+            compact ? "gap-1.5 pb-1" : "gap-2.5 pb-2"
+          )}
+        >
           {infographicStyles.map((s) => (
             <FactoryStylePickCard
               key={s.id}
@@ -745,6 +784,7 @@ function InfographicModal({
               onClick={() => setStyle(s.id)}
               emoji={s.emoji}
               label={s.label}
+              compact={compact}
             />
           ))}
         </div>
@@ -771,14 +811,19 @@ function InfographicModal({
         ]}
       />
       <div>
-        <p className="mb-2 text-[13px] text-zinc-500">Describe the infographic</p>
+        <p className={cn("text-zinc-500", compact ? "mb-1.5 text-[12px]" : "mb-2 text-[13px]")}>
+          Describe the infographic
+        </p>
         <textarea
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
-          rows={4}
+          rows={compact ? 3 : 4}
           placeholder='Style, palette, or emphasis: "Use a blue theme and highlight three key stats."'
           className={cn(
-            "w-full resize-none rounded-xl border border-stone-200 px-3 py-2.5 text-[14px] text-zinc-800 placeholder:text-zinc-400",
+            "w-full resize-none border border-stone-200 text-zinc-800 placeholder:text-zinc-400",
+            compact
+              ? "rounded-lg px-2.5 py-1.5 text-[13px] leading-snug"
+              : "rounded-xl px-3 py-2.5 text-[14px]",
             tc.fieldFocus
           )}
         />
@@ -1018,7 +1063,13 @@ export function ContentFactoryModals({
       case "quiz":
         return <QuizModal onClose={onClose} onSubmitFactory={submit("quiz")} />
       case "infographic":
-        return <InfographicModal onClose={onClose} onSubmitFactory={submit("infographic")} />
+        return (
+          <InfographicModal
+            onClose={onClose}
+            onSubmitFactory={submit("infographic")}
+            compact={modalDensity === "compact"}
+          />
+        )
       case "slides":
         return <SlidesModal onClose={onClose} onSubmitFactory={submit("slides")} />
       default:

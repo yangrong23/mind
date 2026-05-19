@@ -1,5 +1,9 @@
 /** Note processing lifecycle (aligned with device sync + manual generate). */
-export type NoteStatus = "pending" | "synced" | "analyzed" | "transferred"
+export type NoteStatus = "pending" | "recording" | "synced" | "analyzed" | "transferred"
+
+export function isNoteRecording(note: { status: NoteStatus }) {
+  return note.status === "recording"
+}
 
 /** Upload or device transfer still running — list may show a skeleton. */
 export function isNoteProcessing(note: { status: NoteStatus }) {
