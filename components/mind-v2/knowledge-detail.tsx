@@ -975,7 +975,7 @@ export function KnowledgeDetail({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-stone-200/80 bg-white px-3 pb-2 pt-1.5 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="shrink-0 bg-white px-3 pb-2 pt-1.5 dark:bg-zinc-950">
           <MindChatComposer
             variant="thread"
             className="max-w-none"

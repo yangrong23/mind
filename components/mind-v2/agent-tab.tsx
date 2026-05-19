@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
-import { MOCK_KNOWLEDGE_BASES } from "@/lib/mock-knowledge-bases"
+import { MOCK_KNOWLEDGE_BASES, type KnowledgeBase } from "@/lib/mock-knowledge-bases"
+import { MindSaveToLibrarySheet } from "@/components/mind-v2/mind-save-to-library-sheet"
 import {
   ContentFactoryModals,
   type FactoryGenerationSettings,
@@ -747,6 +748,7 @@ export function AgentChat({
   const [qaHistoryItems, setQaHistoryItems] = useState<MindQaHistoryItem[]>(() => seedDemoQaHistory())
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
   const [messageFeedback, setMessageFeedback] = useState<Record<string, "up" | "down">>({})
+  const [saveToLibrarySheet, setSaveToLibrarySheet] = useState<{ text: string } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const locale = "en-US" as const
 
@@ -833,12 +835,24 @@ export function AgentChat({
     })
   }
 
-  function saveAiReplyToLibrary(text: string) {
-    runWithAuth(() =>
-      toast.success("Saved to library", {
-        description: scopeLabel ? `${scopeLabel} · Reply saved (demo)` : `${kbLabel} · Reply saved (demo)`,
-      })
-    )
+  function openSaveToLibrarySheet(text: string) {
+    const body = text.trim()
+    if (!body) {
+      toast.error("Nothing to save", { description: "Wait for a reply before archiving." })
+      return
+    }
+    runWithAuth(() => setSaveToLibrarySheet({ text: body }))
+  }
+
+  function confirmSaveToLibrary(kb: KnowledgeBase) {
+    const excerpt =
+      saveToLibrarySheet?.text.slice(0, 120) + (saveToLibrarySheet && saveToLibrarySheet.text.length > 120 ? "…" : "")
+    setSaveToLibrarySheet(null)
+    toast.success("Saved to library", {
+      description: scopeLabel
+        ? `“${kb.name}” · ${scopeLabel} (demo)`
+        : `“${kb.name}”${excerpt ? ` · ${excerpt}` : ""} (demo)`,
+    })
   }
 
   function shareAiReply(text: string) {
@@ -873,19 +887,13 @@ export function AgentChat({
     />
   )
 
+  const latestAiReply = [...messages].reverse().find((m) => m.role === "ai" && m.content.trim())?.content ?? ""
+
   const libraryToolbarLead = isLibraryChat ? (
     <button
       type="button"
       className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2.5 text-[11px] font-semibold text-mind transition-colors hover:bg-stone-100 dark:border-stone-200 dark:bg-stone-100 dark:text-mind/10 dark:hover:bg-zinc-800"
-      onClick={() =>
-        runWithAuth(() =>
-          toast.success("Added to library", {
-            description: scopeLabel
-              ? `${scopeLabel} · Latest reply saved (demo).`
-              : `${kbLabel} · Latest reply saved (demo).`,
-          })
-        )
-      }
+      onClick={() => openSaveToLibrarySheet(latestAiReply)}
     >
       <Library className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
       Add to library
@@ -1050,7 +1058,7 @@ export function AgentChat({
                         variant={isLibraryChat ? "library" : "default"}
                         feedback={messageFeedback[msg.id] ?? null}
                         onRegenerate={() => runWithAuth(() => regenerateMessage(msg.id))}
-                        onSaveToLibrary={() => runWithAuth(() => saveAiReplyToLibrary(msg.content))}
+                        onSaveToLibrary={() => openSaveToLibrarySheet(msg.content)}
                         onThumbsUp={() =>
                           runWithAuth(() => {
                             toggleMessageFeedback(msg.id, "up")
@@ -1114,6 +1122,17 @@ export function AgentChat({
         modalDensity="compact"
         onGenerateSubmit={handleFactoryGenerateSubmit}
       />
+
+      {isLibraryChat && saveToLibrarySheet ? (
+        <MindSaveToLibrarySheet
+          open
+          title="Add to library"
+          preview={saveToLibrarySheet.text}
+          preferredKbName={displayKbName ?? kbLabel}
+          onClose={() => setSaveToLibrarySheet(null)}
+          onSelect={confirmSaveToLibrary}
+        />
+      ) : null}
     </div>
   )
 }

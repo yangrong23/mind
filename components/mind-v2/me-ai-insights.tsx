@@ -11,7 +11,9 @@ import {
   type InsightPerspective,
 } from "@/lib/mind-insight-perspectives"
 import { MindChatThinking } from "@/components/mind-v2/mind-chat-thinking"
-import { ChevronRight, Clock, Plus, Share2, X } from "lucide-react"
+import { MindViralShareCard } from "@/components/mind-v2/mind-viral-share-card"
+import { buildInsightSharePayload, type MindSharePayload } from "@/lib/mind-share-payload"
+import { ChevronRight, Clock, Plus, X } from "lucide-react"
 
 type View = "picker" | "gallery" | "result"
 
@@ -23,11 +25,12 @@ const MOCK_HISTORY = [
 
 export type MeAiInsightsProps = {
   onClose: () => void
+  displayName?: string
   noteCount?: number
   libraryItemCount?: number
   tagCount?: number
   dayCount?: number
-  onShare?: (title: string, preview: string) => void
+  onShare?: (payload: MindSharePayload) => void
 }
 
 function PerspectiveIcon({ icon: Icon }: { icon: InsightPerspective["icon"] }) {
@@ -136,6 +139,7 @@ function HistorySheet({ open, onClose, onOpen }: { open: boolean; onClose: () =>
 
 export function MeAiInsights({
   onClose,
+  displayName = "You",
   noteCount = 156,
   libraryItemCount = 234,
   tagCount = 12,
@@ -190,6 +194,24 @@ export function MeAiInsights({
 
   const result = selected ? mockInsightRunResult(selected) : null
 
+  const insightSharePayload =
+    selected && result
+      ? buildInsightSharePayload({
+          displayName,
+          perspectiveTitle: selected.title,
+          rangeLabel: selected.rangeLabel,
+          author: selected.author,
+          headline: result.headline,
+          bodyMarkdown: result.bodyMarkdown,
+          suggestedNextStep: result.suggestedNextStep,
+        })
+      : null
+
+  const openInsightShare = () => {
+    if (!insightSharePayload) return
+    onShare?.(insightSharePayload)
+  }
+
   return (
     <div className="absolute inset-0 z-[65] flex flex-col bg-white animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
       <div className="flex shrink-0 items-center gap-2 border-b border-stone-100/85 bg-white px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900">
@@ -241,18 +263,7 @@ export function MeAiInsights({
             <Plus className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
           </button>
         ) : (
-          <button
-            type="button"
-            className="rounded-full p-1.5 hover:bg-stone-100 dark:hover:bg-zinc-800"
-            aria-label="Share"
-            onClick={() => {
-              if (!selected || !result) return
-              const preview = `${result.headline}\n\n${result.bodyMarkdown}`.slice(0, 220)
-              onShare?.(selected.title, preview + (preview.length >= 220 ? "…" : ""))
-            }}
-          >
-            <Share2 className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
-          </button>
+          <div className="w-8 shrink-0" aria-hidden />
         )}
       </div>
 
@@ -363,11 +374,19 @@ export function MeAiInsights({
       )}
 
       {view === "result" && selected && result && (
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 pb-8">
           {generating ? (
             <MindChatThinking phase={thinkingPhase} compact className="py-10" />
           ) : (
             <div className="animate-in fade-in duration-300">
+              {insightSharePayload ? (
+                <MindViralShareCard
+                  card={insightSharePayload.card}
+                  displayName={displayName}
+                  onShare={openInsightShare}
+                  className="mb-5"
+                />
+              ) : null}
               <p className="mb-3 border-l-2 border-mind/40 pl-2 text-xs font-medium text-mind dark:text-mind/90">
                 AI-generated · <span className={mx.citationMuted}>{selected.title}</span>
               </p>

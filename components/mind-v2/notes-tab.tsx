@@ -12,7 +12,8 @@ import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
 import { MindHardwareDetail } from "@/components/mind-v2/mind-hardware-detail"
 import { isNoteProcessing, isNoteRecording, type NoteStatus } from "@/lib/note-status"
-import { MOCK_KNOWLEDGE_BASES, type KnowledgeBase } from "@/lib/mock-knowledge-bases"
+import type { KnowledgeBase } from "@/lib/mock-knowledge-bases"
+import { MindSaveToLibrarySheet } from "@/components/mind-v2/mind-save-to-library-sheet"
 
 export type { NoteStatus }
 
@@ -294,59 +295,6 @@ const ARCHIVE_STRIP_PX = 92
 const DELETE_STRIP_PX = 76
 const SWIPE_SNAP_THRESHOLD = 40
 
-const SAVE_TO_LIBRARY_KBS = MOCK_KNOWLEDGE_BASES.filter((kb) => kb.category === "mine" || kb.category === "team")
-
-function NoteArchiveKbSheet({
-  note,
-  onClose,
-  onSelect,
-}: {
-  note: Note
-  onClose: () => void
-  onSelect: (kb: KnowledgeBase) => void
-}) {
-  return (
-    <div className="absolute inset-0 z-[50] flex flex-col justify-end">
-      <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close" onClick={onClose} />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="note-archive-kb-title"
-        className="relative max-h-[70vh] overflow-hidden rounded-t-[1.25rem] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.15)] dark:bg-zinc-950"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
-          <h2 id="note-archive-kb-title" className="text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">
-            Save to library
-          </h2>
-          <button type="button" onClick={onClose} className="rounded-full p-2 text-zinc-500 hover:bg-stone-100" aria-label="Close">
-            <X className="h-5 w-5" strokeWidth={2} />
-          </button>
-        </div>
-        <p className="border-b border-stone-100 px-4 py-2.5 text-[13px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-          <span className="line-clamp-2 font-medium text-zinc-700 dark:text-zinc-300">{note.title}</span>
-        </p>
-        <div className="max-h-[50vh] overflow-y-auto py-1">
-          {SAVE_TO_LIBRARY_KBS.map((kb) => (
-            <button
-              key={kb.id}
-              type="button"
-              onClick={() => onSelect(kb)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-stone-50 active:bg-stone-100/80 dark:hover:bg-zinc-900"
-            >
-              <img src={kb.coverImage} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-100">{kb.name}</div>
-                <div className="truncate text-[12px] text-zinc-500">{kb.count} items</div>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function NoteDeleteConfirmSheet({
   note,
@@ -403,47 +351,24 @@ interface SwipeableMemoCardProps {
   onDelete?: () => void
 }
 
-function RecordingMemoRow({
-  note,
-  onOpen,
-  onMenu,
-}: {
-  note: Note
-  onOpen: () => void
-  onMenu: () => void
-}) {
+function RecordingMemoRow({ note, onOpen }: { note: Note; onOpen: () => void }) {
   return (
-    <div className="relative border-b border-zinc-100/90 bg-white dark:border-zinc-800/80 dark:bg-zinc-950">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="w-full py-4 pl-0 pr-4 text-left active:bg-zinc-50/70 dark:active:bg-zinc-900/80"
-      >
-        <h3 className="line-clamp-2 pr-16 text-[16px] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
-          {note.title}
-        </h3>
-        {note.listSubtitle ? (
-          <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">{note.listSubtitle}</p>
-        ) : null}
-      </button>
-      <div className="absolute bottom-4 right-0 flex items-center gap-0.5">
-        <span className="inline-flex items-center gap-1.5 pr-0.5 text-[12px] font-medium text-red-500">
-          <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden />
-          Recording
-        </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onMenu()
-          }}
-          className="flex h-8 w-8 items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-          aria-label="Open recording"
-        >
-          <MoreHorizontal className="h-5 w-5" strokeWidth={1.75} />
-        </button>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onOpen}
+      className="relative w-full border-b border-zinc-100/90 py-4 pl-0 pr-0 text-left active:bg-zinc-50/70 dark:border-zinc-800/80 dark:bg-zinc-950 dark:active:bg-zinc-900/80"
+    >
+      <h3 className="line-clamp-2 pr-20 text-[16px] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
+        {note.title}
+      </h3>
+      {note.listSubtitle ? (
+        <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">{note.listSubtitle}</p>
+      ) : null}
+      <span className="absolute bottom-4 right-0 inline-flex items-center gap-1.5 text-[12px] font-medium text-red-500">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden />
+        Recording
+      </span>
+    </button>
   )
 }
 
@@ -635,31 +560,20 @@ function NoteThumbnailCell({
 
   if (inProgress) {
     return (
-      <div className="relative flex min-h-[100px] flex-col rounded-xl border border-red-200/60 bg-white p-2.5 shadow-sm dark:border-red-900/40 dark:bg-zinc-950">
-        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left active:opacity-80">
-          <p className="line-clamp-2 pr-10 text-[11px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">{note.title}</p>
-          {note.listSubtitle ? (
-            <p className="mt-1 text-[10px] text-zinc-400">{note.listSubtitle}</p>
-          ) : null}
-        </button>
-        <div className="absolute bottom-2 right-2 flex items-center gap-0.5">
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-red-500">
-            <span className="h-1 w-1 rounded-full bg-red-500 animate-pulse" aria-hidden />
-            Recording
-          </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpen()
-            }}
-            className="flex h-7 w-7 items-center justify-center text-zinc-400"
-            aria-label="Open recording"
-          >
-            <MoreHorizontal className="h-4 w-4" strokeWidth={1.75} />
-          </button>
-        </div>
-      </div>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="relative flex min-h-[100px] w-full flex-col rounded-xl border border-red-200/60 bg-white p-2.5 text-left shadow-sm active:opacity-90 dark:border-red-900/40 dark:bg-zinc-950"
+      >
+        <p className="line-clamp-2 pr-16 text-[11px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">{note.title}</p>
+        {note.listSubtitle ? (
+          <p className="mt-1 text-[10px] text-zinc-400">{note.listSubtitle}</p>
+        ) : null}
+        <span className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 text-[10px] font-medium text-red-500">
+          <span className="h-1 w-1 rounded-full bg-red-500 animate-pulse" aria-hidden />
+          Recording
+        </span>
+      </button>
     )
   }
 
@@ -883,12 +797,7 @@ export function NotesTab({
               isNoteProcessing(note) ? (
                 <NoteCardSkeleton key={note.id} />
               ) : isNoteRecording(note) ? (
-                <RecordingMemoRow
-                  key={note.id}
-                  note={note}
-                  onOpen={() => onNoteClick(note)}
-                  onMenu={() => onNoteClick(note)}
-                />
+                <RecordingMemoRow key={note.id} note={note} onOpen={() => onNoteClick(note)} />
               ) : (
                 <SwipeableMemoCard
                   key={note.id}
@@ -1163,20 +1072,20 @@ export function NotesTab({
         </div>
       )}
 
-      {archiveKbForNote ? (
-        <NoteArchiveKbSheet
-          note={archiveKbForNote}
-          onClose={() => setArchiveKbForNote(null)}
-          onSelect={(kb) => {
-            const title = archiveKbForNote.title
-            onNotesChange(notes.map((n) => (n.id === archiveKbForNote.id ? { ...n, archived: true } : n)))
-            setArchiveKbForNote(null)
-            toast.success("Saved to library", {
-              description: `“${title.length > 28 ? `${title.slice(0, 28)}…` : title}” → ${kb.name}`,
-            })
-          }}
-        />
-      ) : null}
+      <MindSaveToLibrarySheet
+        open={archiveKbForNote != null}
+        preview={archiveKbForNote?.title}
+        onClose={() => setArchiveKbForNote(null)}
+        onSelect={(kb: KnowledgeBase) => {
+          if (!archiveKbForNote) return
+          const title = archiveKbForNote.title
+          onNotesChange(notes.map((n) => (n.id === archiveKbForNote.id ? { ...n, archived: true } : n)))
+          setArchiveKbForNote(null)
+          toast.success("Saved to library", {
+            description: `“${title.length > 28 ? `${title.slice(0, 28)}…` : title}” → ${kb.name}`,
+          })
+        }}
+      />
 
       {deleteConfirmNote ? (
         <NoteDeleteConfirmSheet

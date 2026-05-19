@@ -1,10 +1,15 @@
 "use client"
 
-import { ChevronRight, Share2, Sparkles } from "lucide-react"
+import { ChevronRight, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
+import { MindViralShareCard } from "@/components/mind-v2/mind-viral-share-card"
+import { buildDailyReviewSharePayload } from "@/lib/mind-share-payload"
+import type { MindSharePayload } from "@/lib/mind-share-payload"
 
-const HIGHLIGHTS = [
+export const DAILY_REVIEW_HEADLINE = "You captured with intent — close the loop on one decision"
+
+export const DAILY_REVIEW_HIGHLIGHTS = [
   "Product narrative & customer proof dominated captures",
   "Strong context; decisions often implicit at the end",
   "Steady energy — library links would compound summaries",
@@ -18,10 +23,13 @@ const REFLECTION_PROMPTS = [
 
 export type MeDailyReviewProps = {
   onClose: () => void
-  onShare: () => void
+  onShare: (payload: MindSharePayload) => void
   /** Open today's activity timeline (heatmap day detail). */
   onOpenTodayActivity?: () => void
+  displayName?: string
   body?: string
+  headline?: string
+  highlights?: readonly string[]
   streakDays?: number
   captureCountToday?: number
 }
@@ -38,10 +46,27 @@ export function MeDailyReview({
   onClose,
   onShare,
   onOpenTodayActivity,
+  displayName = "You",
   body = "Today’s recap is tuned to your recent captures: you spent more time on product narrative and customer proof than last week. One pattern stands out—you often end strong on context but leave the decision implicit. Try appending a single “so we will…” line at the end of the next two recordings. Your energy is consistent; keep linking standout quotes to your library so summaries stay grounded.",
+  headline = DAILY_REVIEW_HEADLINE,
+  highlights = DAILY_REVIEW_HIGHLIGHTS,
   streakDays = 7,
   captureCountToday = 3,
 }: MeDailyReviewProps) {
+  const dateLabel = formatReviewDate()
+
+  const sharePayload = buildDailyReviewSharePayload({
+    displayName,
+    dateLabel,
+    headline,
+    body,
+    highlights,
+    streakDays,
+    captureCountToday,
+  })
+
+  const openShare = () => onShare(sharePayload)
+
   return (
     <div className="absolute inset-0 z-[65] flex flex-col bg-white animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
       <header className="flex shrink-0 items-center border-b border-stone-100/85 bg-white px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900">
@@ -56,20 +81,18 @@ export function MeDailyReview({
         <h1 className="min-w-0 flex-1 truncate text-center text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">
           Daily review
         </h1>
-        <button
-          type="button"
-          onClick={onShare}
-          className="rounded-full p-1.5 hover:bg-stone-100 dark:hover:bg-zinc-800"
-          aria-label="Share"
-        >
-          <Share2 className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
-        </button>
+        <div className="w-8 shrink-0" aria-hidden />
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 pb-8">
-        <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-zinc-400">
-          {formatReviewDate()}
-        </p>
+        <MindViralShareCard
+          card={sharePayload.card}
+          displayName={displayName}
+          onShare={openShare}
+          className="mb-5"
+        />
+
+        <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-zinc-400">{dateLabel}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-mind/10 px-2.5 py-1 text-[11px] font-semibold text-mind">
             <Sparkles className="h-3 w-3" strokeWidth={2} aria-hidden />
@@ -84,7 +107,7 @@ export function MeDailyReview({
         </div>
 
         <h2 className="mt-5 text-[20px] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
-          You captured with intent — close the loop on one decision
+          {headline}
         </h2>
 
         <div
@@ -99,7 +122,7 @@ export function MeDailyReview({
         <section className="mt-6">
           <h3 className="text-[13px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Highlights</h3>
           <ul className="mt-2 space-y-2">
-            {HIGHLIGHTS.map((item) => (
+            {highlights.map((item) => (
               <li
                 key={item}
                 className="flex gap-2 rounded-xl border border-stone-100 bg-stone-50/80 px-3 py-2.5 text-[13px] leading-snug text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300"
