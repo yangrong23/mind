@@ -23,11 +23,11 @@ export const MINDER_FACTORY_CARD_HEIGHT_KB = "aspect-square w-full"
 export const MINDER_FACTORY_GRID_CLASS = "grid grid-cols-3 gap-2 [&>*]:h-[5rem]"
 
 /** Knowledge Studio — 6 items in 2 columns × 3 rows */
-export const MINDER_FACTORY_GRID_CLASS_KB = "grid grid-cols-2 gap-2.5"
+export const MINDER_FACTORY_GRID_CLASS_KB = "grid grid-cols-2 gap-3"
 
 export const MINDER_FACTORY_RAIL_CARD_WIDTH = "w-[5.25rem] shrink-0"
 
-export const MINDER_FACTORY_RAIL_CARD_HEIGHT = "h-[3.75rem]"
+export const MINDER_FACTORY_RAIL_CARD_HEIGHT = "h-[4.25rem]"
 
 /** Knowledge article detail — shorter horizontal factory chips */
 export const MINDER_FACTORY_RAIL_CARD_WIDTH_COMPACT = "w-[4.5rem] shrink-0"
@@ -95,7 +95,7 @@ export function MinderFactoryCard({
             )
           : filled
             ? cn(
-                isKbGrid ? "gap-2 rounded-2xl border p-3" : "gap-1.5 rounded-2xl border p-2.5",
+                isKbGrid ? "gap-2.5 rounded-2xl border p-3.5" : "gap-1.5 rounded-2xl border p-2.5",
                 tone.filledShell,
                 tone.filledShadow,
                 "dark:shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-14px_rgba(0,0,0,0.4)]",
@@ -160,9 +160,9 @@ export function MinderFactoryCard({
           isRail
             ? railCompact
               ? "h-5 w-5 rounded-md"
-              : "h-7 w-7 rounded-lg"
+              : "h-9 w-9 rounded-lg"
             : isKbGrid
-              ? "h-10 w-10 rounded-xl"
+              ? "h-12 w-12 rounded-xl"
               : "h-9 w-9 rounded-xl",
           filled ? tone.well : tone.icon,
           filled
@@ -185,7 +185,13 @@ export function MinderFactoryCard({
         <Icon
           className={cn(
             "relative z-[1]",
-            isRail ? (railCompact ? "h-3 w-3" : "h-3.5 w-3.5") : "h-[18px] w-[18px]",
+            isRail
+              ? railCompact
+                ? "h-3 w-3"
+                : "h-5 w-5"
+              : isKbGrid
+                ? "h-[22px] w-[22px]"
+                : "h-[18px] w-[18px]",
             filled && tone.icon
           )}
           strokeWidth={1.85}
@@ -199,7 +205,9 @@ export function MinderFactoryCard({
             ? railCompact
               ? "line-clamp-1 break-words text-[9px]"
               : "line-clamp-2 break-words text-[10px]"
-            : "line-clamp-2 break-words text-[12px]"
+            : isKbGrid
+              ? "line-clamp-2 break-words text-[14px]"
+              : "line-clamp-2 break-words text-[12px]"
         )}
       >
         {label}
