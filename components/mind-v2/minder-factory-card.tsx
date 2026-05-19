@@ -29,6 +29,11 @@ export const MINDER_FACTORY_RAIL_CARD_WIDTH = "w-[5.25rem] shrink-0"
 
 export const MINDER_FACTORY_RAIL_CARD_HEIGHT = "h-[3.75rem]"
 
+/** Knowledge article detail — shorter horizontal factory chips */
+export const MINDER_FACTORY_RAIL_CARD_WIDTH_COMPACT = "w-[4.5rem] shrink-0"
+
+export const MINDER_FACTORY_RAIL_CARD_HEIGHT_COMPACT = "h-[2.75rem]"
+
 export const MINDER_FACTORY_ITEMS: {
   id: FactoryModalKind
   label: string
@@ -52,6 +57,7 @@ export function MinderFactoryCard({
   variant = "grid",
   surface = "flat",
   gridLayout = "agent",
+  density = "default",
   className,
 }: {
   kind: MinderFactoryCardKind
@@ -64,9 +70,12 @@ export function MinderFactoryCard({
   surface?: FactoryOptionSurface
   /** `kb` — taller square cards (Knowledge Studio 2-col grid) */
   gridLayout?: "agent" | "kb"
+  /** `compact` — shorter rail chips (e.g. KB single-article view) */
+  density?: "default" | "compact"
   className?: string
 }) {
   const isRail = variant === "rail"
+  const railCompact = isRail && density === "compact"
   const isKbGrid = gridLayout === "kb" && !isRail
   const filled = surface === "filled" && !isRail
   const tone = filled ? mx.kbFactoryTone[kind] : mx.factoryTone[kind]
@@ -78,7 +87,8 @@ export function MinderFactoryCard({
         "group relative flex w-full flex-col items-center justify-center overflow-hidden text-center",
         isRail
           ? cn(
-              "gap-1 rounded-xl border border-stone-200/90 bg-transparent p-1.5 shadow-none",
+              railCompact ? "gap-0.5 rounded-lg p-1" : "gap-1 rounded-xl p-1.5",
+              "border border-stone-200/90 bg-transparent shadow-none",
               "dark:border-zinc-700/90",
               "hover:border-stone-300 dark:hover:border-zinc-600",
               "active:scale-[0.98]"
@@ -100,7 +110,9 @@ export function MinderFactoryCard({
                 "active:scale-[0.98]"
               ),
         isRail
-          ? MINDER_FACTORY_RAIL_CARD_HEIGHT
+          ? railCompact
+            ? MINDER_FACTORY_RAIL_CARD_HEIGHT_COMPACT
+            : MINDER_FACTORY_RAIL_CARD_HEIGHT
           : isKbGrid
             ? MINDER_FACTORY_CARD_HEIGHT_KB
             : MINDER_FACTORY_CARD_HEIGHT,
@@ -110,8 +122,19 @@ export function MinderFactoryCard({
     >
       {filled ? (
         <>
+          {isKbGrid ? (
+            <span
+              className="pointer-events-none absolute inset-0 z-[0] rounded-2xl bg-stone-50/35 dark:bg-zinc-950/30"
+              aria-hidden
+            />
+          ) : null}
           <span
-            className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.28)_0%,rgba(255,255,255,0)_58%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.12)_0%,rgba(56,189,248,0)_58%)]"
+            className={cn(
+              "pointer-events-none absolute inset-0 rounded-2xl",
+              isKbGrid
+                ? "bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.14)_0%,rgba(255,255,255,0)_58%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.06)_0%,rgba(56,189,248,0)_58%)]"
+                : "bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.28)_0%,rgba(255,255,255,0)_58%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.12)_0%,rgba(56,189,248,0)_58%)]"
+            )}
             aria-hidden
           />
           <span
@@ -134,9 +157,20 @@ export function MinderFactoryCard({
       <div
         className={cn(
           "relative z-[1] flex shrink-0 items-center justify-center",
-          isRail ? "h-7 w-7 rounded-lg" : isKbGrid ? "h-10 w-10 rounded-xl" : "h-9 w-9 rounded-xl",
+          isRail
+            ? railCompact
+              ? "h-5 w-5 rounded-md"
+              : "h-7 w-7 rounded-lg"
+            : isKbGrid
+              ? "h-10 w-10 rounded-xl"
+              : "h-9 w-9 rounded-xl",
           filled ? tone.well : tone.icon,
-          filled ? cn("bg-white/60 ring-1 dark:bg-zinc-900/55", tone.filledIconRing) : undefined
+          filled
+            ? cn(
+                isKbGrid ? "bg-white/50 ring-1 dark:bg-zinc-900/60" : "bg-white/60 ring-1 dark:bg-zinc-900/55",
+                tone.filledIconRing
+              )
+            : undefined
         )}
       >
         {filled ? (
@@ -151,7 +185,7 @@ export function MinderFactoryCard({
         <Icon
           className={cn(
             "relative z-[1]",
-            isRail ? "h-3.5 w-3.5" : "h-[18px] w-[18px]",
+            isRail ? (railCompact ? "h-3 w-3" : "h-3.5 w-3.5") : "h-[18px] w-[18px]",
             filled && tone.icon
           )}
           strokeWidth={1.85}
@@ -161,7 +195,11 @@ export function MinderFactoryCard({
       <span
         className={cn(
           "relative z-[1] max-w-full px-0.5 font-semibold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50",
-          isRail ? "line-clamp-2 break-words text-[10px]" : "line-clamp-2 break-words text-[12px]"
+          isRail
+            ? railCompact
+              ? "line-clamp-1 break-words text-[9px]"
+              : "line-clamp-2 break-words text-[10px]"
+            : "line-clamp-2 break-words text-[12px]"
         )}
       >
         {label}

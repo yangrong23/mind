@@ -863,7 +863,7 @@ export function KnowledgeDetail({
           </button>
         </div>
 
-        <div className="shrink-0 border-t border-stone-200 bg-white/85 px-3 pb-2 pt-1.5 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/85">
+        <div className="shrink-0 bg-white/85 px-3 pb-2 pt-1.5 backdrop-blur-sm dark:bg-zinc-900/85">
           <MindChatFactoryRail onSelect={handleChatFactoryRailSelect} className="mb-1 max-w-none" />
           <MindChatComposer
             variant="thread"
@@ -976,7 +976,6 @@ export function KnowledgeDetail({
         </div>
 
         <div className="shrink-0 border-t border-stone-200/80 bg-white px-3 pb-2 pt-1.5 dark:border-zinc-800 dark:bg-zinc-950">
-          <MindChatFactoryRail onSelect={handleChatFactoryRailSelect} className="mb-1 max-w-none" />
           <MindChatComposer
             variant="thread"
             className="max-w-none"

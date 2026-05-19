@@ -25,19 +25,19 @@ const FACTORY_TONE_REPORT = {
   softHover:
     "hover:border-sky-300/50 hover:bg-sky-500/8 dark:hover:border-sky-600/40 dark:hover:bg-sky-500/12",
   filledShell:
-    "border-sky-200/60 bg-gradient-to-br from-sky-200/32 via-sky-100/24 to-cyan-200/28 dark:border-sky-800/50 dark:from-sky-950 dark:via-sky-900/95 dark:to-cyan-950",
+    "border-sky-200/55 bg-gradient-to-br from-sky-200/24 via-sky-100/18 to-cyan-200/21 dark:border-sky-800/45 dark:from-sky-950 dark:via-sky-900/95 dark:to-cyan-950",
   filledShellHover:
-    "hover:border-sky-300/65 hover:from-sky-200/38 hover:via-sky-100/30 hover:to-cyan-200/34 dark:hover:border-sky-700/50 dark:hover:from-sky-900 dark:hover:via-sky-950 dark:hover:to-cyan-950",
-  filledOverlay: "bg-sky-500/[0.04] dark:bg-sky-400/8",
-  filledOverlayHover: "group-hover:bg-sky-500/[0.06] dark:group-hover:bg-sky-400/10",
+    "hover:border-sky-300/60 hover:from-sky-200/28 hover:via-sky-100/22 hover:to-cyan-200/26 dark:hover:border-sky-700/45 dark:hover:from-sky-900 dark:hover:via-sky-950 dark:hover:to-cyan-950",
+  filledOverlay: "bg-sky-500/[0.03] dark:bg-sky-400/6",
+  filledOverlayHover: "group-hover:bg-sky-500/[0.045] dark:group-hover:bg-sky-400/8",
   filledCornerGlow:
-    "bg-[radial-gradient(circle,rgba(125,211,252,0.18)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(56,189,248,0.14)_0%,transparent_70%)]",
+    "bg-[radial-gradient(circle,rgba(125,211,252,0.13)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(56,189,248,0.1)_0%,transparent_70%)]",
   filledIconRing: "ring-white/55 dark:ring-sky-900/45",
   filledOptionBg:
     "border-sky-200/65 bg-gradient-to-br from-sky-100/30 to-stone-50/95 dark:border-sky-800/45 dark:from-sky-950/95 dark:to-zinc-900",
-  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_6px_20px_-12px_rgba(56,189,248,0.1)]",
+  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.42)_inset,0_6px_20px_-12px_rgba(56,189,248,0.07)]",
   filledShadowHover:
-    "hover:shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_12px_28px_-14px_rgba(56,189,248,0.14)]",
+    "hover:shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_12px_28px_-14px_rgba(56,189,248,0.1)]",
 } as const
 
 const FACTORY_TONE_AUDIO = {
@@ -54,19 +54,19 @@ const FACTORY_TONE_AUDIO = {
   softHover:
     "hover:border-cyan-300/50 hover:bg-cyan-500/8 dark:hover:border-cyan-600/40 dark:hover:bg-cyan-500/12",
   filledShell:
-    "border-cyan-200/60 bg-gradient-to-br from-cyan-200/32 via-cyan-100/24 to-teal-200/28 dark:border-cyan-800/50 dark:from-cyan-950 dark:via-cyan-900/95 dark:to-teal-950",
+    "border-cyan-200/55 bg-gradient-to-br from-cyan-200/24 via-cyan-100/18 to-teal-200/21 dark:border-cyan-800/45 dark:from-cyan-950 dark:via-cyan-900/95 dark:to-teal-950",
   filledShellHover:
-    "hover:border-cyan-300/65 hover:from-cyan-200/38 hover:via-cyan-100/30 hover:to-teal-200/34 dark:hover:border-cyan-700/50 dark:hover:from-cyan-900 dark:hover:via-cyan-950 dark:hover:to-teal-950",
-  filledOverlay: "bg-cyan-500/[0.04] dark:bg-cyan-400/8",
-  filledOverlayHover: "group-hover:bg-cyan-500/[0.06] dark:group-hover:bg-cyan-400/10",
+    "hover:border-cyan-300/60 hover:from-cyan-200/28 hover:via-cyan-100/22 hover:to-teal-200/26 dark:hover:border-cyan-700/45 dark:hover:from-cyan-900 dark:hover:via-cyan-950 dark:hover:to-teal-950",
+  filledOverlay: "bg-cyan-500/[0.03] dark:bg-cyan-400/6",
+  filledOverlayHover: "group-hover:bg-cyan-500/[0.045] dark:group-hover:bg-cyan-400/8",
   filledCornerGlow:
-    "bg-[radial-gradient(circle,rgba(34,211,238,0.18)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(34,211,238,0.12)_0%,transparent_70%)]",
+    "bg-[radial-gradient(circle,rgba(34,211,238,0.13)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(34,211,238,0.09)_0%,transparent_70%)]",
   filledIconRing: "ring-white/55 dark:ring-cyan-900/45",
   filledOptionBg:
     "border-cyan-200/65 bg-gradient-to-br from-cyan-100/30 to-stone-50/95 dark:border-cyan-800/45 dark:from-cyan-950/95 dark:to-zinc-900",
-  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_6px_20px_-12px_rgba(34,211,238,0.1)]",
+  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.42)_inset,0_6px_20px_-12px_rgba(34,211,238,0.07)]",
   filledShadowHover:
-    "hover:shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_12px_28px_-14px_rgba(34,211,238,0.14)]",
+    "hover:shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_12px_28px_-14px_rgba(34,211,238,0.1)]",
 } as const
 
 const FACTORY_TONE_FLASHCARDS = {
@@ -83,19 +83,19 @@ const FACTORY_TONE_FLASHCARDS = {
   softHover:
     "hover:border-blue-300/50 hover:bg-blue-500/8 dark:hover:border-blue-600/40 dark:hover:bg-blue-500/12",
   filledShell:
-    "border-blue-200/60 bg-gradient-to-br from-blue-200/32 via-sky-100/24 to-cyan-200/26 dark:border-blue-800/50 dark:from-blue-950 dark:via-sky-950/95 dark:to-cyan-950",
+    "border-blue-200/55 bg-gradient-to-br from-blue-200/24 via-sky-100/18 to-cyan-200/20 dark:border-blue-800/45 dark:from-blue-950 dark:via-sky-950/95 dark:to-cyan-950",
   filledShellHover:
-    "hover:border-blue-300/65 hover:from-blue-200/38 hover:via-sky-100/30 hover:to-cyan-200/32 dark:hover:border-blue-700/50 dark:hover:from-blue-900 dark:hover:via-sky-950 dark:hover:to-cyan-950",
-  filledOverlay: "bg-blue-500/[0.04] dark:bg-blue-400/8",
-  filledOverlayHover: "group-hover:bg-blue-500/[0.06] dark:group-hover:bg-blue-400/10",
+    "hover:border-blue-300/60 hover:from-blue-200/28 hover:via-sky-100/22 hover:to-cyan-200/25 dark:hover:border-blue-700/45 dark:hover:from-blue-900 dark:hover:via-sky-950 dark:hover:to-cyan-950",
+  filledOverlay: "bg-blue-500/[0.03] dark:bg-blue-400/6",
+  filledOverlayHover: "group-hover:bg-blue-500/[0.045] dark:group-hover:bg-blue-400/8",
   filledCornerGlow:
-    "bg-[radial-gradient(circle,rgba(96,165,250,0.18)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(96,165,250,0.12)_0%,transparent_70%)]",
+    "bg-[radial-gradient(circle,rgba(96,165,250,0.13)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(96,165,250,0.09)_0%,transparent_70%)]",
   filledIconRing: "ring-white/55 dark:ring-blue-900/45",
   filledOptionBg:
     "border-blue-200/65 bg-gradient-to-br from-blue-100/30 to-stone-50/95 dark:border-blue-800/45 dark:from-blue-950/95 dark:to-zinc-900",
-  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_6px_20px_-12px_rgba(59,130,246,0.1)]",
+  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.42)_inset,0_6px_20px_-12px_rgba(59,130,246,0.07)]",
   filledShadowHover:
-    "hover:shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_12px_28px_-14px_rgba(59,130,246,0.14)]",
+    "hover:shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_12px_28px_-14px_rgba(59,130,246,0.1)]",
 } as const
 
 const FACTORY_TONE_QUIZ = {
@@ -112,19 +112,19 @@ const FACTORY_TONE_QUIZ = {
   softHover:
     "hover:border-teal-300/50 hover:bg-teal-500/8 dark:hover:border-teal-600/40 dark:hover:bg-teal-500/12",
   filledShell:
-    "border-teal-200/60 bg-gradient-to-br from-teal-200/32 via-cyan-100/24 to-sky-200/28 dark:border-teal-800/50 dark:from-teal-950 dark:via-cyan-950/95 dark:to-sky-950",
+    "border-teal-200/55 bg-gradient-to-br from-teal-200/24 via-cyan-100/18 to-sky-200/21 dark:border-teal-800/45 dark:from-teal-950 dark:via-cyan-950/95 dark:to-sky-950",
   filledShellHover:
-    "hover:border-teal-300/65 hover:from-teal-200/38 hover:via-cyan-100/30 hover:to-sky-200/34 dark:hover:border-teal-700/50 dark:hover:from-teal-900 dark:hover:via-cyan-950 dark:hover:to-sky-950",
-  filledOverlay: "bg-teal-500/[0.04] dark:bg-teal-400/8",
-  filledOverlayHover: "group-hover:bg-teal-500/[0.06] dark:group-hover:bg-teal-400/10",
+    "hover:border-teal-300/60 hover:from-teal-200/28 hover:via-cyan-100/22 hover:to-sky-200/26 dark:hover:border-teal-700/45 dark:hover:from-teal-900 dark:hover:via-cyan-950 dark:hover:to-sky-950",
+  filledOverlay: "bg-teal-500/[0.03] dark:bg-teal-400/6",
+  filledOverlayHover: "group-hover:bg-teal-500/[0.045] dark:group-hover:bg-teal-400/8",
   filledCornerGlow:
-    "bg-[radial-gradient(circle,rgba(45,212,191,0.18)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(45,212,191,0.12)_0%,transparent_70%)]",
+    "bg-[radial-gradient(circle,rgba(45,212,191,0.13)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(45,212,191,0.09)_0%,transparent_70%)]",
   filledIconRing: "ring-white/55 dark:ring-teal-900/45",
   filledOptionBg:
     "border-teal-200/65 bg-gradient-to-br from-teal-100/30 to-stone-50/95 dark:border-teal-800/45 dark:from-teal-950/95 dark:to-zinc-900",
-  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_6px_20px_-12px_rgba(20,184,166,0.1)]",
+  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.42)_inset,0_6px_20px_-12px_rgba(20,184,166,0.07)]",
   filledShadowHover:
-    "hover:shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_12px_28px_-14px_rgba(20,184,166,0.14)]",
+    "hover:shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_12px_28px_-14px_rgba(20,184,166,0.1)]",
 } as const
 
 const FACTORY_TONE_SLIDES = {
@@ -141,19 +141,19 @@ const FACTORY_TONE_SLIDES = {
   softHover:
     "hover:border-sky-400/50 hover:bg-sky-600/8 dark:hover:border-sky-500/40 dark:hover:bg-sky-600/12",
   filledShell:
-    "border-sky-300/60 bg-gradient-to-br from-sky-200/30 via-blue-100/22 to-indigo-200/28 dark:border-sky-700/50 dark:from-sky-950 dark:via-blue-950/95 dark:to-indigo-950",
+    "border-sky-300/55 bg-gradient-to-br from-sky-200/23 via-blue-100/17 to-indigo-200/21 dark:border-sky-700/45 dark:from-sky-950 dark:via-blue-950/95 dark:to-indigo-950",
   filledShellHover:
-    "hover:border-sky-400/65 hover:from-sky-200/36 hover:via-blue-100/28 hover:to-indigo-200/34 dark:hover:border-sky-600/50 dark:hover:from-sky-900 dark:hover:via-blue-950 dark:hover:to-indigo-950",
-  filledOverlay: "bg-sky-600/[0.04] dark:bg-sky-500/8",
-  filledOverlayHover: "group-hover:bg-sky-600/[0.06] dark:group-hover:bg-sky-500/10",
+    "hover:border-sky-400/60 hover:from-sky-200/27 hover:via-blue-100/21 hover:to-indigo-200/26 dark:hover:border-sky-600/45 dark:hover:from-sky-900 dark:hover:via-blue-950 dark:hover:to-indigo-950",
+  filledOverlay: "bg-sky-600/[0.03] dark:bg-sky-500/6",
+  filledOverlayHover: "group-hover:bg-sky-600/[0.045] dark:group-hover:bg-sky-500/8",
   filledCornerGlow:
-    "bg-[radial-gradient(circle,rgba(14,165,233,0.18)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(14,165,233,0.12)_0%,transparent_70%)]",
+    "bg-[radial-gradient(circle,rgba(14,165,233,0.13)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(14,165,233,0.09)_0%,transparent_70%)]",
   filledIconRing: "ring-white/55 dark:ring-sky-800/45",
   filledOptionBg:
     "border-sky-300/65 bg-gradient-to-br from-sky-100/28 to-stone-50/95 dark:border-sky-700/45 dark:from-sky-950/95 dark:to-zinc-900",
-  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_6px_20px_-12px_rgba(2,132,199,0.1)]",
+  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.42)_inset,0_6px_20px_-12px_rgba(2,132,199,0.07)]",
   filledShadowHover:
-    "hover:shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_12px_28px_-14px_rgba(2,132,199,0.14)]",
+    "hover:shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_12px_28px_-14px_rgba(2,132,199,0.1)]",
 } as const
 
 const FACTORY_TONE_INFOGRAPHIC = {
@@ -170,19 +170,19 @@ const FACTORY_TONE_INFOGRAPHIC = {
   softHover:
     "hover:border-cyan-400/50 hover:bg-cyan-600/8 dark:hover:border-cyan-500/40 dark:hover:bg-cyan-600/12",
   filledShell:
-    "border-cyan-300/60 bg-gradient-to-br from-cyan-200/30 via-teal-100/22 to-sky-200/28 dark:border-cyan-700/50 dark:from-cyan-950 dark:via-teal-950/95 dark:to-sky-950",
+    "border-cyan-300/55 bg-gradient-to-br from-cyan-200/23 via-teal-100/17 to-sky-200/21 dark:border-cyan-700/45 dark:from-cyan-950 dark:via-teal-950/95 dark:to-sky-950",
   filledShellHover:
-    "hover:border-cyan-400/65 hover:from-cyan-200/36 hover:via-teal-100/28 hover:to-sky-200/34 dark:hover:border-cyan-600/50 dark:hover:from-cyan-900 dark:hover:via-teal-950 dark:hover:to-sky-950",
-  filledOverlay: "bg-cyan-600/[0.04] dark:bg-cyan-500/8",
-  filledOverlayHover: "group-hover:bg-cyan-600/[0.06] dark:group-hover:bg-cyan-500/10",
+    "hover:border-cyan-400/60 hover:from-cyan-200/27 hover:via-teal-100/21 hover:to-sky-200/26 dark:hover:border-cyan-600/45 dark:hover:from-cyan-900 dark:hover:via-teal-950 dark:hover:to-sky-950",
+  filledOverlay: "bg-cyan-600/[0.03] dark:bg-cyan-500/6",
+  filledOverlayHover: "group-hover:bg-cyan-600/[0.045] dark:group-hover:bg-cyan-500/8",
   filledCornerGlow:
-    "bg-[radial-gradient(circle,rgba(6,182,212,0.18)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(6,182,212,0.12)_0%,transparent_70%)]",
+    "bg-[radial-gradient(circle,rgba(6,182,212,0.13)_0%,transparent_70%)] dark:bg-[radial-gradient(circle,rgba(6,182,212,0.09)_0%,transparent_70%)]",
   filledIconRing: "ring-white/55 dark:ring-cyan-800/45",
   filledOptionBg:
     "border-cyan-300/65 bg-gradient-to-br from-cyan-100/28 to-stone-50/95 dark:border-cyan-700/45 dark:from-cyan-950/95 dark:to-zinc-900",
-  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_6px_20px_-12px_rgba(8,145,178,0.1)]",
+  filledShadow: "shadow-[0_1px_0_rgba(255,255,255,0.42)_inset,0_6px_20px_-12px_rgba(8,145,178,0.07)]",
   filledShadowHover:
-    "hover:shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_12px_28px_-14px_rgba(8,145,178,0.14)]",
+    "hover:shadow-[0_1px_0_rgba(255,255,255,0.5)_inset,0_12px_28px_-14px_rgba(8,145,178,0.1)]",
 } as const
 
 /** Agent / chat rails — single mind accent (filled* keys unused; shared shape with kb tones) */
