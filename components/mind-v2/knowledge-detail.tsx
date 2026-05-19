@@ -41,7 +41,7 @@ import {
 import {
   ChevronLeft,
   MoreHorizontal,
-  Plus,
+  Upload,
   Camera,
   Image,
   Mic,
@@ -775,6 +775,7 @@ export function KnowledgeDetail({
           </h1>
           <MindChatHeaderActions
             size="compact"
+            newChatAccent={false}
             onNewChat={() => {
               setNotebookAskDraft("")
               setNotebookQaHistoryOpen(false)
@@ -785,7 +786,9 @@ export function KnowledgeDetail({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-mind/90">Rolling summary</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+            Rolling summary
+          </p>
           <h2 className="mt-1.5 text-[19px] font-semibold leading-snug tracking-tight text-zinc-900">{kbDisplayName}</h2>
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-100/90 px-2.5 py-1 text-[12px] font-medium text-zinc-600">
             <span className="tabular-nums">{sourceCount}</span>
@@ -826,12 +829,12 @@ export function KnowledgeDetail({
                 title="Save this summary into your knowledge library"
                 aria-label="Add to library"
                 onClick={() => runWithAuth(saveAskSummaryToLibrary)}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-mind transition-colors hover:bg-stone-50 hover:text-mind dark:text-mind/28 dark:hover:bg-stone-50 dark:hover:text-mind/10"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-200/70 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-100"
               >
                 <Library className="h-5 w-5" strokeWidth={1.85} />
               </button>
             </div>
-            <p className="max-w-[14rem] text-[11px] leading-snug text-mind/80 dark:text-mind/70 sm:max-w-none">
+            <p className="max-w-[14rem] text-[11px] leading-snug text-zinc-500 dark:text-zinc-400 sm:max-w-none">
               Add this answer to your library so it stays grounded with your sources.
             </p>
           </div>
@@ -1034,9 +1037,7 @@ export function KnowledgeDetail({
       <div
         className={cn(
           "flex items-center justify-between px-4 py-3",
-          isPublicKb
-            ? "border-b border-stone-200/50 bg-white/90 backdrop-blur-sm dark:border-zinc-800/80 dark:bg-zinc-950/90"
-            : "border-b border-stone-100 dark:border-zinc-800"
+          isPublicKb ? "bg-white/90 backdrop-blur-sm dark:bg-zinc-950/90" : "bg-white dark:bg-zinc-950"
         )}
       >
         <button onClick={onBack} className="p-2 -ml-2 hover:bg-stone-100 rounded-full">
@@ -1061,9 +1062,9 @@ export function KnowledgeDetail({
                 onClick={() => setShowAddMenu(!showAddMenu)}
                 className="p-2 hover:bg-stone-100 rounded-full"
                 type="button"
-                aria-label="Add to library"
+                aria-label="Upload to library"
               >
-                <Plus className="w-5 h-5 text-zinc-600" />
+                <Upload className="h-5 w-5 text-zinc-600" strokeWidth={1.75} aria-hidden />
               </button>
 
               {showAddMenu && (
@@ -1194,7 +1195,7 @@ export function KnowledgeDetail({
       </div>
 
       {!isPublicKb ? (
-        <div className="flex min-w-0 items-center gap-3 border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
+        <div className="flex min-w-0 items-center gap-3 px-4 py-3">
           {knowledgeBase?.coverImage ? (
             <img
               src={knowledgeBase.coverImage}
@@ -1234,7 +1235,7 @@ export function KnowledgeDetail({
           </button>
         </div>
       ) : (
-        <div className="border-b border-stone-200/40 bg-white px-4 pb-4 pt-3.5 dark:border-zinc-800/60 dark:bg-zinc-950">
+        <div className="bg-white px-4 pb-4 pt-3.5 dark:bg-zinc-950">
           <div className="flex gap-3.5">
             {knowledgeBase?.coverImage ? (
               <img
@@ -1371,7 +1372,9 @@ export function KnowledgeDetail({
                     <span
                       className={cn(
                         "absolute bottom-0 left-1/2 h-[2px] w-10 -translate-x-1/2 rounded-full",
-                        mx.knowledgeTabRule
+                        mode.id === "factory"
+                          ? mx.knowledgeTabRule
+                          : "bg-zinc-300 dark:bg-zinc-600"
                       )}
                       aria-hidden
                     />
@@ -1554,6 +1557,7 @@ export function KnowledgeDetail({
               onSelect={(kind) => setFactoryModal(kind)}
               className="!mt-0"
               surface="filled"
+              layout="kb"
             />
 
                         <StudioFactoryJobsInline

@@ -163,29 +163,37 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
       {/* Left drawer */}
       <div 
         className={cn(
-          "absolute inset-y-0 left-0 z-40 flex w-[75%] flex-col bg-white transition-transform duration-300 dark:bg-zinc-900",
+          "absolute inset-y-0 left-0 z-40 flex w-[75%] flex-col border-r border-mind/15 bg-white transition-transform duration-300 dark:border-mind/20 dark:bg-zinc-900",
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Top actions */}
-        <div className="border-b border-stone-100 p-4 dark:border-zinc-800">
+        <div className="border-b border-mind/10 bg-gradient-to-b from-mind/[0.06] to-white p-4 dark:border-mind/15 dark:from-mind/10 dark:to-zinc-900">
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => {
                 setDrawerOpen(false)
                 setShowCreateSheet(true)
               }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold",
+                mx.brandCta
+              )}
             >
               <Plus className="h-4 w-4" />
               New agent
             </button>
             <button
+              type="button"
               onClick={() => {
                 setDrawerOpen(false)
                 setShowExplore(true)
               }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-stone-100 py-3 text-sm font-medium text-zinc-800 hover:bg-stone-200/90"
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold",
+                mx.brandCtaSoft
+              )}
             >
               <LayoutDashboard className="h-4 w-4" strokeWidth={1.75} aria-hidden />
               Discover
@@ -195,7 +203,7 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
 
         {/* My agents */}
         <div className="flex-1 overflow-y-auto">
-          <div className="px-5 py-3 text-sm text-zinc-400">My agents</div>
+          <div className="px-5 py-3 text-sm text-zinc-400 dark:text-zinc-500">My agents</div>
           {myAgents.map((agent) => (
             <button
               key={agent.id}
@@ -203,22 +211,23 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
                 onAgentChat(agent)
                 setDrawerOpen(false)
               }}
-              className="flex w-full items-center gap-3 px-5 py-3 hover:bg-stone-50 dark:hover:bg-zinc-800/60"
+              type="button"
+              className="flex w-full items-center gap-3 px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-zinc-800/60"
             >
               <span className="text-2xl">{agent.avatar}</span>
-              <div className="flex-1 text-left">
-                <div className="text-[15px] text-zinc-900 dark:text-zinc-100">{agent.name}</div>
-                <div className="text-xs text-zinc-400 dark:text-zinc-500">{agent.description}</div>
+              <div className="min-w-0 flex-1 text-left">
+                <div className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">{agent.name}</div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400">{agent.description}</div>
               </div>
-              <ChevronRight className="w-5 h-5 text-zinc-300" />
+              <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300 dark:text-zinc-600" strokeWidth={2} aria-hidden />
             </button>
           ))}
 
           <div className="mt-4 border-t border-stone-100 px-5 pt-4 dark:border-zinc-800">
-            <div className="mb-3 text-sm text-zinc-400">Recent chats</div>
+            <div className="mb-3 text-sm text-zinc-400 dark:text-zinc-500">Recent chats</div>
             {chatHistory.map((group) => (
               <div key={group.date} className="mb-4">
-                <div className="text-sm text-zinc-400 mb-2">{group.date}</div>
+                <div className="mb-2 text-sm text-zinc-400 dark:text-zinc-500">{group.date}</div>
                 {group.items.map((item) => (
                   <div key={item.id} className="mb-3">
                     <div className="flex items-center gap-2 text-[15px] text-zinc-900 dark:text-zinc-100">
@@ -229,7 +238,7 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
                       <div key={i} className="flex items-center gap-2 ml-6 mt-1 text-sm text-zinc-500">
                         <span className={cn(
                           "w-4 h-4 rounded flex items-center justify-center text-[10px]",
-                          sub.type === "note" ? "bg-zinc-100 text-zinc-700" : "bg-stone-100 text-stone-800"
+                          sub.type === "note" ? "bg-zinc-100 text-zinc-700" : "bg-stone-100 text-stone-700"
                         )}>
                           {sub.type === "note" ? "📝" : "⚙️"}
                         </span>
@@ -242,7 +251,7 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
             ))}
           </div>
 
-          <div className="px-5 py-4 text-center text-xs text-zinc-400">90-day history</div>
+          <div className="px-5 py-4 text-center text-xs text-zinc-400 dark:text-zinc-500">90-day history</div>
         </div>
       </div>
 
@@ -268,7 +277,12 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="flex h-11 w-11 flex-col items-center justify-center gap-[5px] rounded-2xl text-zinc-500 transition-all duration-300 hover:bg-black/[0.04] hover:text-zinc-800 active:scale-95 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"
+              className={cn(
+                "flex h-11 w-11 flex-col items-center justify-center gap-[5px] rounded-2xl text-zinc-500 transition-all duration-300 active:scale-95 dark:text-zinc-400",
+                drawerOpen
+                  ? "bg-mind/10 text-mind"
+                  : "hover:bg-mind/8 hover:text-mind dark:hover:bg-mind/15"
+              )}
               aria-label="Open menu"
             >
               <div className="h-[2px] w-[18px] rounded-full bg-current opacity-80" />

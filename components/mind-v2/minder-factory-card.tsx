@@ -14,10 +14,16 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-/** Fixed footprint for every Minder content-factory card surface */
+/** Fixed footprint for Agent / 3-column factory grids */
 export const MINDER_FACTORY_CARD_HEIGHT = "h-[5rem]"
 
+/** Knowledge Studio — square-ish cards in 2 columns */
+export const MINDER_FACTORY_CARD_HEIGHT_KB = "aspect-square w-full"
+
 export const MINDER_FACTORY_GRID_CLASS = "grid grid-cols-3 gap-2 [&>*]:h-[5rem]"
+
+/** Knowledge Studio — 6 items in 2 columns × 3 rows */
+export const MINDER_FACTORY_GRID_CLASS_KB = "grid grid-cols-2 gap-2.5"
 
 export const MINDER_FACTORY_RAIL_CARD_WIDTH = "w-[5.25rem] shrink-0"
 
@@ -45,6 +51,7 @@ export function MinderFactoryCard({
   onClick,
   variant = "grid",
   surface = "flat",
+  gridLayout = "agent",
   className,
 }: {
   kind: MinderFactoryCardKind
@@ -55,11 +62,14 @@ export function MinderFactoryCard({
   variant?: "grid" | "rail"
   /** `filled` — tinted cards (Knowledge Studio); `flat` — border-only (Agent, chat rails) */
   surface?: FactoryOptionSurface
+  /** `kb` — taller square cards (Knowledge Studio 2-col grid) */
+  gridLayout?: "agent" | "kb"
   className?: string
 }) {
   const isRail = variant === "rail"
+  const isKbGrid = gridLayout === "kb" && !isRail
   const filled = surface === "filled" && !isRail
-  const tone = mx.factoryTone[kind]
+  const tone = filled ? mx.kbFactoryTone[kind] : mx.factoryTone[kind]
   return (
     <button
       type="button"
@@ -75,15 +85,13 @@ export function MinderFactoryCard({
             )
           : filled
             ? cn(
-                "gap-1.5 rounded-2xl border p-2.5",
-                "border-sky-200/90 bg-gradient-to-br from-sky-100 via-sky-50 to-cyan-100",
-                "shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_6px_20px_-12px_rgba(56,189,248,0.12)]",
-                "dark:border-sky-800/55 dark:from-sky-950 dark:via-sky-900 dark:to-cyan-950",
-                "dark:shadow-[0_1px_0_rgba(56,189,248,0.08)_inset,0_8px_24px_-14px_rgba(0,0,0,0.4)]",
-                "hover:-translate-y-0.5 hover:border-mind/35 hover:from-sky-50 hover:via-sky-100 hover:to-cyan-50",
-                "hover:shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_12px_28px_-14px_rgba(56,189,248,0.2)]",
-                "dark:hover:border-mind/40 dark:hover:from-sky-900 dark:hover:via-sky-950 dark:hover:to-cyan-950",
-                "active:translate-y-0 active:scale-[0.98]"
+                isKbGrid ? "gap-2 rounded-2xl border p-3" : "gap-1.5 rounded-2xl border p-2.5",
+                tone.filledShell,
+                tone.filledShadow,
+                "dark:shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_8px_24px_-14px_rgba(0,0,0,0.4)]",
+                tone.filledShellHover,
+                tone.filledShadowHover,
+                "hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
               )
             : cn(
                 "gap-1.5 rounded-2xl border border-stone-200/90 bg-transparent p-2.5 shadow-none",
@@ -91,7 +99,11 @@ export function MinderFactoryCard({
                 "hover:border-stone-300 dark:hover:border-zinc-600",
                 "active:scale-[0.98]"
               ),
-        isRail ? MINDER_FACTORY_RAIL_CARD_HEIGHT : MINDER_FACTORY_CARD_HEIGHT,
+        isRail
+          ? MINDER_FACTORY_RAIL_CARD_HEIGHT
+          : isKbGrid
+            ? MINDER_FACTORY_CARD_HEIGHT_KB
+            : MINDER_FACTORY_CARD_HEIGHT,
         mx.navEase,
         className
       )}
@@ -99,15 +111,22 @@ export function MinderFactoryCard({
       {filled ? (
         <>
           <span
-            className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0)_58%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.2)_0%,rgba(56,189,248,0)_58%)]"
+            className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.28)_0%,rgba(255,255,255,0)_58%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.12)_0%,rgba(56,189,248,0)_58%)]"
             aria-hidden
           />
           <span
-            className="pointer-events-none absolute inset-0 rounded-2xl bg-mind/[0.06] transition-colors group-hover:bg-mind/[0.1] dark:bg-mind/10 dark:group-hover:bg-mind/15"
+            className={cn(
+              "pointer-events-none absolute inset-0 rounded-2xl transition-colors",
+              tone.filledOverlay,
+              tone.filledOverlayHover
+            )}
             aria-hidden
           />
           <span
-            className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-[radial-gradient(circle,rgba(125,211,252,0.28)_0%,transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:bg-[radial-gradient(circle,rgba(56,189,248,0.2)_0%,transparent_70%)]"
+            className={cn(
+              "pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100",
+              tone.filledCornerGlow
+            )}
             aria-hidden
           />
         </>
@@ -115,9 +134,9 @@ export function MinderFactoryCard({
       <div
         className={cn(
           "relative z-[1] flex shrink-0 items-center justify-center",
-          isRail ? "h-7 w-7 rounded-lg" : "h-9 w-9 rounded-xl",
+          isRail ? "h-7 w-7 rounded-lg" : isKbGrid ? "h-10 w-10 rounded-xl" : "h-9 w-9 rounded-xl",
           filled ? tone.well : tone.icon,
-          filled ? "bg-white/75 ring-1 ring-white/70 dark:bg-zinc-900/50 dark:ring-sky-900/40" : undefined
+          filled ? cn("bg-white/60 ring-1 dark:bg-zinc-900/55", tone.filledIconRing) : undefined
         )}
       >
         {filled ? (

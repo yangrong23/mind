@@ -12,6 +12,7 @@ import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
 import { MindHardwareDetail } from "@/components/mind-v2/mind-hardware-detail"
 import { isNoteProcessing, type NoteStatus } from "@/lib/note-status"
+import { MOCK_KNOWLEDGE_BASES, type KnowledgeBase } from "@/lib/mock-knowledge-bases"
 
 export type { NoteStatus }
 
@@ -257,6 +258,111 @@ function NoteCardSkeleton() {
   )
 }
 
+const ARCHIVE_STRIP_PX = 92
+const DELETE_STRIP_PX = 76
+const SWIPE_SNAP_THRESHOLD = 40
+
+const SAVE_TO_LIBRARY_KBS = MOCK_KNOWLEDGE_BASES.filter((kb) => kb.category === "mine" || kb.category === "team")
+
+function NoteArchiveKbSheet({
+  note,
+  onClose,
+  onSelect,
+}: {
+  note: Note
+  onClose: () => void
+  onSelect: (kb: KnowledgeBase) => void
+}) {
+  return (
+    <div className="absolute inset-0 z-[50] flex flex-col justify-end">
+      <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="note-archive-kb-title"
+        className="relative max-h-[70vh] overflow-hidden rounded-t-[1.25rem] bg-white shadow-[0_-8px_40px_rgba(0,0,0,0.15)] dark:bg-zinc-950"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
+          <h2 id="note-archive-kb-title" className="text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">
+            Save to library
+          </h2>
+          <button type="button" onClick={onClose} className="rounded-full p-2 text-zinc-500 hover:bg-stone-100" aria-label="Close">
+            <X className="h-5 w-5" strokeWidth={2} />
+          </button>
+        </div>
+        <p className="border-b border-stone-100 px-4 py-2.5 text-[13px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+          <span className="line-clamp-2 font-medium text-zinc-700 dark:text-zinc-300">{note.title}</span>
+        </p>
+        <div className="max-h-[50vh] overflow-y-auto py-1">
+          {SAVE_TO_LIBRARY_KBS.map((kb) => (
+            <button
+              key={kb.id}
+              type="button"
+              onClick={() => onSelect(kb)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-stone-50 active:bg-stone-100/80 dark:hover:bg-zinc-900"
+            >
+              <img src={kb.coverImage} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-100">{kb.name}</div>
+                <div className="truncate text-[12px] text-zinc-500">{kb.count} items</div>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NoteDeleteConfirmSheet({
+  note,
+  onCancel,
+  onConfirm,
+}: {
+  note: Note
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div className="absolute inset-0 z-[50] flex flex-col justify-end">
+      <button type="button" className="absolute inset-0 bg-black/40" aria-label="Close" onClick={onCancel} />
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="note-delete-title"
+        className="relative rounded-t-[1.25rem] bg-white px-5 pb-8 pt-5 shadow-[0_-8px_40px_rgba(0,0,0,0.15)] dark:bg-zinc-950"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="note-delete-title" className="text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">
+          Delete this note?
+        </h2>
+        <p className="mt-2 text-[14px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+          <span className="font-medium text-zinc-800 dark:text-zinc-200">{note.title}</span> will be removed from Notes.
+          This cannot be undone in the demo.
+        </p>
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-xl border border-stone-200 py-3 text-[15px] font-semibold text-zinc-800 hover:bg-stone-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-xl bg-red-600 py-3 text-[15px] font-semibold text-white hover:bg-red-700 active:bg-red-800"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface SwipeableMemoCardProps {
   note: Note
   folders: NoteFolder[]
@@ -269,51 +375,88 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
   const folder = note.folderId ? folders.find((f) => f.id === note.folderId) : undefined
   const FolderIcon = folder ? folderIconComponent(folder.iconKey) : null
   const startX = useRef(0)
+  const startDx = useRef(0)
   const [dx, setDx] = useState(0)
   const dragging = useRef(false)
 
+  const snapClosed = () => setDx(0)
+  const snapArchive = () => setDx(-ARCHIVE_STRIP_PX)
+  const snapDelete = () => setDx(DELETE_STRIP_PX)
+
   const onStart = (clientX: number) => {
     startX.current = clientX
+    startDx.current = dx
     dragging.current = true
   }
   const onMove = (clientX: number) => {
     if (!dragging.current) return
-    const d = clientX - startX.current
-    setDx(Math.max(-120, Math.min(120, d)))
+    const next = startDx.current + (clientX - startX.current)
+    setDx(Math.max(-ARCHIVE_STRIP_PX, Math.min(DELETE_STRIP_PX, next)))
   }
   const onEnd = () => {
     dragging.current = false
-    if (dx > 72) {
-      onArchive?.()
-      setDx(0)
-    } else if (dx < -72) {
-      onDelete?.()
-      setDx(0)
-    } else {
-      setDx(0)
+    if (dx < -SWIPE_SNAP_THRESHOLD) {
+      snapArchive()
+      return
     }
+    if (dx > SWIPE_SNAP_THRESHOLD) {
+      snapDelete()
+      return
+    }
+    snapClosed()
   }
+
+  const archiveRevealed = dx <= -SWIPE_SNAP_THRESHOLD / 2
+  const deleteRevealed = dx >= SWIPE_SNAP_THRESHOLD / 2
+  const rowRevealed = archiveRevealed || deleteRevealed
 
   return (
     <div className="relative overflow-hidden">
-      <div
-        className="absolute inset-y-0 left-0 flex w-20 items-center justify-center bg-zinc-700 text-white"
-        style={{ opacity: dx > 0 ? Math.min(1, dx / 72) : 0 }}
+      <button
+        type="button"
+        style={{ width: DELETE_STRIP_PX }}
+        className={cn(
+          "absolute inset-y-0 left-0 z-20 flex flex-col items-center justify-center gap-0.5 bg-red-600 text-white transition-opacity",
+          deleteRevealed ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        aria-label={`Delete ${note.title}`}
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete?.()
+          snapClosed()
+        }}
       >
-        <Library className="h-5 w-5" strokeWidth={1.65} />
-      </div>
-      <div
-        className="absolute inset-y-0 right-0 flex w-20 items-center justify-center bg-red-600 text-white"
-        style={{ opacity: dx < 0 ? Math.min(1, -dx / 72) : 0 }}
+        <Trash2 className="h-5 w-5 shrink-0" strokeWidth={1.75} aria-hidden />
+        <span className="text-[11px] font-semibold">Delete</span>
+      </button>
+
+      <button
+        type="button"
+        style={{ width: ARCHIVE_STRIP_PX }}
+        className={cn(
+          "absolute inset-y-0 right-0 z-20 flex flex-col items-center justify-center gap-0.5 bg-zinc-600 text-white transition-opacity",
+          archiveRevealed ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+        aria-label={`Save ${note.title} to library`}
+        onClick={(e) => {
+          e.stopPropagation()
+          onArchive?.()
+          snapClosed()
+        }}
       >
-        <Trash2 className="h-5 w-5" strokeWidth={1.65} />
-      </div>
+        <Library className="h-5 w-5 shrink-0" strokeWidth={1.75} aria-hidden />
+        <span className="px-1 text-center text-[11px] font-semibold leading-tight">Library</span>
+      </button>
 
       <div
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && onOpen()}
+        onKeyDown={(e) => e.key === "Enter" && (rowRevealed ? snapClosed() : onOpen())}
         onClick={() => {
+          if (rowRevealed) {
+            snapClosed()
+            return
+          }
           if (Math.abs(dx) < 8) onOpen()
         }}
         onTouchStart={(e) => onStart(e.touches[0].clientX)}
@@ -323,7 +466,7 @@ function SwipeableMemoCard({ note, folders, onOpen, onArchive, onDelete }: Swipe
         onMouseMove={(e) => dragging.current && onMove(e.clientX)}
         onMouseUp={onEnd}
         onMouseLeave={() => dragging.current && onEnd()}
-        className="relative z-10 w-full cursor-pointer select-none bg-white text-left active:bg-zinc-50/70"
+        className="relative z-10 w-full cursor-pointer select-none bg-white text-left active:bg-zinc-50/70 dark:bg-zinc-950 dark:active:bg-zinc-900/80"
         style={{ transform: `translateX(${dx}px)`, transition: dragging.current ? "none" : "transform 0.2s ease-out" }}
       >
         <div className="py-4">
@@ -496,6 +639,8 @@ export function NotesTab({
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [showFilterSortSheet, setShowFilterSortSheet] = useState(false)
   const [notesViewMode, setNotesViewMode] = useState<"list" | "thumbnails">("list")
+  const [archiveKbForNote, setArchiveKbForNote] = useState<Note | null>(null)
+  const [deleteConfirmNote, setDeleteConfirmNote] = useState<Note | null>(null)
 
   const inListScope = (_n: Note) => true
   const nonArchived = notes.filter((n) => !n.archived)
@@ -632,13 +777,8 @@ export function NotesTab({
                   note={note}
                   folders={folders}
                   onOpen={() => onNoteClick(note)}
-                  onArchive={() => {
-                    toast.success("Saved to library", {
-                      description: note.title.length > 40 ? `${note.title.slice(0, 40)}…` : note.title,
-                    })
-                    onNotesChange(notes.map((n) => (n.id === note.id ? { ...n, archived: true } : n)))
-                  }}
-                  onDelete={() => onNotesChange(notes.filter((n) => n.id !== note.id))}
+                  onArchive={() => setArchiveKbForNote(note)}
+                  onDelete={() => setDeleteConfirmNote(note)}
                 />
               )
             )}
@@ -904,6 +1044,34 @@ export function NotesTab({
           </div>
         </div>
       )}
+
+      {archiveKbForNote ? (
+        <NoteArchiveKbSheet
+          note={archiveKbForNote}
+          onClose={() => setArchiveKbForNote(null)}
+          onSelect={(kb) => {
+            const title = archiveKbForNote.title
+            onNotesChange(notes.map((n) => (n.id === archiveKbForNote.id ? { ...n, archived: true } : n)))
+            setArchiveKbForNote(null)
+            toast.success("Saved to library", {
+              description: `“${title.length > 28 ? `${title.slice(0, 28)}…` : title}” → ${kb.name}`,
+            })
+          }}
+        />
+      ) : null}
+
+      {deleteConfirmNote ? (
+        <NoteDeleteConfirmSheet
+          note={deleteConfirmNote}
+          onCancel={() => setDeleteConfirmNote(null)}
+          onConfirm={() => {
+            const id = deleteConfirmNote.id
+            setDeleteConfirmNote(null)
+            onNotesChange(notes.filter((n) => n.id !== id))
+            toast.success("Note deleted")
+          }}
+        />
+      ) : null}
 
       <MindDevicesSheet
         open={showDeviceSheet}

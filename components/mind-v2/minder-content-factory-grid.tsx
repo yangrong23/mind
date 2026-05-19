@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import type { FactoryModalKind, FactoryOptionSurface } from "@/components/mind-v2/content-factory-modals"
 import {
   MINDER_FACTORY_GRID_CLASS,
+  MINDER_FACTORY_GRID_CLASS_KB,
   MINDER_FACTORY_ITEMS,
   MinderFactoryCard,
 } from "@/components/mind-v2/minder-factory-card"
@@ -13,6 +14,8 @@ export type MinderContentFactoryGridProps = {
   onSelect: (kind: FactoryModalKind) => void
   className?: string
   surface?: FactoryOptionSurface
+  /** `kb` — 2 columns × 3 rows (Knowledge Studio); `agent` — 3 columns × 2 rows */
+  layout?: "agent" | "kb"
 }
 
 export function MinderContentFactoryGrid({
@@ -20,6 +23,7 @@ export function MinderContentFactoryGrid({
   onSelect,
   className,
   surface = "flat",
+  layout = "agent",
 }: MinderContentFactoryGridProps) {
   return (
     <div className={cn("mt-4 w-full", className)}>
@@ -31,7 +35,7 @@ export function MinderContentFactoryGrid({
           {librarySummary}
         </p>
       ) : null}
-      <div className={MINDER_FACTORY_GRID_CLASS}>
+      <div className={layout === "kb" ? MINDER_FACTORY_GRID_CLASS_KB : MINDER_FACTORY_GRID_CLASS}>
         {MINDER_FACTORY_ITEMS.map((item) => (
           <MinderFactoryCard
             key={item.id}
@@ -40,6 +44,7 @@ export function MinderContentFactoryGrid({
             icon={item.icon}
             onClick={() => onSelect(item.id)}
             surface={surface}
+            gridLayout={layout}
           />
         ))}
       </div>

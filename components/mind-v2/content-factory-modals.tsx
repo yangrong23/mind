@@ -51,6 +51,11 @@ function useFactoryOptionSurface() {
   return useContext(FactoryOptionSurfaceContext)
 }
 
+function useFactoryTone(kind: FactoryModalKind) {
+  const surface = useFactoryOptionSurface()
+  return surface === "filled" ? mx.kbFactoryTone[kind] : mx.factoryTone[kind]
+}
+
 interface ContentFactoryModalsProps {
   open: FactoryModalKind | null
   onClose: () => void
@@ -77,7 +82,7 @@ function ModalFrame({
   onClose: () => void
   footer?: ReactNode
 }) {
-  const t = mx.factoryTone[tone]
+  const t = useFactoryTone(tone)
   return (
     <div
       className="absolute inset-0 z-[70] flex flex-col justify-end bg-black/45 sm:items-center sm:justify-center sm:p-4"
@@ -118,7 +123,10 @@ function ModalFrame({
 /** 2-col option cards — same footprint as the Quiz settings sheet grid cells */
 const FACTORY_OPTION_CARD_CLASS =
   "relative flex h-[5rem] w-full min-w-0 flex-col justify-between overflow-hidden rounded-xl border p-3.5 text-left transition-colors"
+const FACTORY_OPTION_CARD_COMPACT_CLASS =
+  "relative flex h-[3.75rem] w-full min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-2.5 text-left transition-colors"
 const FACTORY_OPTION_GRID_CLASS = "grid grid-cols-2 gap-2.5"
+const FACTORY_OPTION_GRID_COMPACT_CLASS = "grid grid-cols-2 gap-2"
 
 function FactoryDescriptionPeekCard({
   title,
@@ -210,34 +218,48 @@ function FactoryOptionCard({
   onClick,
   title,
   description,
+  size = "default",
 }: {
   tone: FactoryModalKind
   selected: boolean
   onClick: () => void
   title: string
   description: string
+  size?: "default" | "compact"
 }) {
-  const tc = mx.factoryTone[tone]
+  const tc = useFactoryTone(tone)
   const filled = useFactoryOptionSurface() === "filled"
+  const compact = size === "compact"
   return (
     <div
       {...factoryOptionCardKeyHandlers(onClick)}
       className={cn(
-        FACTORY_OPTION_CARD_CLASS,
+        compact ? FACTORY_OPTION_CARD_COMPACT_CLASS : FACTORY_OPTION_CARD_CLASS,
         "cursor-pointer",
         filled
           ? selected
             ? tc.cardOn
-            : cn("border-stone-200/90 dark:border-zinc-700/90", mx.surfaceTint, tc.softHover)
+            : cn(tc.filledOptionBg, tc.softHover)
           : selected
             ? "border-mind/30 bg-transparent ring-1 ring-mind/20"
             : "border-stone-200/90 bg-transparent hover:border-stone-300 dark:border-zinc-700/90 dark:hover:border-zinc-600"
       )}
     >
       {selected ? (
-        <Check className={cn("absolute right-2 top-2 h-4 w-4", tc.check)} strokeWidth={3} />
+        <Check
+          className={cn(
+            compact ? "absolute right-1.5 top-1.5 h-3.5 w-3.5" : "absolute right-2 top-2 h-4 w-4",
+            tc.check
+          )}
+          strokeWidth={3}
+        />
       ) : null}
-      <span className="line-clamp-2 min-h-0 break-words pr-6 text-[14px] font-semibold leading-snug text-zinc-900">
+      <span
+        className={cn(
+          "line-clamp-2 min-h-0 break-words font-semibold leading-snug text-zinc-900",
+          compact ? "pr-5 text-[13px]" : "pr-6 text-[14px]"
+        )}
+      >
         {title}
       </span>
       <FactoryCardDetailsButton title={title} description={description} />
@@ -256,7 +278,7 @@ function FactoryTemplateCard({
   desc: string
   onClick?: () => void
 }) {
-  const tc = mx.factoryTone[tone]
+  const tc = useFactoryTone(tone)
   const filled = useFactoryOptionSurface() === "filled"
   return (
     <div
@@ -265,7 +287,7 @@ function FactoryTemplateCard({
         FACTORY_OPTION_CARD_CLASS,
         onClick && "cursor-pointer",
         filled
-          ? cn("border-stone-200/90 dark:border-zinc-700/90", mx.surfaceTint, tc.softHover)
+          ? cn(tc.filledOptionBg, tc.softHover)
           : "border-stone-200/90 bg-transparent hover:border-stone-300 dark:border-zinc-700/90 dark:hover:border-zinc-600"
       )}
     >
@@ -293,7 +315,7 @@ function FactoryStylePickCard({
   emoji: string
   label: string
 }) {
-  const tc = mx.factoryTone[tone]
+  const tc = useFactoryTone(tone)
   const filled = useFactoryOptionSurface() === "filled"
   return (
     <button
@@ -304,7 +326,7 @@ function FactoryStylePickCard({
         filled
           ? selected
             ? tc.styleCardOn
-            : cn("border-stone-200 hover:border-stone-300 dark:border-zinc-700", mx.surfaceTint)
+            : cn(tc.filledOptionBg, tc.softHover)
           : selected
             ? "border-mind/30 bg-transparent ring-1 ring-mind/20"
             : "border-stone-200 bg-transparent hover:border-stone-300 dark:border-zinc-700 dark:hover:border-zinc-600"
@@ -360,7 +382,7 @@ function SliderRow({
   onChange: (n: number) => void
   valueSuffix: string
 }) {
-  const tc = mx.factoryTone[tone]
+  const tc = useFactoryTone(tone)
   return (
     <div className="mb-4">
       <div className="mb-1 flex items-baseline justify-between gap-2">
@@ -405,7 +427,7 @@ function PillRow({
   onChange: (v: string) => void
   options: { id: string; label: string }[]
 }) {
-  const tc = mx.factoryTone[tone]
+  const tc = useFactoryTone(tone)
   return (
     <div className="mb-4">
       <p className="mb-2 text-[13px] text-zinc-500">{label}</p>
@@ -441,7 +463,7 @@ function ReportModal({
   onSubmitFactory?: (settings: FactoryGenerationSettings) => void
 }) {
   const [reportPages, setReportPages] = useState(12)
-  const tc = mx.factoryTone.report
+  const tc = useFactoryTone("report")
   const formatCards = [
     { title: "Custom format", desc: "Structure, tone, and style your report the way you want." },
     { title: "Briefing doc", desc: "Key insights and citations from your sources." },
@@ -511,7 +533,7 @@ function FlashcardsModal({
   const [cardCount, setCardCount] = useState(24)
   const [diff, setDiff] = useState("medium")
   const [topic, setTopic] = useState("")
-  const tc = mx.factoryTone.flashcards
+  const tc = useFactoryTone("flashcards")
   return (
     <ModalFrame
       tone="flashcards"
@@ -570,7 +592,7 @@ function QuizModal({
   const [questionCount, setQuestionCount] = useState(15)
   const [diff, setDiff] = useState("medium")
   const [topic, setTopic] = useState("")
-  const tc = mx.factoryTone.quiz
+  const tc = useFactoryTone("quiz")
   return (
     <ModalFrame
       tone="quiz"
@@ -641,7 +663,7 @@ function InfographicModal({
   const [detail, setDetail] = useState("standard")
   const [panelCount, setPanelCount] = useState(8)
   const [desc, setDesc] = useState("")
-  const tc = mx.factoryTone.infographic
+  const tc = useFactoryTone("infographic")
   return (
     <ModalFrame
       tone="infographic"
@@ -770,7 +792,7 @@ function AudioModal({
     { id: "debate", title: "Debate", desc: "Two perspectives on what the sources imply." },
   ]
   const tags = ["Vendor comparison", "Enterprise patterns", "Beginner’s guide"]
-  const tc = mx.factoryTone.audio
+  const tc = useFactoryTone("audio")
   return (
     <ModalFrame
       tone="audio"
@@ -785,11 +807,12 @@ function AudioModal({
       }
     >
       <p className="mb-2 text-[13px] font-semibold text-zinc-900">Format</p>
-      <div className={cn("mb-4", FACTORY_OPTION_GRID_CLASS)}>
+      <div className={cn("mb-4", FACTORY_OPTION_GRID_COMPACT_CLASS)}>
         {formats.map((f) => (
           <FactoryOptionCard
             key={f.id}
             tone="audio"
+            size="compact"
             selected={format === f.id}
             onClick={() => setFormat(f.id)}
             title={f.title}
@@ -861,7 +884,7 @@ function SlidesModal({
   const [lang, setLang] = useState("English")
   const [slidePages, setSlidePages] = useState(14)
   const [desc, setDesc] = useState("")
-  const tc = mx.factoryTone.slides
+  const tc = useFactoryTone("slides")
   return (
     <ModalFrame
       tone="slides"

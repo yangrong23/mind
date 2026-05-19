@@ -159,10 +159,11 @@ export function KnowledgeTab({ onKBClick, requireAuthThen }: KnowledgeTabProps) 
               onClick={() => openCreateSheet(activeCategory)}
               className={cn(
                 "mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed py-3.5 text-[14px] font-medium transition-colors",
-                "border-stone-200 bg-stone-50 text-mind hover:bg-stone-50 dark:border-stone-50 dark:bg-zinc-800 dark:text-mind/10 dark:hover:bg-stone-100"
+                "border-stone-200 bg-stone-50 text-zinc-600 hover:border-stone-300 hover:bg-stone-100",
+                "dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
               )}
             >
-              <Plus className="h-5 w-5" strokeWidth={1.75} />
+              <Plus className="h-5 w-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.75} aria-hidden />
               {activeCategory === "team" ? "New team library" : "New library"}
             </button>
           )}

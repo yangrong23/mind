@@ -11,7 +11,7 @@ import {
   ChevronDown,
   Globe,
   MessageCircle,
-  Plus,
+  CirclePlus,
 } from "lucide-react"
 
 export type MindChatMode = "dialog" | "agent"
@@ -142,9 +142,7 @@ export function MindChatComposer({
         <div
           className={cn(
             "overflow-visible",
-            variant === "home"
-              ? "rounded-[1.5rem] border border-zinc-200/55 bg-white/92 shadow-[0_16px_48px_-20px_rgba(15,23,42,0.14),0_2px_12px_-4px_rgba(15,23,42,0.06)] backdrop-blur-md dark:border-zinc-700/65 dark:bg-zinc-900/72 dark:shadow-[0_20px_50px_-24px_rgba(0,0,0,0.55)]"
-              : "rounded-[22px] border border-zinc-200/80 bg-white dark:border-zinc-700/90 dark:bg-zinc-900"
+            variant === "home" ? mx.composerHomeShell : "rounded-[22px] border border-zinc-200/80 bg-white dark:border-zinc-700/90 dark:bg-zinc-900"
           )}
         >
           <textarea
@@ -345,7 +343,7 @@ export function MindChatComposer({
                       onUploadClick?.()
                     }}
                   >
-                    <Plus className="h-4 w-4" strokeWidth={2} aria-hidden />
+                    <CirclePlus className="h-4 w-4" strokeWidth={2} aria-hidden />
                   </button>
                 ) : null}
 
