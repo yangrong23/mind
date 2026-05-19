@@ -32,7 +32,7 @@ function VerifiedDot({ tone }: { tone: "blue" | "gold" }) {
     <span
       className={cn(
         "inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white",
-        tone === "blue" ? "bg-zinc-400" : "bg-mind/38 text-mind"
+        tone === "blue" ? "bg-zinc-400" : "bg-amber-500/90 text-white"
       )}
       title="Verified"
       aria-label="Verified"

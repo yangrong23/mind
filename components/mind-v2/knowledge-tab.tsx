@@ -84,10 +84,10 @@ export function KnowledgeTab({ onKBClick, requireAuthThen }: KnowledgeTabProps) 
             onClick={() => setShowDiscover(true)}
             className={cn(
               "flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-medium transition-colors",
-              "text-mind hover:bg-stone-50 dark:text-mind/18 dark:hover:bg-zinc-800"
+              "text-zinc-600 hover:bg-stone-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
             )}
           >
-            <Store className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+            <Store className="h-4 w-4 text-zinc-500 dark:text-zinc-400" strokeWidth={1.75} aria-hidden />
             Plaza
           </button>
         </div>
@@ -174,10 +174,11 @@ export function KnowledgeTab({ onKBClick, requireAuthThen }: KnowledgeTabProps) 
               onClick={() => setShowDiscover(true)}
               className={cn(
                 "mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed py-3.5 text-[14px] font-medium transition-colors",
-                "border-stone-200 bg-stone-50 text-mind hover:bg-stone-50 dark:border-stone-50 dark:bg-zinc-800 dark:text-mind/10 dark:hover:bg-stone-100"
+                "border-stone-200 bg-stone-50 text-zinc-600 hover:border-stone-300 hover:bg-stone-100",
+                "dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
               )}
             >
-              <Store className="h-5 w-5" strokeWidth={1.75} />
+              <Store className="h-5 w-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.75} />
               Browse library plaza
             </button>
           )}

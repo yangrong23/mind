@@ -65,6 +65,8 @@ interface ContentFactoryModalsProps {
   onGenerateSubmit?: (kind: FactoryModalKind, settings?: FactoryGenerationSettings) => void
   /** Knowledge Studio uses filled option cards; Agent / chat rails stay flat. */
   optionSurface?: FactoryOptionSurface
+  /** Agent home / chat: tighter audio format cards and focus field. */
+  modalDensity?: "default" | "compact"
 }
 
 function ModalFrame({
@@ -125,8 +127,13 @@ const FACTORY_OPTION_CARD_CLASS =
   "relative flex h-[5rem] w-full min-w-0 flex-col justify-between overflow-hidden rounded-xl border p-3.5 text-left transition-colors"
 const FACTORY_OPTION_CARD_COMPACT_CLASS =
   "relative flex h-[3.75rem] w-full min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-2.5 text-left transition-colors"
+/** Agent audio format picker — tighter than compact */
+const FACTORY_OPTION_CARD_DENSE_CLASS =
+  "relative flex h-[3rem] w-full min-w-0 flex-col justify-between overflow-hidden rounded-lg border p-2 text-left transition-colors"
 const FACTORY_OPTION_GRID_CLASS = "grid grid-cols-2 gap-2.5"
 const FACTORY_OPTION_GRID_COMPACT_CLASS = "grid grid-cols-2 gap-2"
+const FACTORY_OPTION_GRID_DENSE_CLASS = "grid grid-cols-2 gap-1.5"
+const FACTORY_AUDIO_FOCUS_ROWS = 4
 
 function FactoryDescriptionPeekCard({
   title,
@@ -225,16 +232,21 @@ function FactoryOptionCard({
   onClick: () => void
   title: string
   description: string
-  size?: "default" | "compact"
+  size?: "default" | "compact" | "dense"
 }) {
   const tc = useFactoryTone(tone)
   const filled = useFactoryOptionSurface() === "filled"
-  const compact = size === "compact"
+  const dense = size === "dense"
+  const compact = size === "compact" || dense
   return (
     <div
       {...factoryOptionCardKeyHandlers(onClick)}
       className={cn(
-        compact ? FACTORY_OPTION_CARD_COMPACT_CLASS : FACTORY_OPTION_CARD_CLASS,
+        dense
+          ? FACTORY_OPTION_CARD_DENSE_CLASS
+          : compact
+            ? FACTORY_OPTION_CARD_COMPACT_CLASS
+            : FACTORY_OPTION_CARD_CLASS,
         "cursor-pointer",
         filled
           ? selected
@@ -248,7 +260,11 @@ function FactoryOptionCard({
       {selected ? (
         <Check
           className={cn(
-            compact ? "absolute right-1.5 top-1.5 h-3.5 w-3.5" : "absolute right-2 top-2 h-4 w-4",
+            dense
+            ? "absolute right-1 top-1 h-3 w-3"
+            : compact
+              ? "absolute right-1.5 top-1.5 h-3.5 w-3.5"
+              : "absolute right-2 top-2 h-4 w-4",
             tc.check
           )}
           strokeWidth={3}
@@ -256,13 +272,14 @@ function FactoryOptionCard({
       ) : null}
       <span
         className={cn(
-          "line-clamp-2 min-h-0 break-words font-semibold leading-snug text-zinc-900",
-          compact ? "pr-5 text-[13px]" : "pr-6 text-[14px]"
+          "min-h-0 break-words font-semibold leading-snug text-zinc-900",
+          dense ? "line-clamp-1 pr-4 text-[12px]" : "line-clamp-2",
+          !dense && (compact ? "pr-5 text-[13px]" : "pr-6 text-[14px]")
         )}
       >
         {title}
       </span>
-      <FactoryCardDetailsButton title={title} description={description} />
+      {!dense ? <FactoryCardDetailsButton title={title} description={description} /> : null}
     </div>
   )
 }
@@ -774,10 +791,12 @@ function AudioModal({
   onClose,
   libraryName,
   onSubmitFactory,
+  compact = false,
 }: {
   onClose: () => void
   libraryName?: string
   onSubmitFactory?: (settings: FactoryGenerationSettings) => void
+  compact?: boolean
 }) {
   const [format, setFormat] = useState("deep")
   const [lang, setLang] = useState("English")
@@ -806,13 +825,20 @@ function AudioModal({
         />
       }
     >
-      <p className="mb-2 text-[13px] font-semibold text-zinc-900">Format</p>
-      <div className={cn("mb-4", FACTORY_OPTION_GRID_COMPACT_CLASS)}>
+      <p className={cn("font-semibold text-zinc-900", compact ? "mb-1.5 text-[12px]" : "mb-2 text-[13px]")}>
+        Format
+      </p>
+      <div
+        className={cn(
+          compact ? "mb-3" : "mb-4",
+          compact ? FACTORY_OPTION_GRID_DENSE_CLASS : FACTORY_OPTION_GRID_COMPACT_CLASS
+        )}
+      >
         {formats.map((f) => (
           <FactoryOptionCard
             key={f.id}
             tone="audio"
-            size="compact"
+            size={compact ? "dense" : "compact"}
             selected={format === f.id}
             onClick={() => setFormat(f.id)}
             title={f.title}
@@ -820,13 +846,14 @@ function AudioModal({
           />
         ))}
       </div>
-      <div className="mb-4">
-        <p className="mb-1 text-[13px] text-zinc-500">Language</p>
+      <div className={compact ? "mb-2" : "mb-3"}>
+        <p className={cn("text-zinc-500", compact ? "mb-1 text-[11px]" : "mb-1 text-[12px]")}>Language</p>
         <select
           value={lang}
           onChange={(e) => setLang(e.target.value)}
           className={cn(
-            "w-full rounded-xl border border-stone-200 py-2 pl-2 pr-2 text-[13px]",
+            "w-full rounded-lg border border-stone-200 pl-2 pr-2 text-zinc-900",
+            compact ? "py-1 text-[11px]" : "py-1.5 text-[12px]",
             tc.fieldFocus
           )}
         >
@@ -845,23 +872,31 @@ function AudioModal({
         valueSuffix="min"
       />
       <div>
-        <p className="mb-2 text-[13px] text-zinc-500">What should the hosts emphasize this episode?</p>
+        <p className={cn("text-zinc-500", compact ? "mb-1.5 text-[12px]" : "mb-2 text-[13px]")}>
+          What should the hosts emphasize this episode?
+        </p>
         <textarea
           value={focus}
           onChange={(e) => setFocus(e.target.value)}
-          rows={FACTORY_TOPIC_TEXTAREA_ROWS}
+          rows={compact ? FACTORY_AUDIO_FOCUS_ROWS : FACTORY_TOPIC_TEXTAREA_ROWS}
           className={cn(
-            "mb-3 w-full resize-none rounded-xl border border-stone-200 px-3 py-2 text-[14px] text-zinc-800",
+            "mb-3 w-full resize-none border border-stone-200 text-zinc-800",
+            compact
+              ? "rounded-lg px-2.5 py-1.5 text-[13px] leading-snug"
+              : "rounded-xl px-3 py-2 text-[14px]",
             tc.fieldFocus
           )}
         />
-        <div className="flex flex-wrap gap-2">
+        <div className={cn("flex flex-wrap", compact ? "gap-1.5" : "gap-2")}>
           {tags.map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setFocus((prev) => (prev ? `${prev}\n` : "") + t)}
-              className="rounded-full border border-dashed border-stone-300 bg-stone-50 px-3 py-1.5 text-[12px] text-zinc-700 hover:bg-stone-100"
+              className={cn(
+                "rounded-full border border-dashed border-stone-300 bg-stone-50 text-zinc-700 hover:bg-stone-100",
+                compact ? "px-2 py-0.5 text-[11px]" : "px-3 py-1.5 text-[12px]"
+              )}
             >
               + {t}
             </button>
@@ -959,6 +994,7 @@ export function ContentFactoryModals({
   libraryName,
   onGenerateSubmit,
   optionSurface = "flat",
+  modalDensity = "default",
 }: ContentFactoryModalsProps) {
   if (!open) return null
   const submit =
@@ -969,7 +1005,14 @@ export function ContentFactoryModals({
       case "report":
         return <ReportModal onClose={onClose} onSubmitFactory={submit("report")} />
       case "audio":
-        return <AudioModal onClose={onClose} libraryName={libraryName} onSubmitFactory={submit("audio")} />
+        return (
+          <AudioModal
+            onClose={onClose}
+            libraryName={libraryName}
+            onSubmitFactory={submit("audio")}
+            compact={modalDensity === "compact"}
+          />
+        )
       case "flashcards":
         return <FlashcardsModal onClose={onClose} onSubmitFactory={submit("flashcards")} />
       case "quiz":

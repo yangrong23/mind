@@ -1372,9 +1372,7 @@ export function KnowledgeDetail({
                     <span
                       className={cn(
                         "absolute bottom-0 left-1/2 h-[2px] w-10 -translate-x-1/2 rounded-full",
-                        mode.id === "factory"
-                          ? mx.knowledgeTabRule
-                          : "bg-zinc-300 dark:bg-zinc-600"
+                        mx.knowledgeTabRule
                       )}
                       aria-hidden
                     />

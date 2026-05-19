@@ -414,6 +414,7 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
           open={agentStudioSession.factoryKind}
           onClose={() => setAgentStudioSession(null)}
           libraryName={resolveAgentStudioLibraryName(agentStudioSession)}
+          modalDensity="compact"
           onGenerateSubmit={(kind) => {
             setAgentStudioSession(null)
             toast.success("Queued", {
@@ -1110,6 +1111,7 @@ export function AgentChat({
         open={factoryModal}
         onClose={() => setFactoryModal(null)}
         libraryName={isLibraryChat ? factoryLibraryLabel || undefined : undefined}
+        modalDensity="compact"
         onGenerateSubmit={handleFactoryGenerateSubmit}
       />
     </div>
