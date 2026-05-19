@@ -1,22 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
+import { mockInsightRunResult } from "@/lib/me-insight-run-mock"
 import {
   MIND_FEATURED_INSIGHT_PERSPECTIVES,
   MIND_INSIGHT_GALLERY_CATEGORIES,
   type InsightPerspective,
 } from "@/lib/mind-insight-perspectives"
+import { MindChatThinking } from "@/components/mind-v2/mind-chat-thinking"
 import { ChevronRight, Clock, Plus, Share2, X } from "lucide-react"
 
 type View = "picker" | "gallery" | "result"
 
+const MOCK_HISTORY = [
+  { id: "h1", title: "Value clarification", range: "Last 3 months", ago: "2 days ago" },
+  { id: "h2", title: "Reverse thinking", range: "Last year", ago: "1 week ago" },
+  { id: "h3", title: "Default insight", range: "All notes", ago: "2 weeks ago" },
+] as const
+
 export type MeAiInsightsProps = {
   onClose: () => void
   noteCount?: number
-  /** Knowledge library items in the insight corpus (notes + libraries). */
   libraryItemCount?: number
   tagCount?: number
   dayCount?: number
@@ -25,12 +32,7 @@ export type MeAiInsightsProps = {
 
 function PerspectiveIcon({ icon: Icon }: { icon: InsightPerspective["icon"] }) {
   return (
-    <div
-      className={cn(
-        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-        mx.settingsIconWell
-      )}
-    >
+    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", mx.settingsIconWell)}>
       <Icon className={cn("h-5 w-5", mx.settingsIconInk)} strokeWidth={1.75} aria-hidden />
     </div>
   )
@@ -52,6 +54,86 @@ function GalleryAddButton({ onClick }: { onClick: () => void }) {
   )
 }
 
+function FilterRangeSheet({
+  open,
+  onClose,
+  noteCount,
+  libraryItemCount,
+}: {
+  open: boolean
+  onClose: () => void
+  noteCount: number
+  libraryItemCount: number
+}) {
+  if (!open) return null
+  return (
+    <div className="absolute inset-0 z-[80]">
+      <button type="button" className="absolute inset-0 bg-black/40" aria-label="Dismiss" onClick={onClose} />
+      <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-white pb-6 animate-in slide-in-from-bottom duration-200 dark:bg-zinc-950">
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="h-1 w-10 rounded-full bg-stone-300 dark:bg-zinc-600" />
+        </div>
+        <div className="px-5">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Filter range</h3>
+          <p className="mt-1 text-sm text-zinc-500">Notes + knowledge libraries (demo)</p>
+          <div className="mt-4 space-y-2">
+            {["Last 7 days", "Last 30 days", "Last 3 months", "All time"].map((label) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  toast.success("Range updated", { description: `${label} · ${noteCount} notes · ${libraryItemCount} library items` })
+                  onClose()
+                }}
+                className="flex w-full items-center justify-between rounded-xl border border-stone-200/90 px-4 py-3 text-left text-[14px] font-medium text-zinc-800 hover:bg-stone-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              >
+                {label}
+                <ChevronRight className="h-4 w-4 text-zinc-400" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HistorySheet({ open, onClose, onOpen }: { open: boolean; onClose: () => void; onOpen: (title: string) => void }) {
+  if (!open) return null
+  return (
+    <div className="absolute inset-0 z-[80]">
+      <button type="button" className="absolute inset-0 bg-black/40" aria-label="Dismiss" onClick={onClose} />
+      <div className="absolute bottom-0 left-0 right-0 max-h-[70%] rounded-t-3xl bg-white pb-6 animate-in slide-in-from-bottom duration-200 dark:bg-zinc-950">
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="h-1 w-10 rounded-full bg-stone-300 dark:bg-zinc-600" />
+        </div>
+        <div className="px-5">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Insight history</h3>
+          <ul className="mt-3 divide-y divide-stone-100 dark:divide-zinc-800">
+            {MOCK_HISTORY.map((h) => (
+              <li key={h.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpen(h.title)
+                    onClose()
+                  }}
+                  className="flex w-full flex-col gap-0.5 py-3 text-left hover:opacity-80"
+                >
+                  <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">{h.title}</span>
+                  <span className="text-[12px] text-zinc-500">
+                    {h.range} · {h.ago}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function MeAiInsights({
   onClose,
   noteCount = 156,
@@ -63,12 +145,26 @@ export function MeAiInsights({
   const [view, setView] = useState<View>("picker")
   const [selected, setSelected] = useState<InsightPerspective | null>(null)
   const [generating, setGenerating] = useState(false)
+  const [thinkingPhase, setThinkingPhase] = useState(0)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+
+  useEffect(() => {
+    if (!generating) return
+    setThinkingPhase(0)
+    const t1 = window.setTimeout(() => setThinkingPhase(1), 900)
+    const t2 = window.setTimeout(() => setThinkingPhase(2), 1800)
+    return () => {
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+    }
+  }, [generating])
 
   const runPerspective = (p: InsightPerspective) => {
     setSelected(p)
     setGenerating(true)
     setView("result")
-    window.setTimeout(() => setGenerating(false), 650)
+    window.setTimeout(() => setGenerating(false), 2400)
   }
 
   const handleBack = () => {
@@ -92,8 +188,10 @@ export function MeAiInsights({
         ? selected.title
         : "AI insights"
 
+  const result = selected ? mockInsightRunResult(selected) : null
+
   return (
-    <div className="absolute inset-0 z-[65] flex flex-col bg-white dark:bg-zinc-950 animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
+    <div className="absolute inset-0 z-[65] flex flex-col bg-white animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
       <div className="flex shrink-0 items-center gap-2 border-b border-stone-100/85 bg-white px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900">
         <button
           type="button"
@@ -111,27 +209,19 @@ export function MeAiInsights({
           {headerTitle}
         </h1>
         {view === "picker" ? (
-          <div className="flex items-center gap-0.5 rounded-full border border-stone-200/90 bg-white dark:bg-zinc-950 p-0.5 dark:border-zinc-700 dark:bg-zinc-800/80">
+          <div className="flex items-center gap-0.5 rounded-full border border-stone-200/90 bg-white p-0.5 dark:border-zinc-700 dark:bg-zinc-800/80">
             <button
               type="button"
-              onClick={() =>
-                toast.message("Custom perspective", {
-                  description: "Would open the perspective builder (demo).",
-                })
-              }
-              className="rounded-full p-1.5 hover:bg-white dark:hover:bg-zinc-700"
-              aria-label="Create perspective"
+              onClick={() => setView("gallery")}
+              className="rounded-full p-1.5 hover:bg-stone-100 dark:hover:bg-zinc-700"
+              aria-label="Discover perspectives"
             >
               <Plus className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
             </button>
             <button
               type="button"
-              onClick={() =>
-                toast.message("Insight history", {
-                  description: "Past runs would appear here (demo).",
-                })
-              }
-              className="rounded-full p-1.5 hover:bg-white dark:hover:bg-zinc-700"
+              onClick={() => setHistoryOpen(true)}
+              className="rounded-full p-1.5 hover:bg-stone-100 dark:hover:bg-zinc-700"
               aria-label="History"
             >
               <Clock className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
@@ -156,12 +246,9 @@ export function MeAiInsights({
             className="rounded-full p-1.5 hover:bg-stone-100 dark:hover:bg-zinc-800"
             aria-label="Share"
             onClick={() => {
-              if (!selected) return
-              const preview =
-                selected.sampleBody.length > 200
-                  ? selected.sampleBody.slice(0, 200) + "…"
-                  : selected.sampleBody
-              onShare?.(selected.title, preview)
+              if (!selected || !result) return
+              const preview = `${result.headline}\n\n${result.bodyMarkdown}`.slice(0, 220)
+              onShare?.(selected.title, preview + (preview.length >= 220 ? "…" : ""))
             }}
           >
             <Share2 className="h-5 w-5 text-zinc-600 dark:text-zinc-300" />
@@ -171,62 +258,59 @@ export function MeAiInsights({
 
       {view === "picker" && (
         <div className="min-h-0 flex-1 overflow-y-auto pb-6">
-            <div className="px-5 pt-5 pb-3">
-              <p className={cn("text-[15px] font-semibold", mx.accentBlue)}>Select a perspective to start</p>
-              <p className="mt-1 text-[12px] leading-snug text-zinc-400">
-                Insights use your notes and knowledge libraries to reflect what you capture and what you are learning.
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[13px] text-zinc-500">
-                <span className="tabular-nums">
-                  {noteCount} notes · {libraryItemCount} library items · {tagCount} tags · {dayCount} days
-                </span>
-                <span className="text-zinc-300">·</span>
-                <button
-                  type="button"
-                  className={cn("font-medium", mx.citationLink)}
-                  onClick={() =>
-                    toast.message("Filter range", {
-                      description:
-                        "Filter notes, libraries, tags, and dates for this run (demo).",
-                    })
-                  }
-                >
-                  Filter range
-                </button>
-              </div>
-            </div>
-
-            <div className="mx-4 space-y-2">
-              {MIND_FEATURED_INSIGHT_PERSPECTIVES.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => runPerspective(p)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-stone-200/80 bg-white px-3.5 py-3.5 text-left shadow-sm shadow-stone-900/[0.03] transition-colors hover:border-stone-300/90 hover:bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/60"
-                >
-                  <PerspectiveIcon icon={p.icon} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                      <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">{p.title}</span>
-                      <span className="text-[12px] text-zinc-400">by {p.author}</span>
-                    </div>
-                    <p className="mt-0.5 line-clamp-1 text-[13px] text-zinc-500">{p.description}</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => setView("gallery")}
-                className="flex w-full items-center justify-between rounded-2xl border border-dashed border-stone-300/90 bg-stone-50/50 px-4 py-3.5 text-left transition-colors hover:bg-stone-100/80 dark:border-zinc-700 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/50"
-              >
-                <span className="text-[15px] font-medium text-zinc-700 dark:text-zinc-300">
-                  Discover more perspectives / Custom
-                </span>
-                <ChevronRight className="h-5 w-5 text-zinc-400" />
+          <div className="px-5 pt-5 pb-3">
+            <p className={cn("text-[15px] font-semibold", mx.accentBlue)}>Select a perspective to start</p>
+            <p className="mt-1 text-[12px] leading-snug text-zinc-400">
+              Insights use your notes and knowledge libraries to reflect what you capture and what you are learning.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[13px] text-zinc-500">
+              <span className="tabular-nums">
+                {noteCount} notes · {libraryItemCount} library items · {tagCount} tags · {dayCount} days
+              </span>
+              <span className="text-zinc-300">·</span>
+              <button type="button" className={cn("font-medium", mx.citationLink)} onClick={() => setFilterOpen(true)}>
+                Filter range
               </button>
             </div>
+          </div>
+
+          <div className="mx-4 space-y-2">
+            {MIND_FEATURED_INSIGHT_PERSPECTIVES.map((p, i) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => runPerspective(p)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-2xl border border-stone-200/80 bg-white px-3.5 py-3.5 text-left shadow-sm shadow-stone-900/[0.03] transition-all",
+                  "hover:border-stone-300/90 hover:bg-stone-50/80 active:scale-[0.99]",
+                  "dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/60",
+                  "animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-300"
+                )}
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
+                <PerspectiveIcon icon={p.icon} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                    <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">{p.title}</span>
+                    <span className="text-[12px] text-zinc-400">by {p.author}</span>
+                  </div>
+                  <p className="mt-0.5 line-clamp-1 text-[13px] text-zinc-500">{p.description}</p>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => setView("gallery")}
+              className="flex w-full items-center justify-between rounded-2xl border border-dashed border-stone-300/90 bg-stone-50/50 px-4 py-3.5 text-left transition-colors hover:bg-stone-100/80 dark:border-zinc-700 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/50"
+            >
+              <span className="text-[15px] font-medium text-zinc-700 dark:text-zinc-300">
+                Discover more perspectives / Custom
+              </span>
+              <ChevronRight className="h-5 w-5 text-zinc-400" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -241,7 +325,7 @@ export function MeAiInsights({
                     key={p.id}
                     type="button"
                     onClick={() => runPerspective(p)}
-                    className="relative flex min-h-[168px] flex-col rounded-2xl border border-stone-200/85 bg-white p-3 text-left shadow-sm shadow-stone-900/[0.03] transition-colors hover:border-stone-300 hover:bg-stone-50/60 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/50"
+                    className="relative flex min-h-[168px] flex-col rounded-2xl border border-stone-200/85 bg-white p-3 text-left shadow-sm shadow-stone-900/[0.03] transition-all hover:border-stone-300 hover:bg-stone-50/60 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/50"
                   >
                     <GalleryAddButton
                       onClick={() =>
@@ -251,12 +335,8 @@ export function MeAiInsights({
                       }
                     />
                     <p.icon className="h-7 w-7 text-zinc-800 dark:text-zinc-200" strokeWidth={1.5} />
-                    <p className="mt-3 text-[14px] font-bold leading-snug text-zinc-900 dark:text-zinc-100">
-                      {p.title}
-                    </p>
-                    <p className="mt-1 line-clamp-3 flex-1 text-[11px] leading-relaxed text-zinc-500">
-                      {p.description}
-                    </p>
+                    <p className="mt-3 text-[14px] font-bold leading-snug text-zinc-900 dark:text-zinc-100">{p.title}</p>
+                    <p className="mt-1 line-clamp-3 flex-1 text-[11px] leading-relaxed text-zinc-500">{p.description}</p>
                     <p className="mt-2 text-[10px] text-zinc-400">Range · {p.rangeLabel}</p>
                     <p className="mt-0.5 text-[10px] text-zinc-400">by {p.author}</p>
                   </button>
@@ -282,31 +362,88 @@ export function MeAiInsights({
         </div>
       )}
 
-      {view === "result" && selected && (
+      {view === "result" && selected && result && (
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {generating ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-stone-18 border-t-mind" />
-              <p className="mt-4 text-sm text-zinc-500">Generating insight…</p>
-            </div>
+            <MindChatThinking phase={thinkingPhase} compact className="py-10" />
           ) : (
-            <>
-              <p className="mb-3 border-l-2 border-stone-200 pl-2 text-xs font-medium text-mind/85 dark:text-mind/90">
+            <div className="animate-in fade-in duration-300">
+              <p className="mb-3 border-l-2 border-mind/40 pl-2 text-xs font-medium text-mind dark:text-mind/90">
                 AI-generated · <span className={mx.citationMuted}>{selected.title}</span>
               </p>
-              <p className="mb-3 text-xs text-zinc-500">
+              <p className="mb-4 text-xs text-zinc-500">
                 Range · {selected.rangeLabel} · by {selected.author}
               </p>
-              <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-35 dark:bg-zinc-900">
-                <p className="text-[15px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {selected.sampleBody}
-                </p>
+
+              <div className="rounded-2xl border border-stone-200/90 bg-gradient-to-br from-stone-50/90 to-white p-4 shadow-sm dark:border-zinc-800 dark:from-zinc-900/80 dark:to-zinc-900">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400">Headline</p>
+                <p className="mt-1 text-[17px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">{result.headline}</p>
               </div>
-            </>
+
+              <div className="mt-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+                <p className="text-[15px] leading-[1.72] text-zinc-700 dark:text-zinc-300">{result.bodyMarkdown}</p>
+              </div>
+
+              <p className="mt-4 text-[12px] leading-relaxed text-zinc-500">{result.materialBasis}</p>
+
+              {result.blindSpots.length > 0 ? (
+                <section className="mt-5">
+                  <h3 className="text-[12px] font-semibold uppercase tracking-[0.1em] text-zinc-400">Blind spots</h3>
+                  <ul className="mt-2 space-y-1.5">
+                    {result.blindSpots.map((b) => (
+                      <li key={b} className="text-[13px] leading-snug text-zinc-600 dark:text-zinc-400">
+                        · {b}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              <section className="mt-5">
+                <h3 className="text-[12px] font-semibold uppercase tracking-[0.1em] text-zinc-400">Reflect</h3>
+                <ul className="mt-2 space-y-2">
+                  {result.questions.map((q) => (
+                    <li
+                      key={q}
+                      className="rounded-xl border border-stone-200/80 bg-stone-50/60 px-3 py-2.5 text-[13px] text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-300"
+                    >
+                      {q}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <div className="mt-5 rounded-2xl border border-mind/20 bg-mind/5 px-4 py-3 dark:border-mind/25 dark:bg-mind/10">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-mind">Suggested next step</p>
+                <p className="mt-1 text-[14px] leading-snug text-zinc-800 dark:text-zinc-200">{result.suggestedNextStep}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => runPerspective(selected)}
+                className="mt-5 w-full rounded-xl border border-stone-200 py-2.5 text-[14px] font-medium text-zinc-700 hover:bg-stone-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              >
+                Regenerate
+              </button>
+            </div>
           )}
         </div>
       )}
+
+      <FilterRangeSheet
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        noteCount={noteCount}
+        libraryItemCount={libraryItemCount}
+      />
+      <HistorySheet
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onOpen={(title) => {
+          const p = MIND_FEATURED_INSIGHT_PERSPECTIVES.find((x) => x.title === title) ?? MIND_FEATURED_INSIGHT_PERSPECTIVES[0]
+          runPerspective(p!)
+        }}
+      />
     </div>
   )
 }
-

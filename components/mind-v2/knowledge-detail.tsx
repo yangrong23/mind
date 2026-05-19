@@ -716,7 +716,7 @@ export function KnowledgeDetail({
   const shareSheet = shareTarget && (
     <div className="absolute inset-0 z-[60]">
       <div className="absolute inset-0 bg-black/40" onClick={() => setShareTarget(null)} />
-      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl animate-in slide-in-from-bottom duration-200">
+      <div className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-white animate-in slide-in-from-bottom duration-200 dark:bg-zinc-950">
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-10 h-1 bg-stone-300 rounded-full" />
         </div>
@@ -928,7 +928,7 @@ export function KnowledgeDetail({
 
   if (showContentDetail) {
     return (
-      <div className="relative flex flex-col h-full bg-white">
+      <div className="relative flex h-full flex-col bg-white dark:bg-zinc-950">
         <div className="flex items-center justify-between border-b border-stone-80 bg-white px-4 py-3 dark:border-stone-40 dark:bg-zinc-950">
           <button
             type="button"

@@ -14,6 +14,7 @@ import {
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
 import { MeAiInsights } from "@/components/mind-v2/me-ai-insights"
+import { MeDailyReview } from "@/components/mind-v2/me-daily-review"
 import {
   MeCollectedPersonalInfoPanel,
   MePrivacyGuideSummaryPanel,
@@ -75,6 +76,11 @@ const generateHeatmapData = () => {
 }
 
 const heatmapData = generateHeatmapData()
+
+function getTodayHeatmapEntry() {
+  const today = new Date().toISOString().slice(0, 10)
+  return heatmapData.find((d) => d.date === today) ?? heatmapData[heatmapData.length - 1]!
+}
 
 function hashDateString(s: string) {
   let h = 0
@@ -574,20 +580,30 @@ export function MeTab({
             <button
               type="button"
               onClick={() => setPersonalizedFeed({ type: "daily" })}
-              className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
+              className="flex w-full items-center gap-2 rounded-lg py-2.5 pl-0.5 pr-1 text-left transition-colors hover:bg-white/70 active:bg-white/90"
             >
               <Sparkles className="h-4 w-4 shrink-0 text-mind opacity-90" />
-              <span>Daily review</span>
-              <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-medium text-zinc-800">Daily review</span>
+                <span className="mt-0.5 block line-clamp-1 text-[11px] font-normal text-zinc-400">
+                  Today&apos;s recap · tap to read
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
             </button>
             <button
               type="button"
               onClick={() => setShowAiInsights(true)}
-              className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
+              className="flex w-full items-center gap-2 rounded-lg py-2.5 pl-0.5 pr-1 text-left transition-colors hover:bg-white/70 active:bg-white/90"
             >
               <Target className="h-4 w-4 shrink-0 text-mind opacity-90" />
-              <span>AI insights</span>
-              <ChevronRight className="ml-auto h-4 w-4 text-zinc-400" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-medium text-zinc-800">AI insights</span>
+                <span className="mt-0.5 block line-clamp-1 text-[11px] font-normal text-zinc-400">
+                  Perspectives on notes & libraries
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
             </button>
             <button
               type="button"
@@ -630,7 +646,7 @@ export function MeTab({
             role="dialog"
             aria-modal="true"
             aria-labelledby="account-switch-title"
-            className="relative z-[59] mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl border border-stone-200/90 bg-white shadow-xl shadow-stone-900/10"
+            className="relative z-[59] mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl border border-stone-200/90 bg-white shadow-xl shadow-stone-900/10 dark:border-zinc-700 dark:bg-zinc-900"
           >
             <div className="px-4 pt-5 pb-3 text-center">
               <p id="account-switch-title" className="text-[16px] font-semibold text-zinc-900">
@@ -762,7 +778,7 @@ export function MeTab({
           
           <div className="absolute inset-x-4 top-20 flex flex-col items-center">
             {/* Card body */}
-            <div className="w-full max-w-[340px] bg-white rounded-3xl p-6 shadow-xl mb-6">
+            <div className="mb-6 w-full max-w-[340px] rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-900">
               {/* User row */}
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-full bg-stone-200 flex items-center justify-center">
@@ -829,7 +845,7 @@ export function MeTab({
             </div>
 
             {/* Share actions */}
-            <div className="w-full max-w-[340px] bg-white rounded-2xl p-4">
+            <div className="w-full max-w-[340px] rounded-2xl bg-white p-4 dark:bg-zinc-900">
               <div className="grid grid-cols-4 gap-4 mb-4">
                 <button
                   type="button"
@@ -1872,53 +1888,25 @@ export function MeTab({
         </div>
       )}
 
-      {personalizedFeed && (
-        <div className="absolute inset-0 z-[65] flex flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950 animate-in slide-in-from-right duration-200">
-          <div className="flex items-center px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 shrink-0">
-            <div className="w-10 flex justify-start">
-              <button
-                type="button"
-                onClick={() => setPersonalizedFeed(null)}
-                className="p-1 rounded-full hover:bg-stone-100"
-              >
-                <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
-              </button>
-            </div>
-            <h1 className="flex-1 text-center text-lg font-semibold text-zinc-900 truncate px-2">
-              Daily review
-            </h1>
-            <div className="w-10 flex justify-end">
-              <button
-                type="button"
-                className="p-2 rounded-full hover:bg-stone-100"
-                aria-label="Share"
-                onClick={() => {
-                  const body = PERSONALIZED_DAILY_REVIEW_LATEST
-                  setInsightShareSheet({
-                    title: "Daily review",
-                    preview: body.slice(0, 200) + (body.length > 200 ? "…" : ""),
-                  })
-                }}
-              >
-                <Share2 className="w-5 h-5 text-zinc-600" />
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 py-4">
-            <p className="mb-3 border-l-2 border-stone-200 pl-2 text-xs font-medium text-mind/85 dark:text-mind/90">
-              AI-generated · <span className={mx.citationMuted}>Personalized</span>
-            </p>
-            
-              
-                <div className={cn("rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-35 dark:bg-zinc-900")}>
-                  <p className="text-[15px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                    {PERSONALIZED_DAILY_REVIEW_LATEST}
-                  </p>
-                </div>
-              
-            
-          </div>
-        </div>
+      {personalizedFeed?.type === "daily" && (
+        <MeDailyReview
+          body={PERSONALIZED_DAILY_REVIEW_LATEST}
+          streakDays={stats.consecutiveDays}
+          captureCountToday={Math.min(getTodayHeatmapEntry().value + 1, 5)}
+          onClose={() => setPersonalizedFeed(null)}
+          onShare={() => {
+            const body = PERSONALIZED_DAILY_REVIEW_LATEST
+            setInsightShareSheet({
+              title: "Daily review",
+              preview: body.slice(0, 200) + (body.length > 200 ? "…" : ""),
+            })
+          }}
+          onOpenTodayActivity={() => {
+            const day = getTodayHeatmapEntry()
+            setPersonalizedFeed(null)
+            setHeatmapDayDetail({ date: day.date, value: day.value })
+          }}
+        />
       )}
 
       {showAiInsights && (

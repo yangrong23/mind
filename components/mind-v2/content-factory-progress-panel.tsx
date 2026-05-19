@@ -240,7 +240,7 @@ export function StudioFactoryJobsInline({
       ) : null}
 
       {completed.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white">
+        <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <h2 className="border-b border-stone-100 px-3 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-zinc-500">
             Generated media
           </h2>
