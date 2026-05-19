@@ -459,7 +459,7 @@ export function MindAppV2() {
 
           {/* Bottom nav (tabs only) */}
           {currentView.type === "tabs" && (
-            <div className="shrink-0 overflow-visible bg-gradient-to-t from-stone-50 via-stone-50/90 to-transparent pb-0.5 pt-1 dark:from-zinc-950 dark:via-zinc-950/90 dark:to-transparent">
+            <div className="shrink-0 overflow-visible bg-stone-50 dark:bg-zinc-950">
               <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
             </div>
           )}

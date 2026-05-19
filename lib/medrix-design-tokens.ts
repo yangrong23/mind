@@ -305,8 +305,12 @@ export const mx = {
     "pointer-events-none absolute -inset-px rounded-2xl bg-[radial-gradient(ellipse_100%_95%_at_50%_8%,rgba(255,255,255,0.92)_0%,rgba(186,230,253,0.42)_32%,rgba(125,211,252,0.14)_58%,transparent_78%)] dark:bg-[radial-gradient(ellipse_100%_95%_at_50%_12%,rgba(56,189,248,0.32)_0%,rgba(2,132,199,0.12)_45%,transparent_74%)]",
   navIconGlow:
     "text-mind drop-shadow-[0_0_10px_rgba(56,189,248,0.55),0_0_22px_rgba(125,211,252,0.35)] dark:text-mind/90 dark:drop-shadow-[0_0_12px_rgba(56,189,248,0.45),0_0_28px_rgba(2,132,199,0.2)]",
+  /** Floating glass pill — sheets / inline actions (not main tab bar) */
   navGlassShell:
     "bg-white/65 shadow-[0_-6px_28px_-10px_rgba(15,23,42,0.1),0_8px_28px_-14px_rgba(15,23,42,0.06)] backdrop-blur-xl dark:bg-zinc-900/55 dark:shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.35)]",
+  /** Main tab bar — flush to screen bottom, no floating margin or edge line */
+  navDockShell:
+    "bg-white/95 backdrop-blur-md dark:bg-zinc-950/95",
   navEase: "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
 
   factoryTone: {
