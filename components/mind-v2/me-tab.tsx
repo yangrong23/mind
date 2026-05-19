@@ -450,7 +450,7 @@ export function MeTab({
       {/* Single scroll: profile hero (flex min-h-0 fixes clipped bottom scroll) */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-8">
       {/* Profile — one calm header, no duplicate metrics below */}
-      <div className={cn("px-5 pt-4 pb-4", mx.brandHero, mx.brandHeroBorder)}>
+      <div className={cn("px-5 pt-4 pb-4", mx.brandHero)}>
         <div className="flex items-start justify-between gap-3">
           <button
             type="button"

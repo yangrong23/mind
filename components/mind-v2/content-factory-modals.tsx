@@ -1,6 +1,13 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import {
+  createContext,
+  useContext,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react"
 import { cn } from "@/lib/utils"
 import { mx } from "@/lib/medrix-design-tokens"
 import {
@@ -36,6 +43,14 @@ export type FactoryGenerationSettings = Partial<{
   reportTargetPages: number
 }>
 
+export type FactoryOptionSurface = "flat" | "filled"
+
+const FactoryOptionSurfaceContext = createContext<FactoryOptionSurface>("flat")
+
+function useFactoryOptionSurface() {
+  return useContext(FactoryOptionSurfaceContext)
+}
+
 interface ContentFactoryModalsProps {
   open: FactoryModalKind | null
   onClose: () => void
@@ -43,6 +58,8 @@ interface ContentFactoryModalsProps {
   libraryName?: string
   /** Fired when the user taps Generate; the modal closes immediately after. */
   onGenerateSubmit?: (kind: FactoryModalKind, settings?: FactoryGenerationSettings) => void
+  /** Knowledge Studio uses filled option cards; Agent / chat rails stay flat. */
+  optionSurface?: FactoryOptionSurface
 }
 
 function ModalFrame({
@@ -100,11 +117,92 @@ function ModalFrame({
 
 /** 2-col option cards — same footprint as the Quiz settings sheet grid cells */
 const FACTORY_OPTION_CARD_CLASS =
-  "relative flex w-full min-h-[5.25rem] flex-col rounded-xl border p-3.5 text-left transition-colors"
+  "relative flex h-[5rem] w-full min-w-0 flex-col justify-between overflow-hidden rounded-xl border p-3.5 text-left transition-colors"
 const FACTORY_OPTION_GRID_CLASS = "grid grid-cols-2 gap-2.5"
+
+function FactoryDescriptionPeekCard({
+  title,
+  description,
+  onClose,
+}: {
+  title: string
+  description: string
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/20 p-5"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="factory-desc-peek-title"
+        className="w-full max-w-[15.5rem] rounded-xl border border-stone-200/95 bg-white p-3 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.18)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="factory-desc-peek-title" className="text-[13px] font-semibold leading-snug text-zinc-900">
+          {title}
+        </h3>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-600">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function FactoryCardDetailsButton({ title, description }: { title: string; description: string }) {
+  const [peekOpen, setPeekOpen] = useState(false)
+  if (!description.trim()) return null
+
+  const openPeek = (e: MouseEvent | KeyboardEvent) => {
+    e.stopPropagation()
+    setPeekOpen(true)
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={openPeek}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            openPeek(e)
+          }
+        }}
+        className="mt-1.5 w-fit shrink-0 text-left text-[11px] font-medium text-mind hover:underline"
+      >
+        Details
+      </button>
+      {peekOpen ? (
+        <FactoryDescriptionPeekCard
+          title={title}
+          description={description}
+          onClose={() => setPeekOpen(false)}
+        />
+      ) : null}
+    </>
+  )
+}
 const FACTORY_TOPIC_TEXTAREA_ROWS = 9
 const FACTORY_TOPIC_TEXTAREA_CLASS =
   "w-full resize-none rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[14px] leading-relaxed text-zinc-800 placeholder:text-zinc-400"
+
+function factoryOptionCardKeyHandlers(onClick?: () => void) {
+  if (!onClick) return {}
+  return {
+    role: "button" as const,
+    tabIndex: 0,
+    onClick,
+    onKeyDown: (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        onClick()
+      }
+    },
+  }
+}
 
 function FactoryOptionCard({
   tone,
@@ -120,21 +218,30 @@ function FactoryOptionCard({
   description: string
 }) {
   const tc = mx.factoryTone[tone]
+  const filled = useFactoryOptionSurface() === "filled"
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
+      {...factoryOptionCardKeyHandlers(onClick)}
       className={cn(
         FACTORY_OPTION_CARD_CLASS,
-        selected ? tc.cardOn : cn("border-stone-200/90 dark:border-zinc-700/90", mx.surfaceTint, tc.softHover)
+        "cursor-pointer",
+        filled
+          ? selected
+            ? tc.cardOn
+            : cn("border-stone-200/90 dark:border-zinc-700/90", mx.surfaceTint, tc.softHover)
+          : selected
+            ? "border-mind/30 bg-transparent ring-1 ring-mind/20"
+            : "border-stone-200/90 bg-transparent hover:border-stone-300 dark:border-zinc-700/90 dark:hover:border-zinc-600"
       )}
     >
       {selected ? (
         <Check className={cn("absolute right-2 top-2 h-4 w-4", tc.check)} strokeWidth={3} />
       ) : null}
-      <span className="pr-6 text-[14px] font-semibold leading-snug text-zinc-900">{title}</span>
-      <span className="mt-1.5 text-[12px] leading-snug text-zinc-600">{description}</span>
-    </button>
+      <span className="line-clamp-2 min-h-0 break-words pr-6 text-[14px] font-semibold leading-snug text-zinc-900">
+        {title}
+      </span>
+      <FactoryCardDetailsButton title={title} description={description} />
+    </div>
   )
 }
 
@@ -150,18 +257,26 @@ function FactoryTemplateCard({
   onClick?: () => void
 }) {
   const tc = mx.factoryTone[tone]
+  const filled = useFactoryOptionSurface() === "filled"
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(FACTORY_OPTION_CARD_CLASS, "border-stone-200/90 dark:border-zinc-700/90", mx.surfaceTint, tc.softHover)}
+    <div
+      {...factoryOptionCardKeyHandlers(onClick)}
+      className={cn(
+        FACTORY_OPTION_CARD_CLASS,
+        onClick && "cursor-pointer",
+        filled
+          ? cn("border-stone-200/90 dark:border-zinc-700/90", mx.surfaceTint, tc.softHover)
+          : "border-stone-200/90 bg-transparent hover:border-stone-300 dark:border-zinc-700/90 dark:hover:border-zinc-600"
+      )}
     >
       <span className={cn("absolute right-2 top-2 rounded-md p-1", tc.sparkle, "opacity-90")}>
         <Pencil className="h-3.5 w-3.5" />
       </span>
-      <span className="pr-7 text-[14px] font-semibold leading-snug text-zinc-900">{title}</span>
-      <span className="mt-1.5 text-[12px] leading-snug text-zinc-600">{desc}</span>
-    </button>
+      <span className="line-clamp-2 min-h-0 break-words pr-7 text-[14px] font-semibold leading-snug text-zinc-900">
+        {title}
+      </span>
+      <FactoryCardDetailsButton title={title} description={desc} />
+    </div>
   )
 }
 
@@ -179,13 +294,20 @@ function FactoryStylePickCard({
   label: string
 }) {
   const tc = mx.factoryTone[tone]
+  const filled = useFactoryOptionSurface() === "filled"
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-[calc((100%-0.625rem)/2)] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border p-3.5 text-center transition-colors min-h-[5.25rem]",
-        selected ? tc.styleCardOn : cn("border-stone-200 hover:border-stone-300 dark:border-zinc-700", mx.surfaceTint)
+        "flex h-[5rem] w-[calc((100%-0.625rem)/2)] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border p-3.5 text-center transition-colors",
+        filled
+          ? selected
+            ? tc.styleCardOn
+            : cn("border-stone-200 hover:border-stone-300 dark:border-zinc-700", mx.surfaceTint)
+          : selected
+            ? "border-mind/30 bg-transparent ring-1 ring-mind/20"
+            : "border-stone-200 bg-transparent hover:border-stone-300 dark:border-zinc-700 dark:hover:border-zinc-600"
       )}
     >
       <span className="text-xl leading-none">{emoji}</span>
@@ -808,25 +930,36 @@ function SlidesModal({
   )
 }
 
-export function ContentFactoryModals({ open, onClose, libraryName, onGenerateSubmit }: ContentFactoryModalsProps) {
+export function ContentFactoryModals({
+  open,
+  onClose,
+  libraryName,
+  onGenerateSubmit,
+  optionSurface = "flat",
+}: ContentFactoryModalsProps) {
   if (!open) return null
   const submit =
     (kind: FactoryModalKind) => (settings: FactoryGenerationSettings) =>
       onGenerateSubmit?.(kind, settings)
-  switch (open) {
-    case "report":
-      return <ReportModal onClose={onClose} onSubmitFactory={submit("report")} />
-    case "audio":
-      return <AudioModal onClose={onClose} libraryName={libraryName} onSubmitFactory={submit("audio")} />
-    case "flashcards":
-      return <FlashcardsModal onClose={onClose} onSubmitFactory={submit("flashcards")} />
-    case "quiz":
-      return <QuizModal onClose={onClose} onSubmitFactory={submit("quiz")} />
-    case "infographic":
-      return <InfographicModal onClose={onClose} onSubmitFactory={submit("infographic")} />
-    case "slides":
-      return <SlidesModal onClose={onClose} onSubmitFactory={submit("slides")} />
-    default:
-      return null
-  }
+  const modal = (() => {
+    switch (open) {
+      case "report":
+        return <ReportModal onClose={onClose} onSubmitFactory={submit("report")} />
+      case "audio":
+        return <AudioModal onClose={onClose} libraryName={libraryName} onSubmitFactory={submit("audio")} />
+      case "flashcards":
+        return <FlashcardsModal onClose={onClose} onSubmitFactory={submit("flashcards")} />
+      case "quiz":
+        return <QuizModal onClose={onClose} onSubmitFactory={submit("quiz")} />
+      case "infographic":
+        return <InfographicModal onClose={onClose} onSubmitFactory={submit("infographic")} />
+      case "slides":
+        return <SlidesModal onClose={onClose} onSubmitFactory={submit("slides")} />
+      default:
+        return null
+    }
+  })()
+  return (
+    <FactoryOptionSurfaceContext.Provider value={optionSurface}>{modal}</FactoryOptionSurfaceContext.Provider>
+  )
 }

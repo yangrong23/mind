@@ -1,7 +1,15 @@
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Providers } from './providers'
 import './globals.css'
+
+/** Single app typeface — applied on html/body so every screen inherits the same font */
+const appFont = Inter({
+  subsets: ['latin'],
+  variable: '--font-app',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Mind — Intelligent knowledge workspace',
@@ -32,8 +40,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="min-h-screen bg-background">
-      <body className="font-sans antialiased min-h-screen bg-background text-foreground">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${appFont.variable} min-h-screen bg-background font-sans`}
+    >
+      <body className={`${appFont.className} min-h-screen bg-background font-sans text-foreground antialiased`}>
         <Providers>
           {children}
           {process.env.NODE_ENV === 'production' && <Analytics />}

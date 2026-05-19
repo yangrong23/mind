@@ -20,6 +20,7 @@ import {
   resolveFactoryRailSelection,
   type FactoryRailItem,
 } from "@/components/mind-v2/mind-chat-factory-rail"
+import { MinderContentFactoryGrid } from "@/components/mind-v2/minder-content-factory-grid"
 import { MindChatHeaderActions } from "@/components/mind-v2/mind-chat-header-actions"
 import {
   MindChatQaHistoryPanel,
@@ -222,7 +223,7 @@ function SwipeableLibraryDocRow({
   const revealed = dx <= -DELETE_REVEAL_THRESHOLD / 2
 
   return (
-    <div className="relative overflow-hidden border-b border-stone-100 last:border-b-0">
+    <div className="relative overflow-hidden">
       <div
         className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-zinc-600 text-white"
         style={{ opacity: dx > 0 ? Math.min(1, dx / 72) : 0 }}
@@ -393,13 +394,13 @@ export function KnowledgeDetail({
   const [notebookAskDraft, setNotebookAskDraft] = useState("")
   const [notebookQaHistoryOpen, setNotebookQaHistoryOpen] = useState(false)
   const [notebookQaHistoryItems, setNotebookQaHistoryItems] = useState<MindQaHistoryItem[]>(() => seedDemoQaHistory())
-  const [notebookModelLabel, setNotebookModelLabel] = useState("DS Fast")
+  const [notebookModelLabel, setNotebookModelLabel] = useState("Light")
   const [notebookChatMode, setNotebookChatMode] = useState<"dialog" | "agent">("dialog")
   const [notebookVoiceOn, setNotebookVoiceOn] = useState(false)
   const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
   const [showContentDetail, setShowContentDetail] = useState<LibraryDoc | null>(null)
   const [contentDetailAskDraft, setContentDetailAskDraft] = useState("")
-  const [contentDetailModelLabel, setContentDetailModelLabel] = useState("DS Fast")
+  const [contentDetailModelLabel, setContentDetailModelLabel] = useState("Light")
   const [contentDetailChatMode, setContentDetailChatMode] = useState<"dialog" | "agent">("dialog")
   const [contentDetailVoiceOn, setContentDetailVoiceOn] = useState(false)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
@@ -419,7 +420,7 @@ export function KnowledgeDetail({
   const [publicLikeCount, setPublicLikeCount] = useState(0)
   const [publicBottomDraft, setPublicBottomDraft] = useState("")
   const [publicChatMode, setPublicChatMode] = useState<"dialog" | "agent">("dialog")
-  const [publicModelLabel, setPublicModelLabel] = useState("DS Fast")
+  const [publicModelLabel, setPublicModelLabel] = useState("Light")
   const [publicVoiceOn, setPublicVoiceOn] = useState(false)
 
   const isPublicKb = knowledgeBase?.isPublicKb ?? false
@@ -615,14 +616,7 @@ export function KnowledgeDetail({
 
   function handleChatFactoryRailSelect(id: FactoryRailItem["id"]) {
     runWithAuth(() => {
-      const resolved = resolveFactoryRailSelection(id)
-      if (resolved.type === "mindmap") {
-        toast.message("Mind map queued", {
-          description: "Demo: added a mind map job from this library.",
-        })
-        return
-      }
-      setFactoryModal(resolved.kind)
+      setFactoryModal(resolveFactoryRailSelection(id))
     })
   }
 
@@ -917,6 +911,7 @@ export function KnowledgeDetail({
           onClose={() => setFactoryModal(null)}
           libraryName={kbDisplayName}
           onGenerateSubmit={handleFactoryGenerateSubmit}
+          optionSurface="filled"
         />
       </div>
     )
@@ -941,28 +936,6 @@ export function KnowledgeDetail({
             <ChevronLeft className="h-6 w-6 text-zinc-700 dark:text-zinc-200" />
           </button>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              title="Chat—answers grounded in this item and your library"
-              aria-label="Open Chat for this item"
-              onClick={() =>
-                runWithAuth(() =>
-                  launchLibraryChat({
-                    contentTitle: showContentDetail.title,
-                    contentDocId: showContentDetail.id,
-                    modelLabel: contentDetailModelLabel,
-                    chatMode: contentDetailChatMode,
-                  })
-                )
-              }
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold text-mind shadow-sm shadow-stone-900/5 transition-colors",
-                "hover:bg-stone-50 dark:border-stone-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              )}
-            >
-              <MessageCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-              Chat
-            </button>
             <button
               type="button"
               onClick={() => setShareTarget({ scope: "item", title: showContentDetail.title })}
@@ -1045,6 +1018,7 @@ export function KnowledgeDetail({
           onClose={() => setFactoryModal(null)}
           libraryName={`「${showContentDetail.title}」· ${kbDisplayName}`}
           onGenerateSubmit={handleFactoryGenerateSubmit}
+          optionSurface="filled"
         />
       </div>
     )
@@ -1370,61 +1344,79 @@ export function KnowledgeDetail({
       )}
 
       {!isPublicKb ? (
-        <div className="border-b border-stone-100 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex gap-1 rounded-lg bg-stone-100 p-0.5 dark:bg-zinc-800/80">
+        <div className="bg-white dark:bg-zinc-950" role="tablist" aria-label="Library views">
+          <div className="flex w-full">
             {[
               { id: "content" as const, label: "Hub" },
               { id: "graph" as const, label: "Graph" },
               { id: "factory" as const, label: "Studio" },
-            ].map((mode) => (
-              <button
-                key={mode.id}
-                type="button"
-                onClick={() => setActiveView(mode.id)}
-                className={cn(
-                  "flex-1 rounded-md py-1.5 text-[12px] font-medium transition-all",
-                  activeView === mode.id ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-50" : "text-zinc-500"
-                )}
-              >
-                {mode.label}
-              </button>
-            ))}
+            ].map((mode) => {
+              const selected = activeView === mode.id
+              return (
+                <button
+                  key={mode.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setActiveView(mode.id)}
+                  className={cn(
+                    "relative flex min-w-0 flex-1 items-center justify-center pb-3.5 pt-3.5 text-[15px] font-semibold tracking-tight transition-colors",
+                    selected
+                      ? "text-zinc-900 dark:text-zinc-100"
+                      : "text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                  )}
+                >
+                  {mode.label}
+                  {selected ? (
+                    <span
+                      className={cn(
+                        "absolute bottom-0 left-1/2 h-[2px] w-10 -translate-x-1/2 rounded-full",
+                        mx.knowledgeTabRule
+                      )}
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
+              )
+            })}
           </div>
         </div>
       ) : null}
 
-      <div className={cn("flex-1 flex flex-col min-h-0", activeView === "content" ? "overflow-hidden" : "overflow-y-auto")}>
+      <div className={cn("scrollbar-hide flex min-h-0 flex-1 flex-col", activeView === "content" ? "overflow-hidden" : "overflow-y-auto")}>
         {activeView === "content" && (
-          <div className={cn("flex min-h-0 flex-1 flex-col", isPublicKb ? "bg-[#f2f2f4] dark:bg-zinc-950" : "bg-white dark:bg-zinc-950")}>
-            <div className="min-h-0 flex-1 overflow-y-auto">
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col",
+              isPublicKb ? "bg-[#f2f2f4] dark:bg-zinc-950" : "bg-white dark:bg-zinc-950"
+            )}
+          >
+            <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto">
               <div className={cn("pb-2", isPublicKb ? "px-3 pt-2" : "px-4 pt-3")}>
                 {!isPublicKb ? (
-                  <div className="mb-4 overflow-hidden rounded-2xl border border-stone-200 bg-gradient-to-br from-white via-white to-stone-50 p-4 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_8px_24px_-12px_rgba(2, 132, 199,0.1)] ring-1 ring-zinc-200/50 dark:border-zinc-700 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900 dark:ring-zinc-700/60">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-mind/90 dark:text-mind/90">
-                          Overview
-                        </p>
-                        <h2 className="mt-1 text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-                          How this library fits together
-                        </h2>
-                      </div>
-                      <div className="shrink-0 rounded-full border border-stone-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-zinc-600 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300">
+                  <section className="mb-8">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+                        Overview
+                      </h2>
+                      <span className="shrink-0 text-[12px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
                         {sourceCount} {sourceCount === 1 ? "source" : "sources"}
-                      </div>
+                      </span>
                     </div>
-                    <p className="mt-3.5 text-[14px] leading-[1.65] text-zinc-700 dark:text-zinc-300">{kbOverviewNarrative}</p>
-                  </div>
+                    <p className="mt-4 text-[15px] leading-[1.7] text-zinc-700 dark:text-zinc-300">{kbOverviewNarrative}</p>
+                  </section>
                 ) : null}
                 {!isPublicKb ? (
-                  <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Documents</h2>
+                  <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+                    Documents
+                  </h2>
                 ) : null}
                 <div
                   className={cn(
-                    "overflow-hidden bg-white dark:bg-zinc-950",
+                    "overflow-hidden",
                     isPublicKb
-                      ? "divide-y divide-stone-100 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-black/[0.04] dark:divide-zinc-800/90 dark:shadow-none dark:ring-zinc-800/70"
-                      : "rounded-xl border border-stone-200/90 dark:border-zinc-700"
+                      ? "divide-y divide-stone-100 rounded-xl bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-black/[0.04] dark:divide-zinc-800/90 dark:bg-zinc-950 dark:shadow-none dark:ring-zinc-800/70"
+                      : "divide-y divide-stone-100 dark:divide-zinc-800"
                   )}
                 >
                   {contents.length === 0 ? (
@@ -1554,162 +1546,17 @@ export function KnowledgeDetail({
         )}
 
         {activeView === "factory" && (
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-white dark:bg-zinc-950 px-4 pb-10 pt-4">
+          <div className="scrollbar-hide flex min-h-0 flex-1 flex-col overflow-y-auto bg-white px-4 pb-10 pt-4 dark:bg-zinc-950">
             <h3 className="mb-3 text-[15px] font-semibold tracking-tight text-zinc-800">Create new content</h3>
 
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setFactoryModal("report")}
-                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                      mx.factoryTone.report.well,
-                      mx.factoryTone.report.icon
-                    )}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <path d="M14 2v6h6" />
-                      <path d="M12 18v-6M9 15h6" />
-                    </svg>
-                  </div>
-                  <span className="truncate text-[15px] font-medium text-zinc-800">Report</span>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
-              </button>
+            <MinderContentFactoryGrid
+              librarySummary=""
+              onSelect={(kind) => setFactoryModal(kind)}
+              className="!mt-0"
+              surface="filled"
+            />
 
-              <button
-                type="button"
-                onClick={() => setFactoryModal("audio")}
-                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={cn(
-                      "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                      mx.factoryTone.audio.well,
-                      mx.factoryTone.audio.icon
-                    )}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M2 10v3a1 1 0 001 1h3l4 4V3L6 7H3a1 1 0 00-1 1z" />
-                      <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
-                    </svg>
-                    <Sparkles
-                      className={cn("absolute -right-0.5 -top-0.5 h-3 w-3", mx.factoryTone.audio.sparkle)}
-                      strokeWidth={2}
-                    />
-                  </div>
-                  <span className="truncate text-[15px] font-medium text-zinc-800">Audio overview</span>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFactoryModal("flashcards")}
-                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={cn(
-                      "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                      mx.factoryTone.flashcards.well,
-                      mx.factoryTone.flashcards.icon
-                    )}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="6" width="16" height="12" rx="2" />
-                      <path d="M22 10v8a2 2 0 01-2 2H8" />
-                      <path d="M8 10l3 3-3 3" />
-                    </svg>
-                    <Sparkles
-                      className={cn("absolute -right-0.5 -top-0.5 h-3 w-3", mx.factoryTone.flashcards.sparkle)}
-                      strokeWidth={2}
-                    />
-                  </div>
-                  <span className="truncate text-[15px] font-medium text-zinc-800">Flashcards</span>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFactoryModal("quiz")}
-                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                      mx.factoryTone.quiz.well,
-                      mx.factoryTone.quiz.icon
-                    )}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="5" y="5" width="14" height="14" rx="2" />
-                      <path d="M12 16v.01M10 10a2 2 0 1 1 4 0c0 1.5-2 1.5-2 3" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                  <span className="truncate text-[15px] font-medium text-zinc-800">Quiz</span>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFactoryModal("infographic")}
-                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                      mx.factoryTone.infographic.well,
-                      mx.factoryTone.infographic.icon
-                    )}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="18" y1="20" x2="18" y2="10" />
-                      <line x1="12" y1="20" x2="12" y2="4" />
-                      <line x1="6" y1="20" x2="6" y2="14" />
-                    </svg>
-                  </div>
-                  <span className="truncate text-[15px] font-medium text-zinc-800">Infographic</span>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFactoryModal("slides")}
-                className="flex w-full items-center justify-between rounded-full py-2 pl-2 pr-3 transition-colors hover:bg-white/70"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                      mx.factoryTone.slides.well,
-                      mx.factoryTone.slides.icon
-                    )}
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="3" width="20" height="14" rx="2" />
-                      <line x1="8" y1="21" x2="16" y2="21" />
-                      <line x1="12" y1="17" x2="12" y2="21" />
-                    </svg>
-                  </div>
-                  <span className="truncate text-[15px] font-medium text-zinc-800">Presentation</span>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-400" />
-              </button>
-            </div>
-
-            <StudioFactoryJobsInline
+                        <StudioFactoryJobsInline
               userJobs={factoryUserJobs}
               showQuotaBanner={factoryQuotaBanner}
               onDismissQuotaBanner={() => setFactoryQuotaBanner(false)}
@@ -1897,6 +1744,7 @@ export function KnowledgeDetail({
         onClose={() => setFactoryModal(null)}
         libraryName={kbDisplayName}
         onGenerateSubmit={handleFactoryGenerateSubmit}
+        optionSurface="filled"
       />
     </div>
   )

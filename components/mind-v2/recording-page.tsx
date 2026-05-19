@@ -100,7 +100,7 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div className="text-6xl font-light text-white mb-2 font-mono tracking-wider">
+        <div className="mb-2 text-6xl font-light tabular-nums tracking-wide text-white">
           {formatTime(duration)}
         </div>
         <div className="text-sm text-zinc-200/70 mb-10">

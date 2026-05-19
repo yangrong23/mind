@@ -36,6 +36,13 @@ import {
   ThumbsUp,
   ThumbsDown,
   Maximize2,
+  LayoutGrid,
+  Calendar,
+  Users,
+  BarChart2,
+  ListTodo,
+  Quote,
+  Scale,
 } from "lucide-react"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { CreateFolderSheet } from "./create-folder-sheet"
@@ -169,6 +176,398 @@ const MIND_INSIGHT_CARDS = [
   },
 ] as const
 
+type SummaryInsightView = "todos" | "quotes" | "speakers" | "decisions"
+
+const SUMMARY_INSIGHT_VIEWS: {
+  id: SummaryInsightView
+  label: string
+  hint: string
+}[] = [
+  { id: "todos", label: "My action items", hint: "Action items extracted from this meeting" },
+  { id: "quotes", label: "Meeting quotes", hint: "Memorable lines worth revisiting" },
+  { id: "speakers", label: "Speaker summaries", hint: "Points grouped by who spoke" },
+  { id: "decisions", label: "Key decisions", hint: "Confirmed and pending decisions" },
+]
+
+const SUMMARY_OVERVIEW =
+  "The team reviewed knowledge-graph visualization—how it helps organize information, surface relationships, and compound learning. The graph should speed up processing and support decisions while helping users build a personal knowledge system."
+
+const SUMMARY_TODOS = [
+  { text: "Prototype the knowledge graph UI", who: "@design", due: "Jan 22" },
+  { text: "Research competitor graph implementations", who: "@product", due: "Jan 24" },
+  { text: "Compare D3.js vs React Flow for performance", who: "@engineering", due: "Jan 26" },
+] as const
+
+const SUMMARY_QUOTES = [
+  {
+    t: "00:01:15",
+    speaker: "Product",
+    quote: "We’ll support four node types—people, orgs, projects, and themes—each with distinct colors for quick scanning.",
+  },
+  {
+    t: "00:02:00",
+    speaker: "Engineering",
+    quote: "Automatic link discovery should infer connections from content without manual wiring.",
+  },
+  {
+    t: "00:10:15",
+    speaker: "Engineering",
+    quote: "Next step is a performance and maintainability review between D3.js and React Flow.",
+  },
+] as const
+
+const SUMMARY_SPEAKERS = [
+  {
+    name: "Product",
+    role: "PM",
+    points: [
+      "Defined four core node types and color-by-type scanning.",
+      "Prioritized automatic link discovery over manual graph wiring.",
+    ],
+  },
+  {
+    name: "Engineering",
+    role: "Tech lead",
+    points: [
+      "Raised D3.js vs React Flow tradeoffs for the graph renderer.",
+      "Committed to a shortlist review before UI lock-in.",
+    ],
+  },
+  {
+    name: "Design",
+    role: "UX",
+    points: ["Requested fluid zoom/pan/inspect interactions on the graph canvas."],
+  },
+] as const
+
+const SUMMARY_DECISIONS = [
+  {
+    title: "Ship people–org–project–theme taxonomy in v1",
+    status: "confirmed" as const,
+    detail: "Four node types with distinct colors; theme nodes included in scope.",
+  },
+  {
+    title: "Pursue automatic link discovery",
+    status: "confirmed" as const,
+    detail: "System infers edges from content; manual linking is secondary.",
+  },
+  {
+    title: "Pick graph library after perf review",
+    status: "pending" as const,
+    detail: "D3.js vs React Flow—decision after engineering spike (target Jan 26).",
+  },
+] as const
+
+function NoteSummaryInsightPanel({ view }: { view: SummaryInsightView }) {
+  if (view === "todos") {
+    return (
+      <section className="min-w-0 space-y-2.5 sm:space-y-3">
+        <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">
+          {SUMMARY_INSIGHT_VIEWS.find((v) => v.id === "todos")?.hint}
+        </p>
+        <div className="space-y-2 sm:space-y-2.5">
+          {SUMMARY_TODOS.map((row) => (
+            <div
+              key={row.text}
+              className="flex items-start gap-2.5 rounded-xl border border-stone-200/80 bg-stone-50/50 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3"
+            >
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-2 border-zinc-300 sm:h-4 sm:w-4" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="text-[14px] leading-snug text-zinc-800 sm:text-[15px]">{row.text}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-zinc-400 sm:text-[12px]">
+                  <span>{row.who}</span>
+                  <span aria-hidden>·</span>
+                  <span className="tabular-nums">Due {row.due}</span>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  if (view === "quotes") {
+    return (
+      <section className="min-w-0 space-y-2.5 sm:space-y-3">
+        <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">
+          {SUMMARY_INSIGHT_VIEWS.find((v) => v.id === "quotes")?.hint}
+        </p>
+        <div className="space-y-2.5 sm:space-y-3">
+          {SUMMARY_QUOTES.map((row) => (
+            <blockquote
+              key={row.t}
+              className="relative rounded-xl border border-stone-200/90 bg-white px-3 py-3 shadow-sm shadow-stone-900/[0.03] sm:px-3.5 sm:py-3.5"
+            >
+              <Quote className="absolute right-2.5 top-2.5 h-3.5 w-3.5 text-mind/25 sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
+              <p className="pr-6 text-[14px] font-medium leading-snug text-zinc-900 sm:text-[15px]">&ldquo;{row.quote}&rdquo;</p>
+              <footer className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] text-zinc-500 sm:text-[12px]">
+                <span className="font-medium text-zinc-700">{row.speaker}</span>
+                <span aria-hidden>·</span>
+                <span className="tabular-nums">{row.t}</span>
+              </footer>
+            </blockquote>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  if (view === "speakers") {
+    return (
+      <section className="min-w-0 space-y-2.5 sm:space-y-3">
+        <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">
+          {SUMMARY_INSIGHT_VIEWS.find((v) => v.id === "speakers")?.hint}
+        </p>
+        <div className="space-y-2.5 sm:space-y-3">
+          {SUMMARY_SPEAKERS.map((speaker) => (
+            <article
+              key={speaker.name}
+              className="rounded-xl border border-stone-200/90 bg-gradient-to-b from-white to-stone-50/80 p-3 sm:p-3.5"
+            >
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mind/10 text-[12px] font-semibold text-mind">
+                  {speaker.name.slice(0, 1)}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-[14px] font-semibold text-zinc-900 sm:text-[15px]">{speaker.name}</h3>
+                  <p className="text-[11px] text-zinc-500 sm:text-[12px]">{speaker.role}</p>
+                </div>
+              </div>
+              <ul className="mt-2.5 space-y-1.5 sm:mt-3 sm:space-y-2">
+                {speaker.points.map((point) => (
+                  <li key={point} className="flex min-w-0 gap-2 text-[13px] leading-relaxed text-zinc-700 sm:text-[14px]">
+                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-400" aria-hidden />
+                    <span className="min-w-0 flex-1 break-words">{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="min-w-0 space-y-2.5 sm:space-y-3">
+      <p className="text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">
+        {SUMMARY_INSIGHT_VIEWS.find((v) => v.id === "decisions")?.hint}
+      </p>
+      <div className="space-y-2 sm:space-y-2.5">
+        {SUMMARY_DECISIONS.map((row) => (
+          <div
+            key={row.title}
+            className="rounded-xl border border-stone-200/90 bg-white px-3 py-3 sm:px-3.5 sm:py-3.5"
+          >
+            <div className="flex items-start gap-2">
+              <Scale className="mt-0.5 h-4 w-4 shrink-0 text-mind" strokeWidth={2} aria-hidden />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-[14px] font-semibold leading-snug text-zinc-900 sm:text-[15px]">{row.title}</h3>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]",
+                      row.status === "confirmed"
+                        ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80"
+                        : "bg-amber-50 text-amber-800 ring-1 ring-amber-200/80"
+                    )}
+                  >
+                    {row.status === "confirmed" ? "Confirmed" : "Pending"}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-600 sm:text-[14px]">{row.detail}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+type TemplateGlyph =
+  | "layout-grid"
+  | "calendar"
+  | "file-text"
+  | "quote-99"
+  | "sparkles"
+  | "share-network"
+  | "users"
+  | "pencil"
+
+type TemplateIconPalette = "orange" | "green" | "purple" | "blue" | "violet" | "amber" | "mind"
+
+const TEMPLATE_CARD_SHELL =
+  "relative flex h-full min-h-[172px] w-full flex-col rounded-xl border bg-white p-4 text-left shadow-sm transition-colors"
+
+/** Same 2-col cell sizing on Mine, For you, and Explore */
+const TEMPLATE_GRID_CLASS = "grid grid-cols-2 gap-3 [&>*]:h-[172px] [&>*]:min-w-0"
+
+const TEMPLATE_CARD_SELECTED = "border-zinc-500 ring-1 ring-zinc-200/60"
+const TEMPLATE_CARD_DEFAULT = "border-stone-200/90 hover:border-stone-300/90"
+
+/** Muted icon tints — soft wells, no neon glow (matches reference UI) */
+const TEMPLATE_ICON_PALETTES: Record<TemplateIconPalette, { well: string; icon: string }> = {
+  orange: {
+    well: "bg-orange-50/70 ring-1 ring-orange-100/60",
+    icon: "text-orange-700/75",
+  },
+  green: {
+    well: "bg-emerald-50/70 ring-1 ring-emerald-100/60",
+    icon: "text-emerald-800/70",
+  },
+  purple: {
+    well: "bg-violet-50/70 ring-1 ring-violet-100/60",
+    icon: "text-violet-700/75",
+  },
+  blue: {
+    well: "bg-sky-50/70 ring-1 ring-sky-100/60",
+    icon: "text-sky-800/75",
+  },
+  violet: {
+    well: "bg-fuchsia-50/60 ring-1 ring-fuchsia-100/50",
+    icon: "text-violet-700/70",
+  },
+  amber: {
+    well: "bg-amber-50/70 ring-1 ring-amber-100/60",
+    icon: "text-amber-800/70",
+  },
+  mind: {
+    well: "bg-sky-50/80 ring-1 ring-sky-100/70",
+    icon: "text-mind/80",
+  },
+}
+
+function TemplateIconWell({
+  palette,
+  children,
+}: {
+  palette: TemplateIconPalette
+  children: React.ReactNode
+}) {
+  const style = TEMPLATE_ICON_PALETTES[palette]
+  return (
+    <div
+      className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+        style.well
+      )}
+    >
+      <span
+        className={cn(
+          "inline-flex h-5 w-5 items-center justify-center [&_svg]:block [&_svg]:h-5 [&_svg]:w-5 [&_svg]:shrink-0",
+          style.icon
+        )}
+      >
+        {children}
+      </span>
+    </div>
+  )
+}
+
+function TemplateCardIconRow({ icon }: { icon: React.ReactNode }) {
+  return <div className="mb-3 flex h-10 w-full shrink-0 items-center">{icon}</div>
+}
+
+function renderTemplateGlyph(glyph: TemplateGlyph) {
+  switch (glyph) {
+    case "layout-grid":
+      return <LayoutGrid strokeWidth={2} />
+    case "calendar":
+      return <Calendar strokeWidth={2} />
+    case "file-text":
+      return <FileText strokeWidth={2} />
+    case "quote-99":
+      return <span className="text-[13px] font-bold leading-none">99</span>
+    case "sparkles":
+      return <Sparkles strokeWidth={2} />
+    case "share-network":
+      return <Share2 strokeWidth={2} />
+    case "users":
+      return <Users strokeWidth={2} />
+    case "pencil":
+      return <Pencil strokeWidth={2} />
+    default:
+      return <FileText strokeWidth={2} />
+  }
+}
+
+type TemplatePickerCardProps = {
+  name: string
+  desc: string
+  glyph: TemplateGlyph
+  palette: TemplateIconPalette
+  selected: boolean
+  onSelect: () => void
+  badge?: string
+  author?: string
+  count?: number
+}
+
+function TemplatePickerCard({
+  name,
+  desc,
+  glyph,
+  palette,
+  selected,
+  onSelect,
+  badge,
+  author,
+  count,
+}: TemplatePickerCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(TEMPLATE_CARD_SHELL, selected ? TEMPLATE_CARD_SELECTED : TEMPLATE_CARD_DEFAULT)}
+    >
+      {badge ? (
+        <span className="absolute right-2 top-2 z-[1] rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 ring-1 ring-stone-200/80">
+          {badge}
+        </span>
+      ) : null}
+      <TemplateCardIconRow
+        icon={
+          <TemplateIconWell palette={palette}>
+            {renderTemplateGlyph(glyph)}
+          </TemplateIconWell>
+        }
+      />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="mb-1 line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">{name}</div>
+        <p className="line-clamp-3 flex-1 text-xs leading-relaxed text-zinc-500">{desc}</p>
+        <div className="mt-auto flex min-h-[18px] min-w-0 shrink-0 items-center gap-1.5 pt-2 text-xs text-zinc-400">
+          {count != null ? (
+            <>
+              <BarChart2 className="h-3.5 w-3.5 shrink-0 opacity-70" strokeWidth={2} />
+              <span className="tabular-nums">{count}</span>
+            </>
+          ) : null}
+          {count != null && author ? <span className="opacity-60">·</span> : null}
+          {author ? <span className="truncate">{author}</span> : null}
+        </div>
+      </div>
+    </button>
+  )
+}
+
+function TemplateCreateCard({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        TEMPLATE_CARD_SHELL,
+        "items-center justify-center gap-2 border-2 border-dashed border-stone-300 bg-white shadow-none hover:border-stone-400"
+      )}
+    >
+      <Pencil className="h-8 w-8 text-zinc-400" strokeWidth={1.5} />
+      <span className="text-sm text-zinc-500">New template</span>
+    </button>
+  )
+}
+
 export function NoteDetail({
   note,
   onBack,
@@ -181,6 +580,7 @@ export function NoteDetail({
   const [segment, setSegment] = useState<"source" | "note">("note")
   const [noteSub, setNoteSub] = useState<"marks" | "summary">("summary")
   const [summaryFeedback, setSummaryFeedback] = useState<"up" | "down" | null>(null)
+  const [summaryInsightView, setSummaryInsightView] = useState<SummaryInsightView>("todos")
   const [markExpand, setMarkExpand] = useState<Record<number, boolean>>({})
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadPct, setPlayheadPct] = useState(0.32)
@@ -206,7 +606,7 @@ export function NoteDetail({
     []
   )
   const [templateLanguage, setTemplateLanguage] = useState("Auto")
-  const [templateModel, setTemplateModel] = useState("Auto")
+  const [templateModel, setTemplateModel] = useState("Light")
   const [selectedKB, setSelectedKB] = useState<number | null>(null)
   const [isTransferring, setIsTransferring] = useState(false)
   const [transferComplete, setTransferComplete] = useState(false)
@@ -215,7 +615,7 @@ export function NoteDetail({
   const [templateTab, setTemplateTab] = useState<"mine" | "recommend" | "explore">("mine")
   const [askDraft, setAskDraft] = useState("")
   const [noteChatMode, setNoteChatMode] = useState<"dialog" | "agent">("dialog")
-  const [noteModelLabel, setNoteModelLabel] = useState("DS Fast")
+  const [noteModelLabel, setNoteModelLabel] = useState("Auto")
   const [noteVoiceOn, setNoteVoiceOn] = useState(false)
   const [generated, setGenerated] = useState(() => !note || !isNoteAwaitingGenerate(note))
   const [isGenerating, setIsGenerating] = useState(false)
@@ -422,7 +822,7 @@ export function NoteDetail({
                 )
               })}
             </div>
-            <div className="mb-4 flex items-center justify-between font-mono text-sm tabular-nums">
+            <div className="mb-4 flex items-center justify-between text-sm tabular-nums">
               <span className="font-medium text-zinc-700">{playerTimes.elapsed}</span>
               <span className="text-zinc-400">{playerTimes.total}</span>
             </div>
@@ -474,7 +874,7 @@ export function NoteDetail({
               <div className="space-y-6">
                 {TRANSCRIPT_BLOCKS.map((block, i) => (
                   <div key={i} className="space-y-1.5">
-                    <span className="font-mono text-[12px] tabular-nums text-zinc-400">{block.t}</span>
+                    <span className="text-[12px] tabular-nums text-zinc-400">{block.t}</span>
                     <p
                       className={cn(
                         "break-words text-[17px] leading-[1.65] tracking-[-0.01em] transition-colors duration-200",
@@ -556,7 +956,7 @@ export function NoteDetail({
                   >
                     <div className="flex items-center gap-2 text-zinc-500">
                       <Flag className="h-4 w-4 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
-                      <span className="font-mono text-[13px] tabular-nums">{m.t}</span>
+                      <span className="text-[13px] tabular-nums">{m.t}</span>
                     </div>
                     <h2 className="mt-2 break-words text-[16px] font-semibold leading-snug text-zinc-900">{m.title}</h2>
                     <p
@@ -627,44 +1027,49 @@ export function NoteDetail({
               <section className="min-w-0 space-y-2 sm:space-y-2.5">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 sm:text-[12px]">Overview</h2>
                 <p className="min-w-0 break-words text-[14px] leading-[1.62] text-zinc-800 sm:text-[15px] sm:leading-[1.65]">
-                  The team reviewed knowledge-graph visualization—how it helps organize information, surface relationships,
-                  and compound learning. The graph should speed up processing and support decisions while helping users build
-                  a personal knowledge system.
+                  {SUMMARY_OVERVIEW}
                 </p>
               </section>
 
-              <section className="min-w-0 space-y-2 sm:space-y-2.5">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 sm:text-[12px]">Key points</h2>
-                <ul className="space-y-2.5 sm:space-y-3">
-                  {[
-                    "Support rich node taxonomy (people, orgs, projects, themes)",
-                    "Ship automatic link discovery and smart recommendations",
-                    "Enable library-grounded AI assistance",
-                  ].map((line) => (
-                    <li key={line} className="flex min-w-0 gap-2.5 text-[14px] leading-[1.58] text-zinc-800 sm:gap-3 sm:text-[15px] sm:leading-[1.62]">
-                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-zinc-400" aria-hidden />
-                      <span className="min-w-0 flex-1 break-words">{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="min-w-0 space-y-2 sm:space-y-2.5">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 sm:text-[12px]">Action items</h2>
-                <div className="space-y-2 sm:space-y-2.5">
-                  {[
-                    { t: "Prototype the knowledge graph UI", who: "@design" },
-                    { t: "Research competitor graph implementations", who: "@product" },
-                  ].map((row) => (
-                    <div
-                      key={row.t}
-                      className="flex items-start gap-2.5 rounded-xl border border-stone-200/80 bg-stone-50/50 px-3 py-2.5 sm:gap-3 sm:px-3.5 sm:py-3"
-                    >
-                      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-2 border-zinc-300 sm:h-4 sm:w-4" aria-hidden />
-                      <p className="min-w-0 flex-1 text-[14px] leading-snug text-zinc-800 sm:text-[15px]">{row.t}</p>
-                      <span className="shrink-0 text-[11px] text-zinc-400 sm:text-[12px]">{row.who}</span>
-                    </div>
-                  ))}
+              <section className="min-w-0 space-y-3 sm:space-y-3.5" aria-label="Structured insights">
+                <div
+                  role="tablist"
+                  aria-label="Summary insights"
+                  className="scrollbar-hide -mx-0.5 flex gap-2 overflow-x-auto pb-0.5 pt-0.5"
+                >
+                  {SUMMARY_INSIGHT_VIEWS.map((view) => {
+                    const selected = summaryInsightView === view.id
+                    const Icon =
+                      view.id === "todos"
+                        ? ListTodo
+                        : view.id === "quotes"
+                          ? Quote
+                          : view.id === "speakers"
+                            ? Users
+                            : Scale
+                    return (
+                      <button
+                        key={view.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={selected}
+                        id={`summary-insight-${view.id}`}
+                        onClick={() => setSummaryInsightView(view.id)}
+                        className={cn(
+                          "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors sm:px-3.5 sm:py-2 sm:text-[13px]",
+                          selected
+                            ? "border-mind/25 bg-mind/8 text-mind shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+                            : "border-stone-200/90 bg-white text-zinc-600 hover:border-stone-300 hover:bg-stone-50"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" strokeWidth={2} aria-hidden />
+                        {view.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div role="tabpanel" aria-labelledby={`summary-insight-${summaryInsightView}`}>
+                  <NoteSummaryInsightPanel view={summaryInsightView} />
                 </div>
               </section>
 
@@ -936,81 +1341,71 @@ export function NoteDetail({
             </div>
           </div>
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Body — hide scrollbar so card grid width matches across tabs */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
             {/* Mine */}
             {templateTab === "mine" && (
-              <div className="p-5 pb-28">
+              <div className="p-5">
                 <div className="mb-4 flex items-center gap-2">
                   <h2 className="text-base font-bold text-zinc-900">Recently used</h2>
                   <ChevronRight className="h-5 w-5 text-zinc-400" />
                 </div>
-                <div className="mb-8">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedTemplate({
-                        id: "smart-summary",
-                        name: "Smart summary",
-                        desc: "Adaptive summaries across contexts",
-                      })
-                    }
-                    className={cn(
-                      "relative w-full max-w-[220px] rounded-xl border bg-white p-4 text-left shadow-sm",
-                      selectedTemplate?.id === "smart-summary" ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
-                    )}
-                  >
-                    <span className="absolute right-2 top-2 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-mind">
-                      Last used
-                    </span>
-                    <div className="mb-2 flex items-start justify-between gap-2 pr-16">
-                      <span className="text-mind" aria-hidden>
-                        ✦✦
-                      </span>
-                      <span className="text-zinc-400" aria-hidden>
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-                        </svg>
-                      </span>
-                    </div>
-                    <div className="mb-1 font-semibold text-zinc-900">Smart summary</div>
-                    <div className="text-xs leading-relaxed text-zinc-500">Adaptive summaries across contexts</div>
-                    <div className="mt-4 text-xs text-zinc-400">Plaud</div>
-                  </button>
+                <div className={cn("mb-8", TEMPLATE_GRID_CLASS)}>
+                  {[
+                    {
+                      id: "smart-summary",
+                      name: "Smart summary",
+                      desc: "Adaptive summaries across contexts",
+                      glyph: "sparkles" as const,
+                      palette: "violet" as const,
+                      badge: "Last used",
+                      author: "Plaud",
+                    },
+                    {
+                      id: "meeting-expert-recent",
+                      name: "Meeting recap pro",
+                      desc: "Structured minutes with decisions and todos",
+                      glyph: "layout-grid" as const,
+                      palette: "orange" as const,
+                      author: "massif",
+                      count: 0,
+                    },
+                  ].map((t) => (
+                    <TemplatePickerCard
+                      key={t.id}
+                      name={t.name}
+                      desc={t.desc}
+                      glyph={t.glyph}
+                      palette={t.palette}
+                      badge={t.badge}
+                      author={t.author}
+                      count={t.count}
+                      selected={selectedTemplate?.id === t.id}
+                      onSelect={() =>
+                        setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })
+                      }
+                    />
+                  ))}
                 </div>
 
                 <div className="mb-4 flex items-center gap-2">
                   <h2 className="text-base font-bold text-zinc-900">My templates</h2>
                   <ChevronRight className="h-5 w-5 text-zinc-400" />
                 </div>
-                <div className="mb-6 flex flex-wrap gap-3">
+                <div className={cn("mb-6", TEMPLATE_GRID_CLASS)}>
                   {customTemplates.map((t) => (
-                    <button
+                    <TemplatePickerCard
                       key={t.id}
-                      type="button"
-                      onClick={() =>
-                        setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })
-                      }
-                      className={cn(
-                        "w-full max-w-[200px] rounded-xl border bg-white p-4 text-left shadow-sm",
-                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
-                      )}
-                    >
-                      <div className="mb-2 flex items-center gap-2 text-mind">
-                        <Pencil className="h-4 w-4" />
-                      </div>
-                      <div className="mb-1 font-semibold text-zinc-900">{t.name}</div>
-                      <div className="line-clamp-2 text-xs text-zinc-500">{t.desc}</div>
-                    </button>
+                      name={t.name}
+                      desc={t.desc}
+                      glyph="pencil"
+                      palette="mind"
+                      author="Plaud"
+                      selected={selectedTemplate?.id === t.id}
+                      onSelect={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
+                    />
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateTemplateSheet(true)}
-                    className="flex aspect-[4/5] w-full max-w-[200px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-300 bg-white transition-colors hover:border-stone-400"
-                  >
-                    <Pencil className="h-8 w-8 text-zinc-400" strokeWidth={1.5} />
-                    <span className="text-sm text-zinc-500">New template</span>
-                  </button>
+                  <TemplateCreateCard onClick={() => setShowCreateTemplateSheet(true)} />
                 </div>
 
                 <div className="mb-6 overflow-hidden rounded-xl border border-stone-200 bg-white">
@@ -1032,7 +1427,7 @@ export function NoteDetail({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTemplateModel((v) => (v === "Auto" ? "GPT-4o" : v === "GPT-4o" ? "Claude" : "Auto"))}
+                    onClick={() => setTemplateModel((v) => (v === "Light" ? "Max" : "Light"))}
                     className="flex w-full items-center justify-between px-4 py-3.5 text-left"
                   >
                     <span className="flex items-center gap-2 text-[15px] text-zinc-900">
@@ -1052,94 +1447,79 @@ export function NoteDetail({
             {templateTab === "recommend" && (
               <div className="p-5">
                 {/* Popular */}
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-zinc-900">Popular</h2>
-                  <ChevronRight className="w-5 h-5 text-zinc-400" />
+                <div className="mb-4 flex items-center gap-2">
+                  <h2 className="text-base font-bold text-zinc-900">Popular</h2>
+                  <ChevronRight className="h-5 w-5 text-zinc-400" />
                 </div>
-                <div className="grid grid-cols-2 gap-3 mb-8">
+                <div className={cn("mb-8", TEMPLATE_GRID_CLASS)}>
                   {[
-                    { id: "meeting-expert", name: "Meeting recap pro", desc: "Structured minutes with decisions and todos", icon: "orange", author: "massif", count: 0 },
-                    { id: "verbatim", name: "Verbatim", desc: "Full verbatim transcript", icon: "green", author: "Chao Ma", count: 0 },
+                    {
+                      id: "meeting-expert",
+                      name: "Meeting recap pro",
+                      desc: "Structured minutes with decisions and todos",
+                      glyph: "layout-grid" as const,
+                      palette: "orange" as const,
+                      author: "massif",
+                      count: 0,
+                    },
+                    {
+                      id: "verbatim",
+                      name: "Verbatim",
+                      desc: "Full verbatim transcript",
+                      glyph: "calendar" as const,
+                      palette: "green" as const,
+                      author: "Chao Ma",
+                      count: 0,
+                    },
                   ].map((t) => (
-                    <button
+                    <TemplatePickerCard
                       key={t.id}
-                      onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
-                      className={cn(
-                        "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center mb-3",
-                        t.icon === "orange" ? "bg-zinc-100" : "bg-stone-100"
-                      )}>
-                        {t.icon === "orange" ? (
-                          <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="currentColor">
-                            <rect x="3" y="3" width="7" height="7" rx="1" />
-                            <rect x="14" y="3" width="7" height="7" rx="1" />
-                            <rect x="3" y="14" width="7" height="7" rx="1" />
-                            <rect x="14" y="14" width="7" height="7" rx="1" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5 text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" />
-                            <line x1="16" y1="2" x2="16" y2="6" />
-                            <line x1="8" y1="2" x2="8" y2="6" />
-                            <line x1="3" y1="10" x2="21" y2="10" />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="font-semibold text-zinc-900 text-sm mb-1">{t.name}</div>
-                      <div className="text-xs text-zinc-500 leading-relaxed mb-4">{t.desc}</div>
-                      <div className="flex items-center gap-2 text-xs text-zinc-400">
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="2" y="3" width="20" height="14" rx="2" />
-                          <line x1="8" y1="21" x2="16" y2="21" />
-                          <line x1="12" y1="17" x2="12" y2="21" />
-                        </svg>
-                        {t.count} · {t.author}
-                      </div>
-                    </button>
+                      name={t.name}
+                      desc={t.desc}
+                      glyph={t.glyph}
+                      palette={t.palette}
+                      author={t.author}
+                      count={t.count}
+                      selected={selectedTemplate?.id === t.id}
+                      onSelect={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
+                    />
                   ))}
                 </div>
 
                 {/* Inspiration */}
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-zinc-900">Inspiration</h2>
-                  <ChevronRight className="w-5 h-5 text-zinc-400" />
+                <div className="mb-4 flex items-center gap-2">
+                  <h2 className="text-base font-bold text-zinc-900">Inspiration</h2>
+                  <ChevronRight className="h-5 w-5 text-zinc-400" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className={TEMPLATE_GRID_CLASS}>
                   {[
-                    { id: "meeting-points", name: "Meeting highlights", desc: "Key takeaways for review and decisions", icon: "purple", author: "Plaud" },
-                    { id: "meeting-minutes", name: "Meeting minutes", desc: "Full notes with actions and decisions", icon: "blue", author: "Plaud" },
+                    {
+                      id: "meeting-points",
+                      name: "Meeting highlights",
+                      desc: "Key takeaways for review and decisions",
+                      glyph: "file-text" as const,
+                      palette: "purple" as const,
+                      author: "Plaud",
+                    },
+                    {
+                      id: "meeting-minutes",
+                      name: "Meeting minutes",
+                      desc: "Full notes with actions and decisions",
+                      glyph: "quote-99" as const,
+                      palette: "blue" as const,
+                      author: "Plaud",
+                    },
                   ].map((t) => (
-                    <button
+                    <TemplatePickerCard
                       key={t.id}
-                      onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
-                      className={cn(
-                        "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center mb-3",
-                        t.icon === "purple" ? "bg-zinc-100" : "bg-stone-100"
-                      )}>
-                        {t.icon === "purple" ? (
-                          <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <line x1="9" y1="9" x2="15" y2="9" />
-                            <line x1="9" y1="13" x2="15" y2="13" />
-                            <line x1="9" y1="17" x2="13" y2="17" />
-                          </svg>
-                        ) : (
-                          <span className="text-zinc-600 font-bold text-lg">99</span>
-                        )}
-                      </div>
-                      <div className="font-semibold text-zinc-900 text-sm mb-1">{t.name}</div>
-                      <div className="text-xs text-zinc-500 leading-relaxed mb-4">{t.desc}</div>
-                      <div className="text-xs text-zinc-400">{t.author}</div>
-                    </button>
+                      name={t.name}
+                      desc={t.desc}
+                      glyph={t.glyph}
+                      palette={t.palette}
+                      author={t.author}
+                      selected={selectedTemplate?.id === t.id}
+                      onSelect={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
+                    />
                   ))}
                 </div>
               </div>
@@ -1149,97 +1529,76 @@ export function NoteDetail({
             {templateTab === "explore" && (
               <div className="p-5">
                 {/* General */}
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-zinc-900">General</h2>
-                  <ChevronRight className="w-5 h-5 text-zinc-400" />
+                <div className="mb-4 flex items-center gap-2">
+                  <h2 className="text-base font-bold text-zinc-900">General</h2>
+                  <ChevronRight className="h-5 w-5 text-zinc-400" />
                 </div>
-                <div className="grid grid-cols-2 gap-3 mb-8">
+                <div className={cn("mb-8", TEMPLATE_GRID_CLASS)}>
                   {[
-                    { id: "smart-summary-2", name: "Smart summary", desc: "Adaptive summaries across contexts", icon: "sky-star", author: "Plaud" },
-                    { id: "reasoning", name: "Reasoning recap", desc: "Structured recap of the essentials", icon: "sky-connect", author: "Plaud" },
+                    {
+                      id: "smart-summary-2",
+                      name: "Smart summary",
+                      desc: "Adaptive summaries across contexts",
+                      glyph: "sparkles" as const,
+                      palette: "violet" as const,
+                      author: "Plaud",
+                    },
+                    {
+                      id: "reasoning",
+                      name: "Reasoning recap",
+                      desc: "Structured recap of the essentials",
+                      glyph: "share-network" as const,
+                      palette: "violet" as const,
+                      author: "Plaud",
+                    },
                   ].map((t) => (
-                    <button
+                    <TemplatePickerCard
                       key={t.id}
-                      onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
-                      className={cn(
-                        "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
-                      )}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center">
-                          {t.icon === "sky-star" ? (
-                            <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <circle cx="6" cy="6" r="3" />
-                              <circle cx="18" cy="6" r="3" />
-                              <circle cx="6" cy="18" r="3" />
-                              <circle cx="18" cy="18" r="3" />
-                              <line x1="9" y1="6" x2="15" y2="6" />
-                              <line x1="6" y1="9" x2="6" y2="15" />
-                              <line x1="18" y1="9" x2="18" y2="15" />
-                              <line x1="9" y1="18" x2="15" y2="18" />
-                            </svg>
-                          )}
-                        </div>
-                        <svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M7 17L17 7M17 7H7M17 7V17" />
-                        </svg>
-                      </div>
-                      <div className="font-semibold text-zinc-900 text-sm mb-1">{t.name}</div>
-                      <div className="text-xs text-zinc-500 leading-relaxed mb-4">{t.desc}</div>
-                      <div className="text-xs text-zinc-400">{t.author}</div>
-                    </button>
+                      name={t.name}
+                      desc={t.desc}
+                      glyph={t.glyph}
+                      palette={t.palette}
+                      author={t.author}
+                      selected={selectedTemplate?.id === t.id}
+                      onSelect={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
+                    />
                   ))}
                 </div>
 
                 {/* Meetings */}
-                <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-zinc-900">Meetings</h2>
+                <div className="mb-4 flex items-center gap-2">
+                  <h2 className="text-base font-bold text-zinc-900">Meetings</h2>
                   <ChevronRight className="w-5 h-5 text-zinc-400" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className={TEMPLATE_GRID_CLASS}>
                   {[
-                    { id: "consultation", name: "Consultation Q&A", desc: "Capture Q&A and actions from consult calls", icon: "sky-doc", author: "Plaud" },
-                    { id: "discussion", name: "Discussion digest", desc: "Discussion summary with clear next steps", icon: "sky-people", author: "Plaud" },
+                    {
+                      id: "consultation",
+                      name: "Consultation Q&A",
+                      desc: "Capture Q&A and actions from consult calls",
+                      glyph: "file-text" as const,
+                      palette: "amber" as const,
+                      author: "Plaud",
+                    },
+                    {
+                      id: "discussion",
+                      name: "Discussion digest",
+                      desc: "Discussion summary with clear next steps",
+                      glyph: "users" as const,
+                      palette: "amber" as const,
+                      author: "Plaud",
+                    },
                   ].map((t) => (
-                    <button
+                    <TemplatePickerCard
                       key={t.id}
-                      onClick={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
-                      className={cn(
-                        "p-4 rounded-xl border bg-white text-left",
-                        selectedTemplate?.id === t.id ? "border-zinc-500 ring-1 ring-zinc-200/60" : "border-stone-200"
-                      )}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center">
-                          {t.icon === "sky-doc" ? (
-                            <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <rect x="3" y="3" width="18" height="18" rx="2" />
-                              <line x1="9" y1="9" x2="15" y2="9" />
-                              <line x1="9" y1="13" x2="15" y2="13" />
-                              <line x1="9" y1="17" x2="13" y2="17" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5 text-stone-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                              <circle cx="9" cy="7" r="4" />
-                              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                            </svg>
-                          )}
-                        </div>
-                        <svg className="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M7 17L17 7M17 7H7M17 7V17" />
-                        </svg>
-                      </div>
-                      <div className="font-semibold text-zinc-900 text-sm mb-1">{t.name}</div>
-                      <div className="text-xs text-zinc-500 leading-relaxed mb-4">{t.desc}</div>
-                      <div className="text-xs text-zinc-400">{t.author}</div>
-                    </button>
+                      name={t.name}
+                      desc={t.desc}
+                      glyph={t.glyph}
+                      palette={t.palette}
+                      author={t.author}
+                      selected={selectedTemplate?.id === t.id}
+                      onSelect={() => setSelectedTemplate({ id: t.id, name: t.name, desc: t.desc })}
+                    />
                   ))}
                 </div>
               </div>

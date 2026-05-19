@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import {
   AtSign,
   AudioLines,
@@ -15,13 +16,29 @@ import {
 
 export type MindChatMode = "dialog" | "agent"
 
-const DEFAULT_MODELS = ["DS Fast", "Mind Pro", "Balanced"] as const
+export type MindChatModelOption = {
+  label: string
+  description: string
+}
+
+export const MIND_CHAT_MODEL_OPTIONS: MindChatModelOption[] = [
+  { label: "Light", description: "Faster responses, lower cost" },
+  { label: "Max", description: "Strongest quality and reasoning" },
+]
+
+const DEFAULT_MODELS = MIND_CHAT_MODEL_OPTIONS
 
 const pillBtn =
   "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-zinc-200/85 bg-white px-2 text-[11px] font-medium text-zinc-800 shadow-none transition-colors hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
 
 const homePillBtn =
   "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-zinc-200/85 bg-white/95 px-2 text-[11px] font-medium text-zinc-800 shadow-none transition-colors hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800/90 dark:text-zinc-100 dark:hover:bg-zinc-700"
+
+const menuPopover =
+  "absolute bottom-full left-0 z-[100] mb-1.5 origin-bottom-left overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-md dark:border-zinc-700 dark:bg-zinc-900 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-1 duration-200"
+
+const menuItem =
+  "flex w-full items-start gap-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80"
 
 const roundToolBtn =
   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
@@ -39,7 +56,7 @@ export type MindChatComposerProps = {
   onChatModeChange?: (mode: MindChatMode) => void
   modelLabel?: string
   onModelLabelChange?: (label: string) => void
-  modelOptions?: readonly string[]
+  modelOptions?: readonly MindChatModelOption[]
   voiceOn?: boolean
   onVoiceToggle?: () => void
   onAtClick?: () => void
@@ -70,7 +87,7 @@ export function MindChatComposer({
   shellRef: shellRefProp,
   chatMode = "dialog",
   onChatModeChange,
-  modelLabel = "DS Fast",
+  modelLabel = "Light",
   onModelLabelChange,
   modelOptions = DEFAULT_MODELS,
   voiceOn = false,
@@ -155,7 +172,7 @@ export function MindChatComposer({
                   <span className="relative inline-flex">
                     {modeMenuOpen ? (
                       <div
-                        className="absolute bottom-full left-0 z-[100] mb-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                        className={cn(menuPopover, "w-[min(16.5rem,calc(100vw-2rem))] py-0.5")}
                         role="listbox"
                       >
                         <button
@@ -166,23 +183,22 @@ export function MindChatComposer({
                             onChatModeChange?.("dialog")
                             setModeMenuOpen(false)
                           }}
-                          className={cn(
-                            "flex w-full items-start gap-3 border-b border-zinc-100 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/80",
-                            chatMode === "dialog" && "bg-mind/70 dark:bg-mind/35"
-                          )}
+                          className={cn(menuItem, "border-b border-zinc-100 px-3 py-2.5 dark:border-zinc-800")}
                         >
-                          <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-mind" strokeWidth={2} aria-hidden />
+                          <MessageCircle className="mt-px h-4 w-4 shrink-0 text-mind" strokeWidth={2} aria-hidden />
                           <span className="min-w-0 flex-1">
-                            <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
+                            <span className="block text-[13px] font-semibold leading-tight text-zinc-900 dark:text-zinc-50">
                               Dialog mode
-                              {chatMode === "dialog" ? (
-                                <Check className="h-4 w-4 text-mind" strokeWidth={2.5} />
-                              ) : null}
                             </span>
-                            <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
-                              Multi-turn conversation
+                            <span className="mt-0.5 block text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                              Multi-turn Q&A and reasoning
                             </span>
                           </span>
+                          {chatMode === "dialog" ? (
+                            <Check className="mt-px h-3.5 w-3.5 shrink-0 text-mind" strokeWidth={2.5} aria-hidden />
+                          ) : (
+                            <span className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                          )}
                         </button>
                         <button
                           type="button"
@@ -192,29 +208,28 @@ export function MindChatComposer({
                             onChatModeChange?.("agent")
                             setModeMenuOpen(false)
                           }}
-                          className={cn(
-                            "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/80",
-                            chatMode === "agent" && "bg-mind/70 dark:bg-mind/35"
-                          )}
+                          className={cn(menuItem, "px-3 py-2.5")}
                         >
-                          <Bot className="mt-0.5 h-5 w-5 shrink-0 text-mind" strokeWidth={2} aria-hidden />
+                          <Bot className="mt-px h-4 w-4 shrink-0 text-mind" strokeWidth={2} aria-hidden />
                           <span className="min-w-0 flex-1">
-                            <span className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">
+                            <span className="block text-[13px] font-semibold leading-tight text-zinc-900 dark:text-zinc-50">
                               Task mode
-                              {chatMode === "agent" ? (
-                                <Check className="h-4 w-4 text-mind" strokeWidth={2.5} />
-                              ) : null}
                             </span>
-                            <span className="mt-0.5 block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">
-                              Step-by-step delivery (demo)
+                            <span className="mt-0.5 block text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                              Complex work with delivered outcomes
                             </span>
                           </span>
+                          {chatMode === "agent" ? (
+                            <Check className="mt-px h-3.5 w-3.5 shrink-0 text-mind" strokeWidth={2.5} aria-hidden />
+                          ) : (
+                            <span className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                          )}
                         </button>
                       </div>
                     ) : null}
                     <button
                       type="button"
-                      className={pill}
+                      className={cn(pill, mx.navEase, modeMenuOpen && "border-mind/25 bg-mind/5 dark:bg-mind/10")}
                       aria-expanded={modeMenuOpen}
                       aria-haspopup="listbox"
                       onClick={() => {
@@ -224,7 +239,14 @@ export function MindChatComposer({
                       }}
                     >
                       {chatMode === "dialog" ? "Dialog" : "Task"}
-                      <ChevronDown className="h-3.5 w-3.5 text-zinc-400" strokeWidth={2} aria-hidden />
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 text-zinc-400 transition-transform duration-200",
+                          modeMenuOpen && "rotate-180"
+                        )}
+                        strokeWidth={2}
+                        aria-hidden
+                      />
                     </button>
                   </span>
                 ) : null}
@@ -232,32 +254,40 @@ export function MindChatComposer({
                 {showModelSelector ? (
                   <span className="relative inline-flex">
                     {modelMenuOpen ? (
-                      
-                        <div className="absolute bottom-full left-0 z-[100] mb-2 min-w-[10.5rem] overflow-hidden rounded-xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                          {modelOptions.map((m) => (
-                            <button
-                              key={m}
-                              type="button"
-                              onClick={() => {
-                                onModelLabelChange?.(m)
-                                setModelMenuOpen(false)
-                              }}
-                              className="flex w-full items-center justify-between px-3 py-2 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                            >
-                              {m}
-                              {modelLabel === m ? (
-                                <Check className="h-4 w-4 text-mind" strokeWidth={2.5} />
-                              ) : (
-                                <span className="w-4" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      
+                      <div className={cn(menuPopover, "w-[min(13.5rem,calc(100vw-2rem))] py-0.5")}>
+                        {modelOptions.map((m) => (
+                          <button
+                            key={m.label}
+                            type="button"
+                            onClick={() => {
+                              onModelLabelChange?.(m.label)
+                              setModelMenuOpen(false)
+                            }}
+                            className={cn(
+                              menuItem,
+                              "items-center justify-between gap-2 border-b border-zinc-100 px-2.5 py-2 last:border-b-0 dark:border-zinc-800"
+                            )}
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-[12px] font-medium leading-tight text-zinc-900 dark:text-zinc-50">
+                                {m.label}
+                              </span>
+                              <span className="mt-px block truncate text-[10px] leading-snug text-zinc-500 dark:text-zinc-400">
+                                {m.description}
+                              </span>
+                            </span>
+                            {modelLabel === m.label ? (
+                              <Check className="h-3.5 w-3.5 shrink-0 text-mind" strokeWidth={2.5} aria-hidden />
+                            ) : (
+                              <span className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     ) : null}
                     <button
                       type="button"
-                      className={pill}
+                      className={cn(pill, mx.navEase, modelMenuOpen && "border-mind/25 bg-mind/5 dark:bg-mind/10")}
                       aria-expanded={modelMenuOpen}
                       onClick={() => {
                         setModelMenuOpen((v) => !v)
@@ -266,8 +296,15 @@ export function MindChatComposer({
                       }}
                     >
                       <Globe className="h-3.5 w-3.5 shrink-0 text-zinc-500" strokeWidth={2} aria-hidden />
-                      <span className="max-w-[6.5rem] truncate">{modelLabel}</span>
-                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
+                      <span className="max-w-[5.5rem] truncate">{modelLabel}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform duration-200",
+                          modelMenuOpen && "rotate-180"
+                        )}
+                        strokeWidth={2}
+                        aria-hidden
+                      />
                     </button>
                   </span>
                 ) : null}
@@ -277,7 +314,7 @@ export function MindChatComposer({
                 {showAtButton ? (
                   <span className="relative inline-flex">
                     {atMenuOpen && atMenu ? (
-                      <div className="absolute bottom-full right-0 z-[100] mb-2">{atMenu}</div>
+                      <div className="absolute bottom-full right-0 z-[100] mb-1.5">{atMenu}</div>
                     ) : null}
                     <button
                       type="button"
@@ -323,10 +360,23 @@ export function MindChatComposer({
                     }}
                     className={cn(
                       roundToolBtn,
-                      voiceOn && "bg-mind/5 text-mind dark:bg-zinc-800 dark:text-mind/18"
+                      voiceOn && "bg-mind/10 text-mind dark:bg-mind/15 dark:text-mind"
                     )}
                   >
-                    <AudioLines className="h-4 w-4" strokeWidth={2} aria-hidden />
+                    <AudioLines
+                      className={cn(
+                        "h-4 w-4 transition-[fill,color] duration-200",
+                        voiceOn
+                          ? "text-mind"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      )}
+                      fill={voiceOn ? "currentColor" : "none"}
+                      stroke="currentColor"
+                      strokeWidth={voiceOn ? 0 : 2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    />
                   </button>
                 ) : null}
               </div>

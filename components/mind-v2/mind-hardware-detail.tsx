@@ -97,7 +97,7 @@ export function MindHardwareDetail({
             action
             onClick={() => toast.message("Battery", { description: "Power mode and charging (demo)." })}
           />
-          <Row label="Serial no." value={<span className="font-mono text-[13px]">MR-8810A30270024592</span>} />
+          <Row label="Serial no." value={<span className="text-[13px] tabular-nums">MR-8810A30270024592</span>} />
           <Row
             label="Firmware"
             value="v1.4"

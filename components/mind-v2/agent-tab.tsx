@@ -11,10 +11,12 @@ import {
   type FactoryModalKind,
 } from "@/components/mind-v2/content-factory-modals"
 import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
+import { MindKbAtMenu } from "@/components/mind-v2/mind-kb-at-menu"
 import {
   MindChatFactoryRail,
   resolveFactoryRailSelection,
 } from "@/components/mind-v2/mind-chat-factory-rail"
+import { MinderContentFactoryGrid } from "@/components/mind-v2/minder-content-factory-grid"
 import { MindChatHeaderActions } from "@/components/mind-v2/mind-chat-header-actions"
 import { MindChatMessageActions } from "@/components/mind-v2/mind-chat-message-actions"
 import {
@@ -38,25 +40,11 @@ import {
   LayoutDashboard,
   MessageCircle,
   Library,
-  Check,
   Bot,
   Globe,
   AtSign,
   AudioLines,
-  Square,
 } from "lucide-react"
-
-const STUDIO_OUTPUTS: { id: FactoryModalKind; label: string; sub: string }[] = [
-  { id: "report", label: "Report", sub: "Structured doc" },
-  { id: "audio", label: "Audio", sub: "Narrated recap" },
-  { id: "flashcards", label: "Flashcards", sub: "Study deck" },
-  { id: "quiz", label: "Quiz", sub: "Quick check" },
-  { id: "slides", label: "Slides", sub: "Outline → deck" },
-  { id: "infographic", label: "Infographic", sub: "Visual summary" },
-]
-
-/** Two balanced rows for the agent home “content factory” rail (3 + 3). */
-const STUDIO_OUTPUT_ROWS = [STUDIO_OUTPUTS.slice(0, 3), STUDIO_OUTPUTS.slice(3)] as const
 
 export interface Agent {
   id: number
@@ -133,14 +121,14 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [showCreateSheet, setShowCreateSheet] = useState(false)
   const [showExplore, setShowExplore] = useState(false)
-  const [showKBSelect, setShowKBSelect] = useState(false)
+  const [agentHomeKbMenuOpen, setAgentHomeKbMenuOpen] = useState(false)
   const [libraryLinkMode, setLibraryLinkMode] = useState<StudioLibraryLinkMode>("auto")
   const [pickedKbIds, setPickedKbIds] = useState<number[]>([])
   const [agentHomeDraft, setAgentHomeDraft] = useState("")
   const [agentStudioSession, setAgentStudioSession] = useState<StudioFromAgentHandoff | null>(null)
   /** Home composer — ima-style: dialog vs agent, model, @ KB, voice, upload */
   const [agentHomeChatMode, setAgentHomeChatMode] = useState<"dialog" | "agent">("dialog")
-  const [agentHomeModelLabel, setAgentHomeModelLabel] = useState("DS Fast")
+  const [agentHomeModelLabel, setAgentHomeModelLabel] = useState("Light")
   const [agentHomeVoiceOn, setAgentHomeVoiceOn] = useState(false)
 
   const linkSummary = libraryLinkSummary(libraryLinkMode, pickedKbIds)
@@ -333,7 +321,41 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
                   })
                 }
                 atTitle={linkSummary}
-                onAtClick={() => setShowKBSelect(true)}
+                atMenu={
+                  <MindKbAtMenu
+                    scopeShortcuts={[
+                      {
+                        id: "auto",
+                        label: "Auto",
+                        selected: libraryLinkMode === "auto",
+                        onSelect: () => {
+                          setLibraryLinkMode("auto")
+                          setPickedKbIds([])
+                          setAgentHomeKbMenuOpen(false)
+                        },
+                      },
+                      {
+                        id: "all",
+                        label: "All libraries",
+                        selected: libraryLinkMode === "all",
+                        onSelect: () => {
+                          setLibraryLinkMode("all")
+                          setPickedKbIds([])
+                          setAgentHomeKbMenuOpen(false)
+                        },
+                      },
+                    ]}
+                    items={MOCK_KNOWLEDGE_BASES.slice(0, 6).map((kb) => ({ id: kb.id, name: kb.name }))}
+                    isItemSelected={(kb) => libraryLinkMode === "pick" && pickedKbIds.includes(kb.id)}
+                    onSelect={(kb) => {
+                      setLibraryLinkMode("pick")
+                      setPickedKbIds([kb.id])
+                      setAgentHomeKbMenuOpen(false)
+                    }}
+                  />
+                }
+                atMenuOpen={agentHomeKbMenuOpen}
+                onAtMenuOpenChange={setAgentHomeKbMenuOpen}
                 onUploadClick={() =>
                   runWithAuth(() =>
                     toast.message("Upload file", { description: "Demo — pick a file from your device." })
@@ -341,39 +363,7 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
                 }
               />
 
-              <div className="mt-4 w-full">
-                <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
-                    Content factory
-                  </p>
-                  <p
-                    className="max-w-[55%] truncate text-[10px] font-medium text-zinc-400 dark:text-zinc-500"
-                    title={linkSummary}
-                  >
-                    {linkSummary}
-                  </p>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {STUDIO_OUTPUT_ROWS.flat().map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => openStudioWithKind(item.id)}
-                      className={cn(
-                        "flex min-h-[2.75rem] flex-col justify-center rounded-lg border border-zinc-200/80 bg-white px-2 py-1.5 text-left",
-                        "transition-colors hover:bg-zinc-50 active:scale-[0.99] dark:border-zinc-700/80 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/50"
-                      )}
-                    >
-                      <span className="block text-[11px] font-medium leading-tight tracking-tight text-zinc-800 dark:text-zinc-100">
-                        {item.label}
-                      </span>
-                      <span className="mt-0.5 block line-clamp-2 text-[9px] leading-snug text-zinc-500 dark:text-zinc-400">
-                        {item.sub}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <MinderContentFactoryGrid librarySummary={linkSummary} onSelect={openStudioWithKind} />
             </div>
           </div>
         </div>
@@ -403,122 +393,6 @@ export function AgentTab({ onAgentChat, requireAuthThen }: AgentTabProps) {
             setShowCreateSheet(true)
           }}
         />
-      )}
-
-      {/* Library scope — one scrollable sheet */}
-      {showKBSelect && (
-        <div className="absolute inset-0 z-50 flex min-h-0 flex-col">
-          <button
-            type="button"
-            className="min-h-0 flex-1 bg-black/40"
-            aria-label="Close"
-            onClick={() => setShowKBSelect(false)}
-          />
-          <div className="flex max-h-[90vh] w-full shrink-0 flex-col overflow-hidden rounded-t-3xl bg-white shadow-[0_-12px_48px_-12px_rgba(0,0,0,0.2)] dark:bg-zinc-900">
-            <div className="flex shrink-0 justify-center pb-2 pt-3">
-              <div className="h-1 w-10 rounded-full bg-stone-200 dark:bg-zinc-600" />
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pb-8 [scrollbar-gutter:stable]">
-              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Libraries</h3>
-              <p className="mt-1 text-[13px] leading-snug text-zinc-500 dark:text-zinc-400">
-                Scope for Studio and replies.
-              </p>
-
-              <div className="mt-5 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLibraryLinkMode("all")
-                    setPickedKbIds([])
-                  }}
-                  className={cn(
-                    "w-full rounded-xl border-2 px-3 py-2.5 text-left transition-colors",
-                    libraryLinkMode === "all"
-                      ? "border-zinc-400 bg-stone-100 dark:border-zinc-500 dark:bg-stone-50"
-                      : "border-transparent bg-stone-50 dark:bg-zinc-800/40"
-                  )}
-                >
-                  <div className="font-medium text-zinc-900 dark:text-zinc-100">All libraries</div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Use everything linked</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLibraryLinkMode("auto")
-                    setPickedKbIds([])
-                  }}
-                  className={cn(
-                    "w-full rounded-xl border-2 px-3 py-2.5 text-left transition-colors",
-                    libraryLinkMode === "auto"
-                      ? "border-zinc-400 bg-stone-100 dark:border-zinc-500 dark:bg-stone-50"
-                      : "border-transparent bg-stone-50 dark:bg-zinc-800/40"
-                  )}
-                >
-                  <div className="font-medium text-zinc-900 dark:text-zinc-100">Auto</div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Mind picks per run</div>
-                </button>
-              </div>
-
-              <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                Or choose
-              </p>
-              <div className="mt-2 space-y-2">
-                {MOCK_KNOWLEDGE_BASES.map((kb) => {
-                  const selected = pickedKbIds.includes(kb.id)
-                  return (
-                    <button
-                      key={kb.id}
-                      type="button"
-                      onClick={() => {
-                        setLibraryLinkMode("pick")
-                        setPickedKbIds((prev) =>
-                          prev.includes(kb.id) ? prev.filter((id) => id !== kb.id) : [...prev, kb.id]
-                        )
-                      }}
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-xl p-3 transition-colors",
-                        selected
-                          ? "border-2 border-zinc-400 bg-stone-100 dark:border-zinc-500 dark:bg-zinc-800"
-                          : "border-2 border-transparent bg-stone-100 dark:bg-zinc-800/40"
-                      )}
-                    >
-                      <img
-                        src={kb.coverImage}
-                        alt=""
-                        width={44}
-                        height={44}
-                        className="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-black/[0.06] dark:ring-white/10"
-                      />
-                      <div className="min-w-0 flex-1 text-left">
-                        <div className="font-medium text-zinc-900 dark:text-zinc-100">{kb.name}</div>
-                        <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                          {kb.count} items · {kb.description}
-                        </div>
-                      </div>
-                      {selected && (
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mind text-white dark:bg-zinc-400">
-                          <span className="text-sm">✓</span>
-                        </div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowKBSelect(false)}
-                className={cn(
-                  "mt-8 w-full rounded-xl py-3 text-[15px] font-semibold text-white",
-                  mx.brandCta
-                )}
-              >
-                Done
-                {libraryLinkMode === "pick" && pickedKbIds.length > 0 ? ` (${pickedKbIds.length})` : ""}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {agentStudioSession && (
@@ -780,29 +654,30 @@ function agentAvatarIsRemoteUrl(avatar: string) {
 
 type ChatMsg = { id: string; role: "user" | "ai"; content: string }
 
-const THINKING_PHASE_LABELS = [
-  "Understanding your request",
-  "Processing",
-  "Composing reply",
-] as const
-
-const THINKING_PHASE_MS = 750
-const STREAM_TICK_MS = 18
-const STREAM_CHARS_PER_TICK = 3
-
-type ActiveGeneration = {
-  msgId: string
-  phase: "thinking" | "streaming"
-  thinkingPhase: number
+function lastUserQueryBefore(aiMsgId: string, msgs: ChatMsg[]): string {
+  const idx = msgs.findIndex((m) => m.id === aiMsgId)
+  if (idx <= 0) return ""
+  for (let i = idx - 1; i >= 0; i--) {
+    if (msgs[i].role === "user") return msgs[i].content
+  }
+  return ""
 }
 
-function demoAiReply(agent: Agent, modeAtSend: AgentComposerMode, kbGround: string) {
-  const agentNote =
-    modeAtSend === "agent"
-      ? "\n\n(Task mode: step-by-step delivery with a more autonomous path — demo.)"
-      : ""
-  const kbHint = kbGround ? `\n\n(Source scope: ${kbGround} — demo.)` : ""
-  return `Hi, I'm ${agent.name}. Here are focused takeaways from your question:\n\n1. Align on goals and constraints\n2. Ground recommendations in your saved materials\n3. Use the content factory above the input for reports or mind maps${agentNote}${kbHint}`
+function demoAiReply(
+  userQuery: string,
+  agent: Agent,
+  modeAtSend: AgentComposerMode,
+  kbGround: string
+) {
+  const q = userQuery.trim()
+  const topic = q.length > 120 ? `${q.slice(0, 120)}…` : q || "your question"
+  const scopeLine = kbGround ? `\n\nSources: ${kbGround}` : ""
+
+  if (modeAtSend === "agent") {
+    return `Re: ${topic}\n\nI'll handle this as a task: scan your notes and libraries, then post a concise outcome here.${scopeLine}\n\n(Task mode — demo.)`
+  }
+
+  return `Re: ${topic}\n\nHere's a direct answer from your saved material: start with the latest note on this topic, then any linked library summary. That usually gives you a clear read without extra setup.${scopeLine}\n\nNeed a longer write-up? Use Studio above the input for a report or flashcards.`
 }
 
 // Agent chat screen
@@ -849,30 +724,16 @@ export function AgentChat({
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [chatMode, setChatMode] = useState<AgentComposerMode>(initialChatMode ?? "dialog")
   const [kbMenuOpen, setKbMenuOpen] = useState(false)
-  const [modelLabel, setModelLabel] = useState(initialModelLabel ?? "DS Fast")
+  const [modelLabel, setModelLabel] = useState(initialModelLabel ?? "Light")
   const [voiceOn, setVoiceOn] = useState(false)
   /** Optional KB grounding chosen via @ (demo; parent `knowledgeContext` still drives library entry). */
   const [pickedKbName, setPickedKbName] = useState<string | null>(null)
   const [qaHistoryOpen, setQaHistoryOpen] = useState(false)
   const [qaHistoryItems, setQaHistoryItems] = useState<MindQaHistoryItem[]>(() => seedDemoQaHistory())
-  const [isThinking, setIsThinking] = useState(false)
-  const [activeGeneration, setActiveGeneration] = useState<ActiveGeneration | null>(null)
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
   const [messageFeedback, setMessageFeedback] = useState<Record<string, "up" | "down">>({})
   const scrollRef = useRef<HTMLDivElement>(null)
-  const genTimersRef = useRef<{
-    phaseInterval?: ReturnType<typeof setInterval>
-    streamInterval?: ReturnType<typeof setInterval>
-    thinkingDone?: ReturnType<typeof setTimeout>
-  }>({})
   const locale = "en-US" as const
-
-  const thinkingStatusLabel =
-    activeGeneration != null
-      ? THINKING_PHASE_LABELS[
-          Math.min(activeGeneration.thinkingPhase, THINKING_PHASE_LABELS.length - 1)
-        ]
-      : THINKING_PHASE_LABELS[0]
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -883,63 +744,21 @@ export function AgentChat({
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, isThinking, activeGeneration, scrollToBottom])
-
-  const clearGenerationTimers = useCallback(() => {
-    const t = genTimersRef.current
-    if (t.phaseInterval) clearInterval(t.phaseInterval)
-    if (t.streamInterval) clearInterval(t.streamInterval)
-    if (t.thinkingDone) clearTimeout(t.thinkingDone)
-    genTimersRef.current = {}
-  }, [])
-
-  useEffect(() => () => clearGenerationTimers(), [clearGenerationTimers])
+  }, [messages, scrollToBottom])
 
   const startGeneration = useCallback(
-    (modeAtSend: AgentComposerMode, kbGround: string, replaceMsgId?: string) => {
-      clearGenerationTimers()
-      const fullText = demoAiReply(agent, modeAtSend, kbGround)
+    (modeAtSend: AgentComposerMode, kbGround: string, userQuery: string, replaceMsgId?: string) => {
+      const fullText = demoAiReply(userQuery, agent, modeAtSend, kbGround)
       const msgId = replaceMsgId ?? `a-${Date.now()}`
 
       setMessages((prev) => {
         if (replaceMsgId) {
-          return prev.map((m) => (m.id === replaceMsgId ? { ...m, content: "" } : m))
+          return prev.map((m) => (m.id === replaceMsgId ? { ...m, content: fullText } : m))
         }
-        return [...prev, { id: msgId, role: "ai", content: "" }]
+        return [...prev, { id: msgId, role: "ai", content: fullText }]
       })
-
-      setIsThinking(true)
-      setActiveGeneration({ msgId, phase: "thinking", thinkingPhase: 0 })
-
-      let phase = 0
-      genTimersRef.current.phaseInterval = setInterval(() => {
-        phase = Math.min(phase + 1, THINKING_PHASE_LABELS.length - 1)
-        setActiveGeneration((g) => (g?.msgId === msgId ? { ...g, thinkingPhase: phase } : g))
-      }, THINKING_PHASE_MS)
-
-      genTimersRef.current.thinkingDone = setTimeout(() => {
-        if (genTimersRef.current.phaseInterval) {
-          clearInterval(genTimersRef.current.phaseInterval)
-          genTimersRef.current.phaseInterval = undefined
-        }
-
-        setActiveGeneration((g) => (g?.msgId === msgId ? { ...g, phase: "streaming" } : g))
-
-        let index = 0
-        genTimersRef.current.streamInterval = setInterval(() => {
-          index = Math.min(index + STREAM_CHARS_PER_TICK, fullText.length)
-          const partial = fullText.slice(0, index)
-          setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, content: partial } : m)))
-
-          if (index >= fullText.length) {
-            clearGenerationTimers()
-            setIsThinking(false)
-            setActiveGeneration(null)
-          }
-        }, STREAM_TICK_MS)
-      }, THINKING_PHASE_MS * THINKING_PHASE_LABELS.length)
     },
-    [agent, clearGenerationTimers]
+    [agent]
   )
 
   const seededInitialPromptRef = useRef(false)
@@ -953,11 +772,11 @@ export function AgentChat({
     const kbGround = (pickedKbName || (isLibraryChat ? kbLabel : "")).trim()
     setMessages([userMsg])
     setQaHistoryItems((prev) => [{ id: `qa-${Date.now()}`, at: Date.now(), query: q }, ...prev])
-    startGeneration(modeAtSend, kbGround)
+    startGeneration(modeAtSend, kbGround, q)
   }, [initialPrompt, initialChatMode, isLibraryChat, kbLabel, pickedKbName, startGeneration])
 
   const handleSend = () => {
-    if (!input.trim() || isThinking) return
+    if (!input.trim()) return
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content: input.trim() }
     const modeAtSend = chatMode
     const kbGround = (pickedKbName || (isLibraryChat ? kbLabel : "")).trim()
@@ -965,28 +784,18 @@ export function AgentChat({
     setQaHistoryItems((prev) => [{ id: `qa-${Date.now()}`, at: Date.now(), query: userMsg.content }, ...prev])
     setInput("")
     setKbMenuOpen(false)
-    startGeneration(modeAtSend, kbGround)
+    startGeneration(modeAtSend, kbGround, userMsg.content)
   }
 
   const trySend = () => runWithAuth(handleSend)
 
-  const stopThinking = () => {
-    clearGenerationTimers()
-    setIsThinking(false)
-    setActiveGeneration(null)
-    toast.message("Stopped", { description: "Demo: generation cancelled." })
-  }
-
   function regenerateMessage(msgId: string) {
-    if (isThinking) return
     const kbGround = (pickedKbName || (isLibraryChat ? kbLabel : "")).trim()
-    runWithAuth(() => startGeneration(chatMode, kbGround, msgId))
+    const userQuery = lastUserQueryBefore(msgId, messages)
+    runWithAuth(() => startGeneration(chatMode, kbGround, userQuery, msgId))
   }
 
   function startNewChat() {
-    clearGenerationTimers()
-    setIsThinking(false)
-    setActiveGeneration(null)
     setMessages([])
     setInput("")
     setKbMenuOpen(false)
@@ -1035,28 +844,18 @@ export function AgentChat({
   const displayKbName = pickedKbName ?? (isLibraryChat ? kbLabel : null)
 
   const kbAtMenu = (
-    <div className="max-h-52 w-[min(17.5rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-zinc-200/90 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-      <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-        Knowledge base
-      </p>
-      {MOCK_KNOWLEDGE_BASES.slice(0, 8).map((kb) => (
-        <button
-          key={kb.id}
-          type="button"
-          onClick={() => {
-            setPickedKbName(kb.name)
-            setKbMenuOpen(false)
-            toast.message("Knowledge base", { description: `Grounding set to “${kb.name}” (demo).` })
-          }}
-          className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[13px] text-zinc-800 hover:bg-zinc-50 dark:text-zinc-100 dark:hover:bg-zinc-800"
-        >
-          <span className="truncate">{kb.name}</span>
-          {(pickedKbName === kb.name || (isLibraryChat && kbLabel === kb.name && !pickedKbName)) ? (
-            <Check className="h-4 w-4 shrink-0 text-mind" strokeWidth={2.5} />
-          ) : null}
-        </button>
-      ))}
-    </div>
+    <MindKbAtMenu
+      items={MOCK_KNOWLEDGE_BASES.slice(0, 6).map((kb) => ({ id: kb.id, name: kb.name }))}
+      selectedName={displayKbName}
+      isItemSelected={(kb) =>
+        pickedKbName === kb.name || (isLibraryChat && kbLabel === kb.name && !pickedKbName)
+      }
+      onSelect={(kb) => {
+        setPickedKbName(kb.name)
+        setKbMenuOpen(false)
+        toast.message("Knowledge base", { description: `Grounding set to “${kb.name}” (demo).` })
+      }}
+    />
   )
 
   const libraryToolbarLead = isLibraryChat ? (
@@ -1112,7 +911,7 @@ export function AgentChat({
       atTitle={displayKbName ?? undefined}
       atMenu={kbAtMenu}
       atMenuOpen={kbMenuOpen}
-      onAtMenuOpenChange={(open) => runWithAuth(() => setKbMenuOpen(open))}
+      onAtMenuOpenChange={setKbMenuOpen}
       onUploadClick={() =>
         runWithAuth(() =>
           toast.message("Upload file", { description: "Demo — pick a file from your device." })
@@ -1125,12 +924,7 @@ export function AgentChat({
 
   const handleFactorySelect = (id: string) => {
     runWithAuth(() => {
-      const resolved = resolveFactoryRailSelection(id as Parameters<typeof resolveFactoryRailSelection>[0])
-      if (resolved.type === "mindmap") {
-        toast.message("Mind map queued", { description: "Demo: added a mind map job from this chat." })
-        return
-      }
-      setFactoryModal(resolved.kind)
+      setFactoryModal(resolveFactoryRailSelection(id as Parameters<typeof resolveFactoryRailSelection>[0]))
     })
   }
 
@@ -1150,28 +944,7 @@ export function AgentChat({
 
   const chatFooter = (
     <div className="w-full max-w-md">
-      {isThinking ? (
-        <div className="mx-1 mb-2 flex items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white px-3 py-2.5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-          <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-medium text-zinc-900 dark:text-zinc-100">
-              {activeGeneration?.phase === "streaming" ? "Generating reply" : thinkingStatusLabel}
-            </p>
-            <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
-              {activeGeneration?.phase === "streaming" ? "Streaming output…" : "Thinking…"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => runWithAuth(stopThinking)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-zinc-50 text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-            aria-label="Stop generation"
-          >
-            <Square className="h-3.5 w-3.5" strokeWidth={2.5} fill="currentColor" />
-          </button>
-        </div>
-      ) : (
-        <MindChatFactoryRail onSelect={handleFactorySelect} className="px-1" />
-      )}
+      <MindChatFactoryRail onSelect={handleFactorySelect} className="px-1" />
       {composer}
       <p className="pt-1.5 text-center text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
         Content generated by AI
@@ -1243,14 +1016,7 @@ export function AgentChat({
       ) : (
         <>
           <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-            {messages.map((msg) => {
-              const isMsgGenerating = activeGeneration?.msgId === msg.id
-              const showThinkingInBubble =
-                msg.role === "ai" && isMsgGenerating && activeGeneration?.phase === "thinking" && !msg.content
-              const showStreamCursor =
-                msg.role === "ai" && isMsgGenerating && activeGeneration?.phase === "streaming"
-
-              return (
+            {messages.map((msg) => (
                 <div key={msg.id} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
                   <div className={cn("max-w-[88%]", msg.role === "user" ? "" : "min-w-0")}>
                     <div
@@ -1261,35 +1027,9 @@ export function AgentChat({
                           : "rounded-bl-md border border-stone-200/90 bg-white text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                       )}
                     >
-                      {showThinkingInBubble ? (
-                        <p
-                          className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400"
-                          role="status"
-                          aria-live="polite"
-                        >
-                          {
-                            THINKING_PHASE_LABELS[
-                              Math.min(
-                                activeGeneration?.thinkingPhase ?? 0,
-                                THINKING_PHASE_LABELS.length - 1
-                              )
-                            ]
-                          }
-                          …
-                        </p>
-                      ) : (
-                        <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {msg.content}
-                          {showStreamCursor ? (
-                            <span
-                              className="ml-0.5 inline-block h-[1em] w-0.5 translate-y-px animate-pulse bg-zinc-400 align-[-2px]"
-                              aria-hidden
-                            />
-                          ) : null}
-                        </p>
-                      )}
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
                     </div>
-                    {msg.role === "ai" && !isMsgGenerating && msg.content ? (
+                    {msg.role === "ai" && msg.content ? (
                       <MindChatMessageActions
                         locale={locale}
                         variant={isLibraryChat ? "library" : "default"}
@@ -1335,8 +1075,7 @@ export function AgentChat({
                     ) : null}
                   </div>
                 </div>
-              )
-            })}
+            ))}
           </div>
           <div className="shrink-0 border-t border-stone-200/90 bg-white px-2 pt-1.5 dark:border-zinc-800 dark:bg-zinc-900">
             {chatFooter}

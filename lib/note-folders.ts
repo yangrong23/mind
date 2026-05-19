@@ -11,7 +11,7 @@ export interface NoteFolder {
   iconKey: FolderIconKey
 }
 
-/** Preset swatches aligned with product reference (灰 / 浅蓝 / 薄荷 / 桃橙 / 青 / 珊瑚 / 紫) */
+/** Preset swatches aligned with product reference (gray / light blue / mint / peach / teal / coral / purple) */
 export const FOLDER_COLOR_SWATCHES = [
   { id: "slate", hex: "#475569" },
   { id: "mind", hex: "#0284c7" },

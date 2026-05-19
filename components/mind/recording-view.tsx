@@ -86,7 +86,7 @@ export function RecordingView({ onStop, onClose }: RecordingViewProps) {
       
       {/* Timer */}
       <div className="text-center py-6">
-        <div className="text-5xl font-light text-white tracking-wider font-mono">
+        <div className="text-5xl font-light tabular-nums tracking-wide text-white">
           {formatTime(time)}
         </div>
         <p className="text-white/50 text-sm mt-2">Meeting capture</p>

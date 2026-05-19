@@ -194,7 +194,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
           {isSignIn ? (
             <p className="text-center text-[12px] text-zinc-500 dark:text-zinc-400">
               Demo sign-in: username and password are both{" "}
-              <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">root</span>
+              <span className="font-semibold text-zinc-700 dark:text-zinc-300">root</span>
             </p>
           ) : null}
           <button

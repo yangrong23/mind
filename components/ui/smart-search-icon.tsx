@@ -9,8 +9,8 @@ export type SmartSearchIconProps = SVGProps<SVGSVGElement> & {
 }
 
 /**
- * “智能搜索”图标：放大镜圆环在右上留缺口 + 实心四角星（与产品参考图一致），
- * 区别于通用 Search / ScanSearch。
+ * Smart-search icon: magnifier ring with a gap at the top-right + solid four-point star (matches product reference),
+ * distinct from generic Search / ScanSearch.
  */
 export function SmartSearchIcon({
   className,

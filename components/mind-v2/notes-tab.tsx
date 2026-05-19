@@ -202,20 +202,46 @@ function RecorderGlyph({
   )
 }
 
-/** Mic well with the same soft bloom as the bottom nav active tab */
+/** Mic well — default matches bottom-nav bloom; `fab` uses centered circular fill for Notes record button */
 function NotesRecordGlowIcon({
   className,
   wellClassName = "h-10 w-10",
   iconClassName = "h-6 w-6",
+  variant = "default",
 }: {
   className?: string
   wellClassName?: string
   iconClassName?: string
+  /** `fab` fills the parent circle edge-to-edge (Notes record FAB). */
+  variant?: "default" | "fab"
 }) {
+  const isFab = variant === "fab"
   return (
-    <div className={cn("relative flex items-center justify-center rounded-2xl", wellClassName, className)}>
-      <span className={mx.navBloomOuter} aria-hidden />
-      <span className={mx.navBloomInner} aria-hidden />
+    <div
+      className={cn(
+        "relative flex items-center justify-center overflow-hidden",
+        isFab ? "size-full rounded-full" : "rounded-2xl",
+        wellClassName,
+        className
+      )}
+    >
+      {isFab ? (
+        <>
+          <span
+            className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-sky-200 via-sky-100 to-cyan-100 dark:from-sky-900 dark:via-sky-950 dark:to-cyan-950"
+            aria-hidden
+          />
+          <span
+            className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.55)_0%,rgba(186,230,253,0.28)_38%,rgba(125,211,252,0)_62%)] dark:bg-[radial-gradient(circle_at_50%_36%,rgba(56,189,248,0.4)_0%,rgba(2,132,199,0.15)_42%,rgba(2,132,199,0)_62%)]"
+            aria-hidden
+          />
+        </>
+      ) : (
+        <>
+          <span className={mx.navBloomOuter} aria-hidden />
+          <span className={mx.navBloomInner} aria-hidden />
+        </>
+      )}
       <Mic className={cn("relative z-[1]", iconClassName, mx.navIconGlow)} strokeWidth={2.1} aria-hidden />
     </div>
   )
@@ -623,12 +649,16 @@ export function NotesTab({
       <button
         type="button"
         onClick={() => setShowRecordOptions(true)}
-        className="absolute bottom-7 right-6 z-30 flex items-center justify-center"
         aria-label="Recording options"
+        className={cn(
+          "absolute bottom-7 right-6 z-30 flex size-[3.75rem] items-center justify-center overflow-hidden rounded-full p-0",
+          "bg-gradient-to-br from-sky-200 via-sky-100 to-cyan-100 dark:from-sky-900 dark:via-sky-950 dark:to-cyan-950",
+          "shadow-[0_8px_28px_-14px_rgba(15,23,42,0.14),0_4px_16px_-8px_rgba(56,189,248,0.2)] dark:shadow-[0_8px_32px_-12px_rgba(0,0,0,0.4),0_4px_20px_-10px_rgba(56,189,248,0.15)]",
+          mx.navEase,
+          "hover:scale-105 active:scale-95"
+        )}
       >
-        <div className={cn("flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full", mx.navGlassShell, mx.navEase, "hover:scale-105 active:scale-95")}>
-          <NotesRecordGlowIcon wellClassName="h-11 w-11" iconClassName="h-7 w-7" />
-        </div>
+        <NotesRecordGlowIcon variant="fab" className="size-full" iconClassName="h-7 w-7" />
       </button>
 
       {showRecordOptions && (

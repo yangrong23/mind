@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
-import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
+import { MindChatComposer, MIND_CHAT_MODEL_OPTIONS } from "@/components/mind-v2/mind-chat-composer"
 import {
   ChevronLeft,
   Undo2,
@@ -76,11 +76,9 @@ export function TextNoteEditor({ onBack, onSave, note, variant = "full" }: TextN
   const [hubAiHint, setHubAiHint] = useState(false)
   const [showShareSheet, setShowShareSheet] = useState(false)
   const [aiMessage, setAiMessage] = useState("")
-  const [selectedAIModel, setSelectedAIModel] = useState("DS Fast")
+  const [selectedAIModel, setSelectedAIModel] = useState("Light")
   const [editorChatMode, setEditorChatMode] = useState<"dialog" | "agent">("dialog")
   const [editorVoiceOn, setEditorVoiceOn] = useState(false)
-
-  const aiModelOptions = ["DS Fast", "DS Pro", "GPT-4", "Claude"] as const
 
   useEffect(() => {
     const el = editorRef.current
@@ -433,7 +431,7 @@ export function TextNoteEditor({ onBack, onSave, note, variant = "full" }: TextN
           onChatModeChange={setEditorChatMode}
           modelLabel={selectedAIModel}
           onModelLabelChange={setSelectedAIModel}
-          modelOptions={aiModelOptions}
+          modelOptions={MIND_CHAT_MODEL_OPTIONS}
           voiceOn={editorVoiceOn}
           onVoiceToggle={() => setEditorVoiceOn((prev) => !prev)}
           onUploadClick={() => setShowShareSheet(true)}

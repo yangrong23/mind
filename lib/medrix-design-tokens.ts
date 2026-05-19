@@ -133,6 +133,8 @@ export const mx = {
   knowledgeAskPill:
     "border border-mind/20 bg-mind/8 text-mind shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] hover:border-mind/25 hover:bg-mind/12",
   knowledgeAskSparkle: "text-mind",
+  /** Tab row accent — same depth as Ask border */
+  knowledgeTabRule: "bg-mind/20 dark:bg-mind/25",
 
   studioJobShell: [
     "bg-mind/8 shadow-sm shadow-mind/5 dark:bg-mind/15 dark:shadow-black/20",
