@@ -112,7 +112,7 @@
 
 | # | 方法 | 路径 | 说明 |
 |---|------|------|------|
-| 2.7 | `PUT` | `/api/v1/agents/{agentId}/library-scope` | 保存资料范围 `libraryIds[]`（Minder @ 选择） |
+| 2.7 | `PUT` | `/api/v1/agents/{agentId}/library-scope` | 保存资料范围 `libraryIds[]`（Mindar @ 选择） |
 
 ### 错误码
 

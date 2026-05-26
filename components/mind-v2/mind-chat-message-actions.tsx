@@ -16,7 +16,7 @@ export type MessageFeedback = "up" | "down" | null
 
 export type MindChatMessageActionsProps = {
   onRegenerate: () => void
-  onSaveToLibrary: () => void
+  onSaveToLibrary?: () => void
   onShare: () => void
   onCopy: () => void
   onThumbsUp: () => void
@@ -51,14 +51,14 @@ export function MindChatMessageActions({
         className
       )}
     >
-      {variant === "library" ? (
+      {variant === "library" && onSaveToLibrary ? (
         <button
           type="button"
           onClick={onSaveToLibrary}
-          className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-mind/90 bg-mind/90 px-2.5 py-1.5 text-[12px] font-medium text-mind transition-colors hover:border-mind/28 hover:bg-mind/10 dark:border-mind/60 dark:bg-mind/40 dark:text-mind/10 dark:hover:bg-mind/55"
+          className="inline-flex w-fit items-center gap-1.5 rounded-full border border-stone-200/90 bg-white px-3 py-1.5 text-[12px] font-medium text-zinc-600 shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
         >
           <Library className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-          Add to library
+          Save to notes
         </button>
       ) : null}
 
@@ -66,7 +66,7 @@ export function MindChatMessageActions({
         {variant === "default" ? (
           <ActionChip icon={RefreshCw} label="Regenerate" onClick={onRegenerate} />
         ) : null}
-        {variant === "default" ? (
+        {variant === "default" && onSaveToLibrary ? (
           <ActionChip icon={Library} label="Add to library" onClick={onSaveToLibrary} />
         ) : null}
         <IconAction
@@ -93,7 +93,7 @@ export function MindChatMessageActions({
           type="button"
           aria-label="More"
           onClick={onMore ?? onCopy}
-          className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
         >
           <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
         </button>
@@ -120,11 +120,11 @@ function IconAction({
       title={label}
       onClick={onClick}
       className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200",
+        "flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200",
         active === true &&
           (label === "Helpful"
             ? "bg-mind/5 text-mind dark:bg-mind/50 dark:text-mind/28"
-            : "bg-stone-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200")
+            : "bg-stone-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-200")
       )}
     >
       <Icon className="h-4 w-4" strokeWidth={2} aria-hidden />
@@ -145,7 +145,7 @@ function ActionChip({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200/80 bg-zinc-50/80 px-2.5 py-1.5 text-[12px] font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-200 dark:hover:bg-zinc-800"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200/80 bg-zinc-50/80 px-2.5 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-200 dark:hover:bg-zinc-800"
     >
       <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
       {label}

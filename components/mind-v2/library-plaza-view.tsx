@@ -6,15 +6,18 @@ import { ChevronLeft, RefreshCw, User, Check } from "lucide-react"
 import { toast } from "sonner"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import type { KnowledgeBase } from "@/lib/mock-knowledge-bases"
+import { PlazaLibraryCover } from "@/components/mind-v2/plaza-library-cover"
 import {
   MOCK_PLAZA_LIBRARIES,
   PLAZA_CATEGORY_TABS,
   formatPlazaContent,
   formatPlazaSubscriber,
+  plazaRowAgentLabel,
   plazaRowToKnowledgeBase,
   type PlazaCategoryId,
   type PlazaLibraryRow,
 } from "@/lib/mock-plaza-libraries"
+import { PlazaLibraryAgentIntroSheet } from "@/components/mind-v2/plaza-library-agent-intro-sheet"
 
 function shufflePlazaRows(rows: PlazaLibraryRow[], seed: number): PlazaLibraryRow[] {
   const a = [...rows]
@@ -57,15 +60,16 @@ function PlazaCard({
       className="w-full py-3 text-left transition-colors hover:bg-black/[0.025] active:scale-[0.99] dark:hover:bg-white/[0.04]"
     >
       <div className="flex gap-3">
-        <img
-          src={row.coverImage}
-          alt=""
-          width={72}
-          height={72}
-          className="h-[72px] w-[72px] shrink-0 rounded-xl object-cover"
-        />
+        <div
+          className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl shadow-sm ring-1 ring-black/[0.05]"
+        >
+          <PlazaLibraryCover title={row.title} kbId={row.kbId} size="md" />
+        </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-[15px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">{row.title}</h3>
+          <p className="mt-0.5 text-[11px] font-medium text-teal-700 dark:text-teal-400">
+            With {plazaRowAgentLabel(row)}
+          </p>
           <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">{row.description}</p>
           <div className="mt-2 flex flex-wrap items-center gap-x-1 text-[11px] leading-tight text-zinc-400 dark:text-zinc-500">
             <span className="shrink-0">{leftMeta}</span>
@@ -84,12 +88,15 @@ export interface LibraryPlazaViewProps {
   onBack: () => void
   onPickLibrary?: (kb: KnowledgeBase) => void
   subtitle?: string
+  /** Web shell: hide mobile back row; parent handles navigation */
+  embedded?: boolean
 }
 
-export function LibraryPlazaView({ onBack, onPickLibrary, subtitle }: LibraryPlazaViewProps) {
+export function LibraryPlazaView({ onBack, onPickLibrary, subtitle, embedded = false }: LibraryPlazaViewProps) {
   const [query, setQuery] = useState("")
   const [activeCategory, setActiveCategory] = useState<PlazaCategoryId>("recommended")
   const [featuredShuffleKey, setFeaturedShuffleKey] = useState(0)
+  const [introRow, setIntroRow] = useState<PlazaLibraryRow | null>(null)
 
   const featuredPool = useMemo(() => MOCK_PLAZA_LIBRARIES.filter((r) => r.featured), [])
   const featuredDisplay = useMemo(
@@ -116,7 +123,11 @@ export function LibraryPlazaView({ onBack, onPickLibrary, subtitle }: LibraryPla
     return MOCK_PLAZA_LIBRARIES.filter((r) => r.plazaCategories.includes(activeCategory))
   }, [activeCategory, searchRows])
 
-  const pick = useCallback(
+  const pick = useCallback((row: PlazaLibraryRow) => {
+    setIntroRow(row)
+  }, [])
+
+  const confirmPick = useCallback(
     (row: PlazaLibraryRow) => {
       const kb = plazaRowToKnowledgeBase(row)
       if (onPickLibrary) onPickLibrary(kb)
@@ -128,26 +139,30 @@ export function LibraryPlazaView({ onBack, onPickLibrary, subtitle }: LibraryPla
   return (
     <div className="flex h-full min-h-0 flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950">
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <header className="shrink-0 bg-white dark:bg-zinc-950 px-4 pb-2 pt-3 dark:bg-zinc-950">
-          <div className="relative flex items-center justify-center py-1">
-            <button
-              type="button"
-              onClick={onBack}
-              className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full p-2 text-zinc-600 transition-colors hover:bg-black/[0.04] dark:text-zinc-300 dark:hover:bg-white/10"
-              aria-label="Back"
-            >
-              <ChevronLeft className="h-6 w-6" strokeWidth={1.75} />
-            </button>
-            <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Library plaza</h1>
-            <button
-              type="button"
-              className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full p-2 text-zinc-500 transition-colors hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:bg-white/10"
-              aria-label="Account"
-              onClick={() => toast.message("Account", { description: "Demo entry." })}
-            >
-              <User className="h-5 w-5" strokeWidth={1.75} />
-            </button>
-          </div>
+        <header className="shrink-0 bg-white px-4 pb-2 pt-3 dark:bg-zinc-950">
+          {embedded ? (
+            <h1 className="text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Library plaza</h1>
+          ) : (
+            <div className="relative flex items-center justify-center py-1">
+              <button
+                type="button"
+                onClick={onBack}
+                className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full p-2 text-zinc-600 transition-colors hover:bg-black/[0.04] dark:text-zinc-300 dark:hover:bg-white/10"
+                aria-label="Back"
+              >
+                <ChevronLeft className="h-6 w-6" strokeWidth={1.75} />
+              </button>
+              <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Library plaza</h1>
+              <button
+                type="button"
+                className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full p-2 text-zinc-500 transition-colors hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:bg-white/10"
+                aria-label="Account"
+                onClick={() => toast.message("Account", { description: "Demo entry." })}
+              >
+                <User className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+            </div>
+          )}
           {subtitle ? (
             <p className="mt-1 px-2 text-center text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">{subtitle}</p>
           ) : null}
@@ -224,6 +239,18 @@ export function LibraryPlazaView({ onBack, onPickLibrary, subtitle }: LibraryPla
           )}
         </div>
       </div>
+
+      <PlazaLibraryAgentIntroSheet
+        row={introRow}
+        open={introRow != null}
+        onClose={() => setIntroRow(null)}
+        onBrowseLibrary={() => {
+          if (introRow) confirmPick(introRow)
+        }}
+        onStartThread={() => {
+          if (introRow) confirmPick(introRow)
+        }}
+      />
     </div>
   )
 }

@@ -1,0 +1,11 @@
+/**
+ * Web product shell styles for Vite.
+ * globals.css alone does not scan monorepo mind-v2 components — Tailwind utilities
+ * (flex, w-[7rem], etc.) would be missing and /web renders as unstyled HTML.
+ */
+@import "../../../app/globals.css";
+
+@source "../../../components/mind-v2/**/*.{tsx,ts}";
+@source "../../../components/ui/**/*.{tsx,ts}";
+@source "../../../lib/**/*.{ts}";
+@source "../**/*.{tsx,ts}";

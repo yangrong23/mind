@@ -14,12 +14,13 @@
 | [03-recording.md](./03-recording.md) | 全屏录音 |
 | [04-knowledge-tab.md](./04-knowledge-tab.md) | 知识库 Tab、Library Plaza |
 | [05-knowledge-detail.md](./05-knowledge-detail.md) | 知识库详情（Hub / Graph / Studio、Ask、条目详情） |
-| [06-agent-tab.md](./06-agent-tab.md) | Minder / Agent Tab（首页、抽屉、资料范围、内容工厂） |
+| [06-agent-tab.md](./06-agent-tab.md) | Mindar / Agent Tab（首页、抽屉、资料范围、内容工厂） |
 | [07-agent-chat.md](./07-agent-chat.md) | Agent 对话页（含资料库内 Chat） |
 | [08-me-tab.md](./08-me-tab.md) | Me Tab（个人、设置、账户） |
 | [08-me-ai-insights-prompts.md](./08-me-ai-insights-prompts.md) | Me AI 洞察：各视角提示词与数据参数 |
 | [09-auth.md](./09-auth.md) | 全屏登录 / 注册（遮罩） |
 | [10-shared-sheets-modals.md](./10-shared-sheets-modals.md) | 跨页面弹层与共用组件（简要） |
+| [11-plaza-kb-agent.md](./11-plaza-kb-agent.md) | Plaza library as scoped agent — publish, subscribe, chat (English spec) |
 
 ## 导航关系（简图）
 

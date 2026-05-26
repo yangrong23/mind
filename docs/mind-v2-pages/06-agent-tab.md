@@ -1,4 +1,4 @@
-# 06 — Agent Tab（Minder 首页）
+# 06 — Agent Tab（Mindar 首页）
 
 **文件**：`components/mind-v2/agent-tab.tsx`（主 Tab 部分 + `CreateAgentSheet` / `ExploreAgentsPage` 等同文件子组件）
 
@@ -7,7 +7,7 @@
 **负责**
 
 - 左侧抽屉：我的 Agent、历史、新建 / Discover 入口；点击 Agent → `onAgentChat`（父级鉴权）。
-- 中央 **Minder** 品牌与主输入框：发送 `submitAgentHomePrompt`（`requireAuthThen`）、Enter 发送。
+- 中央 **Mindar** 品牌与主输入框：发送 `submitAgentHomePrompt`（`requireAuthThen`）、Enter 发送。
 - 资料范围：**Atom** → `showKBSelect` sheet；可选 **Library Plaza** 叠加（`libraryPlazaFromAgent`）。
 - **FileStack**：附件（`requireAuthThen` + toast）。
 - **Content factory** 两排快捷入口 → `openStudioWithKind` → `ContentFactoryModals`。
@@ -47,7 +47,7 @@
 
 ## 后端接口开发项
 
-> Minder 首页：抽屉 Agent 列表、主输入框、资料范围（@ 库）、Content Factory、Discover/新建 Agent。
+> Mindar 首页：抽屉 Agent 列表、主输入框、资料范围（@ 库）、Content Factory、Discover/新建 Agent。
 
 ### 1. Agent 资源
 
@@ -80,14 +80,14 @@
 
 **响应分组**：`[{ "date": "2026-05-12", "items": [{ "sessionId", "title", "agentId", "preview" }] }]`
 
-### 3. Minder 主输入（`submitAgentHomePrompt`）
+### 3. Mindar 主输入（`submitAgentHomePrompt`）
 
 | # | 方法 | 路径 | 说明 |
 |---|------|------|------|
-| 3.1 | `POST` | `/api/v1/minder/quick-send` | 首页发送：创建 session + 首条消息 + 排队回复 |
+| 3.1 | `POST` | `/api/v1/mindar/quick-send` | 首页发送：创建 session + 首条消息 + 排队回复 |
 | 3.2 | `POST` | `/api/v1/chat/sessions` | 或显式创建会话后跳转 `agent-chat` |
 
-**`POST minder/quick-send` 请求**
+**`POST mindar/quick-send` 请求**
 
 ```json
 {
@@ -106,8 +106,8 @@
 | # | 方法 | 路径 | 说明 |
 |---|------|------|------|
 | 4.1 | `GET` | `/api/v1/libraries?scope=agent-pick` | KB 多选 Sheet 列表 |
-| 4.2 | `PUT` | `/api/v1/users/me/minder-library-scope` | 持久化 `libraryLinkMode` + `pickedKbIds` |
-| 4.3 | `GET` | `/api/v1/users/me/minder-library-scope` | 读取 linkSummary 展示 |
+| 4.2 | `PUT` | `/api/v1/users/me/mindar-library-scope` | 持久化 `libraryLinkMode` + `pickedKbIds` |
+| 4.3 | `GET` | `/api/v1/users/me/mindar-library-scope` | 读取 linkSummary 展示 |
 
 ### 5. 附件上传（`+`）
 
@@ -127,7 +127,7 @@
 
 | # | 方法 | 路径 | 说明 |
 |---|------|------|------|
-| 7.1 | `POST` | `/api/v1/minder/factory/handoff` | `openStudioWithKind`：带库范围创建工厂任务 |
+| 7.1 | `POST` | `/api/v1/mindar/factory/handoff` | `openStudioWithKind`：带库范围创建工厂任务 |
 | 7.2 | 见 `05` §6 | 工厂任务 CRUD |
 
 **handoff 请求**：`{ "factoryKind", "libraryLinkMode", "pickedLibraryIds", "settings?" }`

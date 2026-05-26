@@ -27,7 +27,7 @@
 |--------|----------|------|------------------|
 | `notes` | Notes | `NotesTab` | 采集列表（硬件/手机录音）+ 富文本笔记 + 录音入口 |
 | `knowledge` | Knowledge | `KnowledgeTab` | 我的 / 团队 / 订阅知识库列表与发现 |
-| `agent` | Minder | `AgentTab` | 库联动、Agent 抽屉、Studio 入口、主输入区 |
+| `agent` | Mindar | `AgentTab` | 库联动、Agent 抽屉、Studio 入口、主输入区 |
 | `me` | Me | `MeTab` | 个人资料、统计、热力图、设置与商业化展示 |
 
 实现：`bottom-nav.tsx`。
@@ -164,7 +164,7 @@
 
 ---
 
-### 3.6 Minder（Agent Tab）— `agent-tab.tsx`（含子模块）
+### 3.6 Mindar（Agent Tab）— `agent-tab.tsx`（含子模块）
 
 | 功能 | 行为 | 实现状态 | 后端依赖 |
 |------|------|----------|----------|
@@ -314,7 +314,7 @@ App（AgentChat / kb-agent-chat）
 
 1. **采集链路**：Notes 列表 → 录音页 → 上传 → 详情（转写/摘要）→ 移库。  
 2. **知识与 RAG**：Knowledge 列表/发现 → 库详情 Content/Graph/Studio → 库内 Agent 对话。  
-3. **通用 Agent**：Minder Tab、创建/发现、通用 `AgentChat`。  
+3. **通用 Agent**：Mindar Tab、创建/发现、通用 `AgentChat`。  
 4. **内容工厂**：任务 API、队列与 Worker、产物存储与计费（**§4.1**）。  
 5. **OpenClaw 与 SKILL**：运行时部署、密钥与沙箱、模版版本与编排（**§4.2–4.3**）。  
 6. **账户与商业化**：Me、双空间、积分套餐、设置类 API。  
@@ -351,7 +351,7 @@ App（AgentChat / kb-agent-chat）
 | `components/mind-v2/note-detail.tsx` | 笔记详情 |
 | `components/mind-v2/knowledge-tab.tsx` | 知识库列表 + Discover 内页 |
 | `components/mind-v2/knowledge-detail.tsx` | 库详情三视图 |
-| `components/mind-v2/agent-tab.tsx` | Minder Tab + `AgentChat` + Create/Explore |
+| `components/mind-v2/agent-tab.tsx` | Mindar Tab + `AgentChat` + Create/Explore |
 | `components/mind-v2/me-tab.tsx` | 个人中心 |
 | `components/mind-v2/social-share-row.tsx` | 分享行 |
 | `lib/mind-accounts.ts` | 账户常量 |

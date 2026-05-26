@@ -1,23 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { mx, mxHeatmapCell, mxHeatmapCellTiny } from "@/lib/medrix-design-tokens"
+import { buildDemoActivityTimeline, getTodayTimelineDay } from "@/lib/mock-activity-timeline"
 import {
   getMindAccount,
   MIND_ACCOUNTS,
   accountSpaceLabel,
   type MindAccountId,
 } from "@/lib/mind-accounts"
-import { MindDevicesSheet } from "@/components/mind-v2/mind-devices-sheet"
-import { MeAiInsights } from "@/components/mind-v2/me-ai-insights"
-import {
-  DAILY_REVIEW_HEADLINE,
-  DAILY_REVIEW_HIGHLIGHTS,
-  MeDailyReview,
-} from "@/components/mind-v2/me-daily-review"
+import { MeDevicesSettingsPanel } from "@/components/mind-v2/me-devices-settings"
 import { MindShareSheet } from "@/components/mind-v2/mind-share-sheet"
 import {
   SettingsGroup,
@@ -25,6 +19,15 @@ import {
   SettingsScreenShell,
   SettingsToggleRow,
 } from "@/components/mind-v2/me-settings-ui"
+import { MeTabWebLayout } from "@/components/mind-v2/me-tab-web-layout"
+import {
+  MeActivityDiaryPreview,
+  MeActivityTimeline,
+  MeDiaryTimelineEmbed,
+  MeDiaryTimelinePanel,
+} from "@/components/mind-v2/me-activity-timeline"
+import { WebMeProfileHeader, WebMeSettingCard, type WebMeStat } from "@/components/mind-v2/web-me-shell"
+import { WebMeSettingsDetail } from "@/components/mind-v2/web-me-settings-detail"
 import { buildTimelineSharePayload, type MindSharePayload } from "@/lib/mind-share-payload"
 import {
   MeCollectedPersonalInfoPanel,
@@ -40,13 +43,14 @@ import {
   clampFontZoomPercent,
 } from "@/lib/mind-display-prefs"
 import {
-  Settings,
+  FileText,
   ChevronRight,
   Share2,
   User,
   Bell,
   HelpCircle,
   Globe,
+  Shield,
   Smartphone,
   Award,
   Clock,
@@ -54,9 +58,6 @@ import {
   Brain,
   Bot,
   Cloud,
-  Sparkles,
-  Target,
-  Map,
   Calendar,
   Zap,
   Hash,
@@ -65,33 +66,63 @@ import {
   Building2,
   ChevronsUpDown,
   LogOut,
-  Bluetooth,
   Sun,
   Moon,
   Cpu,
   HardDrive,
 } from "lucide-react"
 
-// Heatmap sample data
-const generateHeatmapData = () => {
-  const data: { date: string; value: number }[] = []
-  const today = new Date()
-  for (let i = 90; i >= 0; i--) {
-    const date = new Date(today)
-    date.setDate(date.getDate() - i)
-    data.push({
-      date: date.toISOString().split('T')[0],
-      value: Math.random() > 0.6 ? Math.floor(Math.random() * 4) + 1 : 0
-    })
+const DEMO_CAPTURE_DIARY = buildDemoActivityTimeline()
+
+function settingsExtraTitle(
+  settingsExtra:
+    | "display"
+    | "notifications"
+    | "storage"
+    | "devices"
+    | "features"
+    | "privacy"
+    | "account"
+    | "help"
+): string {
+  const map: Record<string, string> = {
+    display: "Display",
+    notifications: "Notifications",
+    storage: "Storage",
+    devices: "Devices",
+    features: "AI",
+    privacy: "Privacy",
+    account: "Account",
+    help: "Help",
   }
-  return data
+  return map[settingsExtra] ?? "Settings"
 }
 
-const heatmapData = generateHeatmapData()
-
-function getTodayHeatmapEntry() {
-  const today = new Date().toISOString().slice(0, 10)
-  return heatmapData.find((d) => d.date === today) ?? heatmapData[heatmapData.length - 1]!
+function MeSettingsShell({
+  webLayout,
+  title,
+  onBack,
+  children,
+  zClass,
+}: {
+  webLayout?: boolean
+  title: string
+  onBack: () => void
+  children: ReactNode
+  zClass?: string
+}) {
+  if (webLayout) {
+    return (
+      <WebMeSettingsDetail title={title} onBack={onBack}>
+        {children}
+      </WebMeSettingsDetail>
+    )
+  }
+  return (
+    <SettingsScreenShell title={title} onBack={onBack} zClass={zClass}>
+      {children}
+    </SettingsScreenShell>
+  )
 }
 
 function hashDateString(s: string) {
@@ -238,123 +269,7 @@ function buildDayShareCardText(
   return `${slogan}\n\n${label} · ${activityLine}\n${streakDays}-day streak on Mind · ${displayName}`
 }
 
-function ActivityDayShareCard({
-  isoDate,
-  activity,
-  displayName,
-  streakDays,
-  onShare,
-}: {
-  isoDate: string
-  activity: number
-  displayName: string
-  streakDays: number
-  onShare: () => void
-}) {
-  const slogan = getDayViralSlogan(isoDate, activity)
-  const uploads = getDayUploads(isoDate, activity)
-  const weekSlice = heatmapData.slice(-91)
-  const dayIndex = weekSlice.findIndex((d) => d.date === isoDate)
-  const windowDays =
-    dayIndex >= 0 ? weekSlice.slice(Math.max(0, dayIndex - 6), dayIndex + 1) : weekSlice.slice(-7)
-
-  return (
-    <button
-      type="button"
-      onClick={onShare}
-      className={cn(
-        "group relative w-full overflow-hidden rounded-3xl border border-stone-200 text-left shadow-lg shadow-stone-900/[0.08] transition-transform active:scale-[0.99]",
-        mx.brandHero
-      )}
-    >
-      
-        <div
-          className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-stone-100 blur-2xl"
-          aria-hidden
-        />
-        
-          <div
-            className="pointer-events-none absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-stone-50 blur-2xl"
-            aria-hidden
-          />
-        
-      
-
-      <div className="relative px-5 pb-5 pt-5">
-        
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80 ring-1 ring-zinc-200/60">
-                <Sparkles className="h-4 w-4 text-mind" strokeWidth={2} aria-hidden />
-              </div>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mind/80">
-                Mind timeline
-              </span>
-            </div>
-            <span className="rounded-full bg-white/75 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-mind ring-1 ring-zinc-200/60">
-              {streakDays}d streak
-            </span>
-          </div>
-        
-
-        <p className="mt-5 whitespace-pre-line text-[26px] font-bold leading-[1.15] tracking-tight text-zinc-900">
-          {slogan}
-        </p>
-
-        <p className="mt-3 text-[13px] font-medium text-zinc-600">
-          {formatHeatmapDayLabel(isoDate)}
-          <span className="text-zinc-400"> · </span>
-          {activity > 0
-            ? `${uploads.length} capture${uploads.length === 1 ? "" : "s"} · level ${activity}`
-            : "Quiet day — still on the board"}
-        </p>
-
-        <div className="mt-4 rounded-2xl border border-white/70 bg-white/55 p-3 backdrop-blur-sm">
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-zinc-400">This week</p>
-          <div className="flex items-end gap-1">
-            {windowDays.map((day) => {
-              const isSelected = day.date === isoDate
-              const h = Math.max(4, (day.value + 1) * 5)
-              return (
-                <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
-                  <div
-                    className={cn(
-                      "w-full rounded-sm transition-colors",
-                      isSelected
-                        ? "bg-mind ring-2 ring-zinc-300/50 ring-offset-1"
-                        : day.value > 0
-                          ? "bg-stone-100"
-                          : "bg-stone-200/90"
-                    )}
-                    style={{ height: h }}
-                    aria-hidden
-                  />
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-stone-200 pt-4">
-          <div className="min-w-0">
-            <p className="truncate text-[14px] font-semibold text-zinc-900">{displayName}</p>
-            <p className="text-[11px] text-zinc-500">Tap to share this card</p>
-          </div>
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-[10px] font-bold leading-tight text-white">
-            Mind
-          </div>
-        </div>
-      </div>
-    </button>
-  )
-}
-
-/** Mock AI-generated personalized copy for full-screen daily review */
-const PERSONALIZED_DAILY_REVIEW_LATEST =
-  "Today’s recap is tuned to your recent captures: you spent more time on product narrative and customer proof than last week. One pattern stands out—you often end strong on context but leave the decision implicit. Try appending a single “so we will…” line at the end of the next two recordings. Your energy is consistent; keep linking standout quotes to your library so summaries stay grounded."
-
-interface MeTabProps {
-  onSettingsClick?: () => void
+export interface MeTabProps {
   activeAccountId: MindAccountId
   onActiveAccountChange: (id: MindAccountId) => void
   /** When provided, Sign out in the account sheet ends the demo session (guest gate). */
@@ -362,29 +277,47 @@ interface MeTabProps {
   /** Shell text scale (85–130%). Controlled by parent so the device chrome updates live. */
   fontZoomPercent?: number
   onFontZoomPercentChange?: (pct: number) => void
+  /** Desktop: profile + activity timeline */
+  webLayout?: boolean
+  /** Increment from web rail to open credits / plans */
+  creditsOpenSignal?: number
 }
 
 export function MeTab({
-  onSettingsClick,
   activeAccountId,
   onActiveAccountChange,
   onSessionSignOut,
   fontZoomPercent = 100,
   onFontZoomPercentChange,
+  webLayout = false,
+  creditsOpenSignal = 0,
 }: MeTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
-  const [heatmapDayDetail, setHeatmapDayDetail] = useState<{ date: string; value: number } | null>(null)
+  const [activityDiary, setActivityDiary] = useState<{
+    date: string
+    value: number
+    listFirst?: boolean
+  } | null>(null)
+
+  const openActivityDiaryList = () => {
+    const today = getTodayTimelineDay(DEMO_CAPTURE_DIARY)
+    setActivityDiary({ date: today.isoDate, value: today.activity, listFirst: true })
+  }
+
+  const openActivityDiaryDay = (day: { isoDate: string; activity: number }) => {
+    setActivityDiary({ date: day.isoDate, value: day.activity, listFirst: true })
+  }
   const [shareSheet, setShareSheet] = useState<MindSharePayload | null>(null)
-  const [personalizedFeed, setPersonalizedFeed] = useState<null | { type: "daily" }>(null)
-  const [showAiInsights, setShowAiInsights] = useState(false)
   const [showShareCard, setShowShareCard] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
-  const [showSettingsHub, setShowSettingsHub] = useState(false)
   const [showCloudSync, setShowCloudSync] = useState(false)
   const [showPersonalization, setShowPersonalization] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false)
   const [showCreditsPlans, setShowCreditsPlans] = useState(false)
+  useEffect(() => {
+    if (creditsOpenSignal > 0) setShowCreditsPlans(true)
+  }, [creditsOpenSignal])
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false)
   const [wifiOnlySync, setWifiOnlySync] = useState(false)
   const [useMemory, setUseMemory] = useState(false)
@@ -402,10 +335,17 @@ export function MeTab({
   ])
   const [offlineOnly, setOfflineOnly] = useState(false)
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
-  const [showDeviceSheet, setShowDeviceSheet] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
   const [settingsExtra, setSettingsExtra] = useState<
-    null | "display" | "notifications" | "storage" | "features" | "privacy" | "account" | "help"
+    | null
+    | "display"
+    | "notifications"
+    | "storage"
+    | "devices"
+    | "features"
+    | "privacy"
+    | "account"
+    | "help"
   >(null)
   const [showStorageSpace, setShowStorageSpace] = useState(false)
   const [privacyDetail, setPrivacyDetail] = useState<
@@ -426,36 +366,11 @@ export function MeTab({
     totalHours: 12.5,
     totalRecordings: 89,
     knowledgeItems: 234,
-    creditsRemaining: 1240,
-    creditsMonthlyAllowance: 2000,
+    creditsRemaining: 32_400,
+    creditsMonthlyAllowance: 50_000,
   }
 
-  const creditPlans = [
-    {
-      id: "lite",
-      name: "Lite refill",
-      credits: 500,
-      price: "$4.99",
-      blurb: "Top up for light AI use",
-      highlight: false,
-    },
-    {
-      id: "standard",
-      name: "Standard",
-      credits: 2500,
-      price: "$19.99",
-      blurb: "Best for daily capture & summaries",
-      highlight: true,
-    },
-    {
-      id: "pro",
-      name: "Pro pack",
-      credits: 12000,
-      price: "$79.99",
-      blurb: "Teams and heavy workflows",
-      highlight: false,
-    },
-  ] as const
+  const currentMembershipPlanId = "standard" as const
 
   const appearanceLabel =
     !themeHubMounted || !themeForHub.resolvedTheme
@@ -465,20 +380,16 @@ export function MeTab({
         : "Light"
   const notifStatusLabel = notifCaptureReady || notifDigest ? "On" : "Off"
 
-  return (
-    <div className={cn("relative flex h-full min-h-0 flex-col", mx.pageBg)}>
-      {/* Single scroll: profile hero (flex min-h-0 fixes clipped bottom scroll) */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-8">
-      {/* Profile — one calm header, no duplicate metrics below */}
-      <div className={cn("px-5 pt-4 pb-4", mx.brandHero)}>
+  const profileHeroBlock = (
+    <div className={cn(webLayout ? "p-0" : cn("px-5 pt-4 pb-4", "bg-[#0a1530] text-white"))}>
         <div className="flex items-start justify-between gap-3">
           <button
             type="button"
             onClick={() => setShowAccountSwitcher(true)}
             className={cn(
               "flex min-w-0 flex-1 items-center gap-3 rounded-xl py-0.5 pl-0.5 pr-2 text-left transition-colors focus:outline-none",
-              mx.brandHeroHover,
-              mx.brandFocusRing
+              "hover:bg-white/10",
+              "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
             )}
             aria-label="Switch account"
           >
@@ -487,166 +398,257 @@ export function MeTab({
                 "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold",
                 activeAccount.kind === "work"
                   ? "bg-gradient-to-br from-stone-100 to-stone-50 ring-1 ring-stone-200/70"
-                  : cn(mx.accentPersonalAvatar, mx.accentPersonalRing)
+                  : cn("bg-mind text-white", "ring-2 ring-mind/20")
               )}
             >
               {activeAccount.kind === "work" ? (
-                <User className={cn("h-6 w-6", mx.accentWorkIcon)} />
+                <User className={cn("h-6 w-6", "text-mind")} />
               ) : (
                 <span className="text-white">{activeAccount.initial}</span>
               )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <h2 className={cn("text-[17px] font-semibold leading-tight tracking-tight", mx.brandOnHero)}>
+                <h2 className={cn("text-[17px] font-semibold leading-tight tracking-tight", "text-white")}>
                   {activeAccount.displayName}
                 </h2>
                 <span
                   className={cn(
                     "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                     activeAccount.kind === "work"
-                      ? cn(mx.accentWorkSoft, "text-mind")
-                      : cn(mx.accentPersonalSoft, "text-mind")
+                      ? cn("bg-mind/8", "text-mind")
+                      : cn("bg-mind/8", "text-mind")
                   )}
                 >
                   {accountSpaceLabel(activeAccount.kind)}
                 </span>
               </div>
-              <p className={cn("mt-0.5 truncate text-[13px]", mx.brandOnHeroMuted)}>{activeAccount.email}</p>
-              <p className={cn("mt-0.5 text-[12px]", mx.brandOnHeroMuted)}>
+              <p className={cn("mt-0.5 truncate text-[13px]", "text-[#a4a097]")}>{activeAccount.email}</p>
+              <p className={cn("mt-0.5 text-[12px]", "text-[#a4a097]")}>
                 {stats.totalDays} days ·{" "}
-                <span className={cn("font-medium", mx.brandAccentOnHero)}>
+                <span className={cn("font-medium", "text-white")}>
                   {stats.creditsRemaining.toLocaleString("en-US")} credits
                 </span>
               </p>
             </div>
-            <ChevronsUpDown className={cn("h-4 w-4 shrink-0 opacity-50", mx.brandOnHeroMuted)} aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowSettingsHub(true)
-              onSettingsClick?.()
-            }}
-            className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
-              mx.settingsOnHero
-            )}
-            aria-label="Settings"
-          >
-            <Settings className={cn("h-5 w-5", mx.brandOnHero)} />
+            <ChevronsUpDown className={cn("h-4 w-4 shrink-0 opacity-50", "text-[#a4a097]")} aria-hidden />
           </button>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2 border-t border-stone-200 pt-3">
           {[
-            { value: stats.totalNotes, label: "Notes" },
+            { value: stats.totalNotes, label: "Memos" },
             { value: stats.consecutiveDays, label: "Streak" },
             { value: `${stats.totalHours}h`, label: "Captured" },
           ].map((s) => (
             <div key={s.label} className="text-center">
-              <div className={cn("text-lg font-semibold tabular-nums leading-none", mx.brandOnHero)}>{s.value}</div>
-              <div className={cn("mt-1 text-[11px]", mx.brandOnHeroMuted)}>{s.label}</div>
+              <div className={cn("text-lg font-semibold tabular-nums leading-none", "text-white")}>{s.value}</div>
+              <div className={cn("mt-1 text-[11px]", "text-[#a4a097]")}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowCreditsPlans(true)}
-          className={cn(
-            "mt-3 w-full rounded-xl border border-stone-200 bg-white/60 py-2 text-[13px] font-medium text-mind shadow-sm shadow-stone-900/5 backdrop-blur-sm transition-colors hover:bg-white/90",
-            mx.brandFocusRing
-          )}
-        >
-          {stats.creditsRemaining.toLocaleString("en-US")} credits · Plans & refill
-        </button>
+        {!webLayout ? (
+          <button
+            type="button"
+            onClick={() => setShowCreditsPlans(true)}
+            className={cn(
+              "mt-3 w-full rounded-xl border border-stone-200 bg-white/60 py-2 text-[13px] font-medium text-mind shadow-sm shadow-stone-900/5 backdrop-blur-sm transition-colors hover:bg-white/90",
+              "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
+            )}
+          >
+            {stats.creditsRemaining.toLocaleString("en-US")} credits · Plans & refill
+          </button>
+        ) : null}
 
+        {!webLayout ? (
         <div className="mt-3 space-y-3 rounded-xl border border-stone-200 bg-white/55 p-3 shadow-sm shadow-stone-900/5 backdrop-blur-sm">
-          <div>
-            <div className="flex items-start justify-between gap-2">
-              <p className={cn("text-[12px] font-semibold", mx.brandOnHero)}>Activity</p>
-              <p className={cn("max-w-[10rem] text-right text-[10px] leading-snug", mx.brandOnHeroMuted)}>
-                Last ~13 weeks · tap a square
-              </p>
-            </div>
-            <div className="mt-2">
-              <div className="grid grid-cols-13 gap-px sm:gap-0.5">
-                {heatmapData.slice(-91).map((day, i) => (
-                  <button
-                    key={`hero-${day.date}-${i}`}
-                    type="button"
-                    onClick={() => setHeatmapDayDetail({ date: day.date, value: day.value })}
-                    title={formatHeatmapDayLabel(day.date)}
-                    className={mxHeatmapCell(day.value)}
-                  />
-                ))}
-              </div>
-              <div className={cn("mt-1 flex justify-between text-[10px]", mx.brandOnHeroMuted)}>
-                <span>Mar</span>
-                <span>Apr</span>
-                <span>May</span>
-              </div>
-            </div>
-          </div>
+          <MeActivityDiaryPreview
+            days={DEMO_CAPTURE_DIARY}
+            gridCells={35}
+            onOpenDiary={openActivityDiaryList}
+            onOpenDay={openActivityDiaryDay}
+          />
 
-          <div className="space-y-0 border-t border-stone-200 pt-2">
-            <button
-              type="button"
-              onClick={() => setPersonalizedFeed({ type: "daily" })}
-              className="flex w-full items-center gap-2 rounded-lg py-2.5 pl-0.5 pr-1 text-left transition-colors hover:bg-white/70 active:bg-white/90"
-            >
-              <Sparkles className="h-4 w-4 shrink-0 text-mind opacity-90" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-medium text-zinc-800">Daily review</span>
-                <span className="mt-0.5 block line-clamp-1 text-[11px] font-normal text-zinc-400">
-                  Today&apos;s recap · tap to read
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAiInsights(true)}
-              className="flex w-full items-center gap-2 rounded-lg py-2.5 pl-0.5 pr-1 text-left transition-colors hover:bg-white/70 active:bg-white/90"
-            >
-              <Target className="h-4 w-4 shrink-0 text-mind opacity-90" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-medium text-zinc-800">AI insights</span>
-                <span className="mt-0.5 block line-clamp-1 text-[11px] font-normal text-zinc-400">
-                  Perspectives on notes & libraries
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" />
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                toast.message("Knowledge map", { description: "This feature is coming soon." })
-              }
-              className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
-            >
-              <Map className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-              <span>Knowledge map</span>
-              <span className="ml-auto text-[10px] font-medium text-zinc-400">Soon</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDeviceSheet(true)}
-              className="flex w-full items-center gap-2 rounded-lg py-2 text-left text-[13px] font-medium text-zinc-800 hover:bg-white/70"
-            >
-              <Bluetooth className="h-4 w-4 shrink-0 text-mind opacity-90" aria-hidden />
-              <span>Devices</span>
-              <span className="min-w-0 flex-1 truncate text-right text-[11px] font-normal text-zinc-500">
-                Recorder, pairing, lexicon, offline
-              </span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-            </button>
+          <div>
+            <p className="mb-2 px-0.5 text-[12px] font-semibold text-zinc-800">Settings</p>
+            <SettingsGroup>
+              <SettingsLinkRow
+                label="Display"
+                value={`${appearanceLabel} · ${fontZoomPercent}%`}
+                onClick={() => setSettingsExtra("display")}
+              />
+              <SettingsLinkRow
+                label="Notifications"
+                value={notifStatusLabel}
+                onClick={() => setSettingsExtra("notifications")}
+              />
+              <SettingsLinkRow
+                label="Storage"
+                value="11.2 MB"
+                onClick={() => setSettingsExtra("storage")}
+              />
+              <SettingsLinkRow
+                label="Devices"
+                value={isDeviceConnected ? "Recorder connected" : "Not connected"}
+                onClick={() => setSettingsExtra("devices")}
+              />
+              <SettingsLinkRow
+                label="AI"
+                value={frontierInsights ? "Frontier on" : "Standard"}
+                onClick={() => setSettingsExtra("features")}
+              />
+              <SettingsLinkRow label="Privacy" onClick={() => setSettingsExtra("privacy")} />
+              <SettingsLinkRow label="Account" onClick={() => setSettingsExtra("account")} />
+              <SettingsLinkRow label="Help" onClick={() => setSettingsExtra("help")} last />
+            </SettingsGroup>
           </div>
         </div>
-      </div>
-      </div>
+        ) : null}
+    </div>
+  )
 
+  const webMeStats: WebMeStat[] = [
+    { label: "Memos", value: stats.totalNotes, icon: FileText, tone: "blue" },
+    { label: "Streak", value: stats.consecutiveDays, icon: Award, tone: "orange" },
+    { label: "Captured", value: `${stats.totalHours}h`, icon: Clock, tone: "violet" },
+    {
+      label: "Credits",
+      value: stats.creditsRemaining.toLocaleString("en-US"),
+      icon: Zap,
+      tone: "teal",
+    },
+  ]
+
+  const webTimelinePanel = (
+    <MeDiaryTimelinePanel
+      days={DEMO_CAPTURE_DIARY}
+      gridCells={35}
+      onOpenDiary={openActivityDiaryList}
+      onOpenDay={openActivityDiaryDay}
+    />
+  )
+
+  const webSettingsPanel = (
+    <div className="flex flex-col gap-3">
+      <p className="px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-zinc-400">Settings</p>
+      {[
+        {
+          key: "display",
+          node: (
+            <WebMeSettingCard
+              icon={Sun}
+              title="Display"
+              subtitle={`${appearanceLabel} · ${fontZoomPercent}%`}
+              onClick={() => setSettingsExtra("display")}
+            />
+          ),
+        },
+        {
+          key: "notifications",
+          node: (
+            <WebMeSettingCard
+              icon={Bell}
+              title="Notifications"
+              subtitle={notifStatusLabel === "On" ? "Capture ready · digest optional" : "All off"}
+              toggle
+              checked={notifCaptureReady || notifDigest}
+              onToggle={() => {
+                setNotifCaptureReady((v) => !v)
+                toast.success("Saved")
+              }}
+            />
+          ),
+        },
+        {
+          key: "storage",
+          node: (
+            <WebMeSettingCard
+              icon={HardDrive}
+              title="Storage"
+              subtitle="11.2 MB · manage breakdown"
+              onClick={() => setSettingsExtra("storage")}
+            />
+          ),
+        },
+        {
+          key: "devices",
+          node: (
+            <WebMeSettingCard
+              icon={Smartphone}
+              title="Devices"
+              subtitle={isDeviceConnected ? "Recorder connected" : "Not connected"}
+              onClick={() => setSettingsExtra("devices")}
+            />
+          ),
+        },
+        {
+          key: "ai",
+          node: (
+            <WebMeSettingCard
+              icon={Brain}
+              title="AI"
+              subtitle={frontierInsights ? "Frontier on" : "Standard"}
+              onClick={() => setSettingsExtra("features")}
+            />
+          ),
+        },
+        {
+          key: "privacy",
+          node: (
+            <WebMeSettingCard
+              icon={Shield}
+              title="Privacy"
+              subtitle="Guide · data · sharing"
+              onClick={() => setSettingsExtra("privacy")}
+            />
+          ),
+        },
+        {
+          key: "account",
+          node: (
+            <WebMeSettingCard
+              icon={User}
+              title="Account"
+              subtitle="Personalization · sync · security"
+              onClick={() => setSettingsExtra("account")}
+            />
+          ),
+        },
+        {
+          key: "help",
+          node: (
+            <WebMeSettingCard
+              icon={HelpCircle}
+              title="Help"
+              subtitle="Guide · support · feedback"
+              onClick={() => setSettingsExtra("help")}
+            />
+          ),
+        },
+      ].map((row, i) => (
+        <div
+          key={row.key}
+          className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500"
+          style={{ animationDelay: `${60 + i * 40}ms` }}
+        >
+          {row.node}
+        </div>
+      ))}
+    </div>
+  )
+
+  const webProfileHero = (
+    <WebMeProfileHeader
+      account={activeAccount}
+      stats={webMeStats}
+      onOpenAccountSwitcher={() => setShowAccountSwitcher(true)}
+      onOpenCredits={() => setShowCreditsPlans(true)}
+    />
+  )
+
+  const accountAndOverlays = (
+    <>
       {/* Multi-account: work vs personal (outside main scroll) */}
       {showAccountSwitcher && (
         <div className="absolute inset-0 z-[58] flex flex-col justify-center px-5 py-10">
@@ -678,11 +680,11 @@ export function MeTab({
                     "flex h-[68px] w-[68px] items-center justify-center rounded-full text-2xl font-semibold shadow-inner",
                     activeAccount.kind === "work"
                       ? "bg-gradient-to-br from-stone-100 to-stone-50 ring-2 ring-stone-200/80"
-                      : cn(mx.accentPersonalAvatar, "ring-2 ring-stone-200/90")
+                      : cn("bg-mind text-white", "ring-2 ring-stone-200/90")
                   )}
                 >
                   {activeAccount.kind === "work" ? (
-                    <User className={cn("h-8 w-8", mx.accentWorkIcon)} />
+                    <User className={cn("h-8 w-8", "text-mind")} />
                   ) : (
                     <span className="text-white">{activeAccount.initial}</span>
                   )}
@@ -714,11 +716,11 @@ export function MeTab({
                       "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
                       acc.kind === "work"
                         ? "bg-stone-50 ring-1 ring-zinc-200/60"
-                        : cn(mx.accentPersonalAvatar)
+                        : cn("bg-mind text-white")
                     )}
                   >
                     {acc.kind === "work" ? (
-                      <User className={cn("h-5 w-5", mx.accentWorkIcon)} />
+                      <User className={cn("h-5 w-5", "text-mind")} />
                     ) : (
                       <span className="text-white">{acc.initial}</span>
                     )}
@@ -729,7 +731,7 @@ export function MeTab({
                       <span
                         className={cn(
                           "rounded px-1.5 py-0.5 text-[10px] font-semibold",
-                          acc.kind === "work" ? cn(mx.accentWorkSoft, "text-mind") : "bg-stone-50 text-mind"
+                          acc.kind === "work" ? cn("bg-mind/8", "text-mind") : "bg-stone-50 text-mind"
                         )}
                       >
                         {accountSpaceLabel(acc.kind)}
@@ -738,7 +740,7 @@ export function MeTab({
                     <div className="truncate text-[13px] text-zinc-500">{acc.email}</div>
                   </div>
                   {acc.kind === "work" ? (
-                    <Building2 className={cn("h-5 w-5 shrink-0", mx.accentWorkIcon)} aria-hidden />
+                    <Building2 className={cn("h-5 w-5 shrink-0", "text-mind")} aria-hidden />
                   ) : (
                     <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" aria-hidden />
                   )}
@@ -751,8 +753,8 @@ export function MeTab({
                 type="button"
                 className={cn(
                   "w-full rounded-lg py-2.5 text-[15px] font-medium transition-colors",
-                  mx.accentBlue,
-                  mx.accentBlueHover
+                  "text-mind",
+                  "hover:text-mind/90"
                 )}
                 onClick={() => {
                   toast.message("Add account", { description: "Would open the system account flow (demo)." })
@@ -765,8 +767,8 @@ export function MeTab({
                 type="button"
                 className={cn(
                   "flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[15px] font-medium transition-colors",
-                  mx.accentBlue,
-                  mx.accentBlueHover
+                  "text-mind",
+                  "hover:text-mind/90"
                 )}
                 onClick={() => {
                   setShowAccountSwitcher(false)
@@ -806,37 +808,29 @@ export function MeTab({
               {/* Stats grid */}
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="text-center">
-                  <div className={cn("text-sm mb-1", mx.citationMuted)}>All notes</div>
+                  <div className={cn("text-sm mb-1", "text-zinc-500")}>All notes</div>
                   <div className="text-4xl font-bold text-zinc-900">{stats.totalNotes}</div>
                 </div>
                 <div className="text-center">
-                  <div className={cn("text-sm mb-1", mx.citationMuted)}>Total days</div>
+                  <div className={cn("text-sm mb-1", "text-zinc-500")}>Total days</div>
                   <div className="text-4xl font-bold text-zinc-900">{stats.totalDays}</div>
                 </div>
                 <div className="text-center">
-                  <div className={cn("text-sm mb-1", mx.citationMuted)}>Day streak</div>
+                  <div className={cn("text-sm mb-1", "text-zinc-500")}>Day streak</div>
                   <div className="text-4xl font-bold text-zinc-900">{stats.consecutiveDays}</div>
                 </div>
               </div>
 
-              {/* Heatmap */}
-              <div className="mb-6">
-                <div className="text-sm text-zinc-400 mb-1">Last 12 months activity</div>
-                <p className="text-[10px] text-zinc-400 mb-2">Tap a square for that day</p>
-                <div className="grid grid-cols-26 gap-[2px]">
-                  {heatmapData.slice(-52).map((day, i) => (
-                    <button
-                      key={`sh-${day.date}-${i}`}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setHeatmapDayDetail({ date: day.date, value: day.value })
-                      }}
-                      title={formatHeatmapDayLabel(day.date)}
-                      className={cn("w-2 h-2", mxHeatmapCellTiny(day.value))}
-                    />
-                  ))}
-                </div>
+              <div className="mb-6 rounded-xl border border-stone-100/90 bg-stone-50/50 p-3">
+                <p className="text-[12px] font-medium text-zinc-600">Capture diary</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                  {DEMO_CAPTURE_DIARY.length} days summarized · {stats.consecutiveDays}-day streak
+                </p>
+                {DEMO_CAPTURE_DIARY[0] ? (
+                  <p className="mt-2 truncate text-[11px] font-medium text-zinc-600">
+                    Latest: {DEMO_CAPTURE_DIARY[0].title}
+                  </p>
+                ) : null}
               </div>
 
               {/* Brand + QR */}
@@ -962,7 +956,7 @@ export function MeTab({
                   setOfflineOnly(true)
                   setOfflineConfirmOpen(false)
                 }}
-                className={cn("flex-1 rounded-xl py-3 text-[15px] font-semibold text-white", mx.brandCta)}
+                className={cn("flex-1 rounded-xl py-3 text-[15px] font-semibold text-white", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")}
               >
                 Enable offline
               </button>
@@ -971,97 +965,15 @@ export function MeTab({
         </div>
       )}
 
-      {/* Settings hub — level 1 */}
-      {showSettingsHub && (
-        <SettingsScreenShell
-          zClass="z-50"
-          title="Settings"
-          onBack={() => {
-            setShowSettingsHub(false)
-            setPrivacyDetail(null)
-            setShowStorageSpace(false)
-          }}
-        >
-          <SettingsGroup>
-            <SettingsLinkRow
-              label="Display"
-              value={`${appearanceLabel} · ${fontZoomPercent}%`}
-              onClick={() => {
-                setShowSettingsHub(false)
-                setSettingsExtra("display")
-              }}
-            />
-            <SettingsLinkRow
-              label="Notifications"
-              value={notifStatusLabel}
-              onClick={() => {
-                setShowSettingsHub(false)
-                setSettingsExtra("notifications")
-              }}
-            />
-            <SettingsLinkRow
-              label="Storage"
-              value="11.2 MB"
-              onClick={() => {
-                setShowSettingsHub(false)
-                setSettingsExtra("storage")
-              }}
-            />
-            <SettingsLinkRow
-              label="AI"
-              value={frontierInsights ? "Frontier on" : "Standard"}
-              onClick={() => {
-                setShowSettingsHub(false)
-                setSettingsExtra("features")
-              }}
-            />
-            <SettingsLinkRow
-              label="Privacy"
-              onClick={() => {
-                setShowSettingsHub(false)
-                setSettingsExtra("privacy")
-              }}
-            />
-            <SettingsLinkRow
-              label="Account"
-              onClick={() => {
-                setShowSettingsHub(false)
-                setSettingsExtra("account")
-              }}
-            />
-            <SettingsLinkRow
-              label="Help"
-              onClick={() => {
-                setShowSettingsHub(false)
-                setSettingsExtra("help")
-              }}
-              last
-            />
-          </SettingsGroup>
-        </SettingsScreenShell>
-      )}
-
-      {/* Settings — level 2 */}
+      {/* Settings — drill-down */}
       {settingsExtra && (
-        <SettingsScreenShell
-          title={
-            settingsExtra === "display"
-              ? "Display"
-              : settingsExtra === "notifications"
-                ? "Notifications"
-                : settingsExtra === "storage"
-                  ? "Storage"
-                  : settingsExtra === "features"
-                    ? "AI"
-                    : settingsExtra === "privacy"
-                      ? "Privacy"
-                      : settingsExtra === "account"
-                        ? "Account"
-                        : "Help"
-          }
+        <MeSettingsShell
+          webLayout={webLayout}
+          title={settingsExtraTitle(settingsExtra)}
           onBack={() => {
             setSettingsExtra(null)
-            setShowSettingsHub(true)
+            setPrivacyDetail(null)
+            setShowStorageSpace(false)
           }}
         >
           {settingsExtra === "display" && (
@@ -1126,6 +1038,20 @@ export function MeTab({
             </SettingsGroup>
           )}
 
+          {settingsExtra === "devices" && (
+            <MeDevicesSettingsPanel
+              isDeviceConnected={isDeviceConnected}
+              onSetDeviceConnected={setIsDeviceConnected}
+              lexiconDraft={lexiconDraft}
+              onLexiconDraftChange={setLexiconDraft}
+              lexiconTags={lexiconTags}
+              onLexiconTagsChange={setLexiconTags}
+              offlineOnly={offlineOnly}
+              onRequestOfflineEnable={() => setOfflineConfirmOpen(true)}
+              onOfflineDisable={() => setOfflineOnly(false)}
+            />
+          )}
+
           {settingsExtra === "features" && (
             <SettingsGroup>
               <SettingsLinkRow
@@ -1175,13 +1101,6 @@ export function MeTab({
                 }}
               />
               <SettingsLinkRow
-                label="Devices"
-                onClick={() => {
-                  setSettingsExtra(null)
-                  setShowDeviceSheet(true)
-                }}
-              />
-              <SettingsLinkRow
                 label="Recording & security"
                 onClick={() => {
                   setSettingsExtra(null)
@@ -1208,12 +1127,13 @@ export function MeTab({
               ))}
             </SettingsGroup>
           )}
-        </SettingsScreenShell>
+        </MeSettingsShell>
       )}
 
       {/* Recording & security (from Account) */}
       {showPreferences && (
-        <SettingsScreenShell
+        <MeSettingsShell
+          webLayout={webLayout}
           zClass="z-50"
           title="Recording & security"
           onBack={() => setShowPreferences(false)}
@@ -1266,7 +1186,7 @@ export function MeTab({
               last
             />
           </SettingsGroup>
-        </SettingsScreenShell>
+        </MeSettingsShell>
       )}
 
       {/* Private cloud sync */}
@@ -1301,7 +1221,7 @@ export function MeTab({
                     onClick={() => setCloudSyncEnabled(!cloudSyncEnabled)}
                     className={cn(
                       "w-12 h-7 rounded-full transition-colors relative",
-                      cloudSyncEnabled ? "bg-mind" : cn(mx.toggleTrackOff)
+                      cloudSyncEnabled ? "bg-mind" : cn("bg-stone-200 dark:bg-zinc-600")
                     )}
                   >
                     <div className={cn(
@@ -1317,7 +1237,7 @@ export function MeTab({
                       onClick={() => setWifiOnlySync(!wifiOnlySync)}
                       className={cn(
                         "w-12 h-7 rounded-full transition-colors relative",
-                        wifiOnlySync ? "bg-mind" : cn(mx.toggleTrackOff)
+                        wifiOnlySync ? "bg-mind" : cn("bg-stone-200 dark:bg-zinc-600")
                       )}
                     >
                       <div className={cn(
@@ -1444,7 +1364,7 @@ export function MeTab({
                     onClick={() => setUseMemory(!useMemory)}
                     className={cn(
                       "w-12 h-7 rounded-full transition-colors relative",
-                      useMemory ? "bg-mind" : cn(mx.toggleTrackOff)
+                      useMemory ? "bg-mind" : cn("bg-stone-200 dark:bg-zinc-600")
                     )}
                   >
                     <div className={cn(
@@ -1455,7 +1375,7 @@ export function MeTab({
                 </div>
                 <p className="text-xs text-zinc-400">
                   When on, Mind may use saved context for more relevant replies.
-                  <span className={cn("underline underline-offset-2 decoration-stone-300", mx.citationLink)}>
+                  <span className={cn("underline underline-offset-2 decoration-stone-300", "text-mind hover:text-mind/90")}>
                     Learn more
                   </span>
                 </p>
@@ -1480,7 +1400,7 @@ export function MeTab({
             creditsRemaining: stats.creditsRemaining,
             creditsMonthlyAllowance: stats.creditsMonthlyAllowance,
           }}
-          creditPlans={creditPlans}
+          currentPlanId={currentMembershipPlanId}
         />
       )}
 
@@ -1547,229 +1467,42 @@ export function MeTab({
         </div>
       )}
 
-      {personalizedFeed?.type === "daily" && (
-        <MeDailyReview
+      {activityDiary ? (
+        <MeActivityTimeline
+          days={DEMO_CAPTURE_DIARY}
+          initialDate={activityDiary.date}
+          initialActivity={activityDiary.value}
           displayName={activeAccount.displayName}
-          body={PERSONALIZED_DAILY_REVIEW_LATEST}
-          headline={DAILY_REVIEW_HEADLINE}
-          highlights={DAILY_REVIEW_HIGHLIGHTS}
-          streakDays={stats.consecutiveDays}
-          captureCountToday={Math.min(getTodayHeatmapEntry().value + 1, 5)}
-          onClose={() => setPersonalizedFeed(null)}
-          onShare={setShareSheet}
-          onOpenTodayActivity={() => {
-            const day = getTodayHeatmapEntry()
-            setPersonalizedFeed(null)
-            setHeatmapDayDetail({ date: day.date, value: day.value })
-          }}
-        />
-      )}
-
-      {showAiInsights && (
-        <MeAiInsights
-          displayName={activeAccount.displayName}
-          onClose={() => setShowAiInsights(false)}
-          noteCount={stats.totalNotes}
-          libraryItemCount={stats.knowledgeItems}
-          tagCount={12}
-          dayCount={stats.totalDays}
-          onShare={setShareSheet}
-        />
-      )}
-
-      {heatmapDayDetail &&
-        (() => {
-          const d = heatmapDayDetail
-          const uploads = getDayUploads(d.date, d.value)
-          const title = formatHeatmapDayLabel(d.date)
-          const sharePreview = buildDayShareCardText(
-            d.date,
-            d.value,
-            activeAccount.displayName,
-            stats.consecutiveDays
-          )
-          const captures = getDayUploads(d.date, d.value).length
-          const activityLine =
-            d.value > 0
-              ? `${captures} capture${captures === 1 ? "" : "s"} · level ${d.value}`
-              : "A quiet day on my timeline"
-          const openDayShare = () =>
+          webLayout={webLayout}
+          listFirst={activityDiary.listFirst ?? true}
+          onClose={() => setActivityDiary(null)}
+          getUploads={getDayUploads}
+          onShare={(day) => {
+            const title = formatHeatmapDayLabel(day.isoDate)
+            const sharePreview = buildDayShareCardText(
+              day.isoDate,
+              day.activity,
+              activeAccount.displayName,
+              stats.consecutiveDays
+            )
+            const captures = getDayUploads(day.isoDate, day.activity).length
+            const activityLine =
+              day.activity > 0
+                ? `${captures} capture${captures === 1 ? "" : "s"} · level ${day.activity}`
+                : "A quiet day on my timeline"
             setShareSheet(
               buildTimelineSharePayload({
                 displayName: activeAccount.displayName,
                 dateLabel: title,
-                slogan: getDayViralSlogan(d.date, d.value),
+                slogan: getDayViralSlogan(day.isoDate, day.activity),
                 activityLine,
                 streakDays: stats.consecutiveDays,
                 body: sharePreview,
               })
             )
-          return (
-            <div className="absolute inset-0 z-[60] flex flex-col bg-white dark:bg-zinc-950 dark:bg-zinc-950 animate-in fade-in duration-150">
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900 shrink-0">
-                <button type="button" onClick={() => setHeatmapDayDetail(null)} className="p-1 rounded-full hover:bg-stone-100">
-                  <ChevronRight className="w-6 h-6 text-zinc-600 rotate-180" />
-                </button>
-                
-                  <div className="flex-1 min-w-0 text-center">
-                    <h1 className="text-lg font-semibold text-zinc-900 truncate">{title}</h1>
-                    <p className="text-xs text-zinc-500">
-                      Activity {d.value === 0 ? "none" : `level ${d.value}`}
-                    </p>
-                  </div>
-                  <div className="w-8 shrink-0" aria-hidden />
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-5 py-4 pb-8 space-y-4">
-                <ActivityDayShareCard
-                  isoDate={d.date}
-                  activity={d.value}
-                  displayName={activeAccount.displayName}
-                  streakDays={stats.consecutiveDays}
-                  onShare={openDayShare}
-                />
-
-                <div className="bg-white rounded-2xl border border-stone-100/85 shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 border-b border-stone-100/85 bg-white dark:bg-zinc-950/80">
-                    <span className="text-xs font-medium text-zinc-600">This day · AI summary</span>
-                  </div>
-                  <div className="p-4 space-y-4">
-                    <p className="text-[15px] text-zinc-900 leading-relaxed font-medium">
-                      {getDayLeadLine(d.date, d.value)}
-                    </p>
-                    <p className="text-[15px] text-zinc-700 leading-relaxed">
-                      {getDailyReviewForDay(d.date, d.value)}
-                    </p>
-                    {uploads.length > 0 && (
-                      <div className="pt-2 border-t border-stone-100/85">
-                        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-3">
-                          Recorded
-                        </p>
-                        <ul className="space-y-2">
-                          {uploads.map((item) => (
-                            <li key={item.id}>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  toast.message("Open recording", {
-                                    description: `${item.title} · ${item.time}`,
-                                  })
-                                }
-                                className="flex w-full gap-3 rounded-xl bg-white dark:bg-zinc-950 p-3 text-left transition-colors hover:bg-stone-100/80"
-                              >
-                                <div
-                                  className={cn(
-                                    "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                                    mx.citationSubtleBg
-                                  )}
-                                >
-                                  <Mic className="w-4 h-4 text-zinc-600" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-zinc-900 text-sm">{item.title}</div>
-                                  <div className="text-xs text-zinc-500 mt-0.5">
-                                    {item.time} · {item.source}
-                                  </div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-zinc-300 shrink-0 self-center" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
-
-      <MindDevicesSheet
-        open={showDeviceSheet}
-        onClose={() => setShowDeviceSheet(false)}
-        isDeviceConnected={isDeviceConnected}
-        onSetDeviceConnected={setIsDeviceConnected}
-        zOverlayClass="z-[60]"
-      >
-        <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">On this device</p>
-          <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm shadow-stone-900/[0.03] divide-y divide-stone-100">
-            <div className="flex items-center gap-3 px-4 py-3">
-              <div
-                className="relative h-[52px] w-11 shrink-0 rounded-xl bg-gradient-to-b from-stone-100 to-stone-300/90 ring-1 ring-stone-200/80"
-                aria-hidden
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-medium text-zinc-900">Medrix Mind</p>
-                <p className="mt-0.5 text-[13px] text-zinc-500">
-                  <span className="font-medium text-zinc-600">78%</span>
-                  <span className="text-zinc-400"> · </span>
-                  ~42h storage
-                </p>
-              </div>
-            </div>
-
-            <div className="px-4 py-3">
-              <p className="text-[14px] font-medium text-zinc-900">Lexicon</p>
-              <textarea
-                value={lexiconDraft}
-                onChange={(e) => setLexiconDraft(e.target.value)}
-                onBlur={() => {
-                  const raw = lexiconDraft.trim()
-                  if (!raw) return
-                  const parts = raw.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean)
-                  if (parts.length) {
-                    setLexiconTags((prev) => Array.from(new Set([...prev, ...parts])).slice(0, 24))
-                    setLexiconDraft("")
-                  }
-                }}
-                placeholder="Add terms (comma or new line) to bias transcription and search"
-                rows={2}
-                className="mt-2 w-full resize-none rounded-lg border border-stone-200/90 bg-stone-50/50 px-3 py-2 text-[14px] text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400/80 focus:outline-none focus:ring-1 focus:ring-zinc-400/20"
-              />
-              {lexiconTags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {lexiconTags.map((tag) => (
-                    <span key={tag} className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] text-zinc-600">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-medium text-zinc-900">Offline-only processing</p>
-                <p className="mt-0.5 text-[12px] leading-snug text-zinc-500">
-                  Fully offline: cloud Claw and advanced skills are unavailable
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={offlineOnly}
-                onClick={() => {
-                  if (!offlineOnly) setOfflineConfirmOpen(true)
-                  else setOfflineOnly(false)
-                }}
-                className={cn(
-                  "relative h-7 w-[44px] shrink-0 rounded-full p-0.5 transition-colors",
-                  offlineOnly ? "bg-mind" : "bg-stone-200"
-                )}
-              >
-                <span
-                  className={cn(
-                    "block h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
-                    offlineOnly ? "translate-x-[18px]" : "translate-x-0"
-                  )}
-                />
-              </button>
-            </div>
-          </div>
-        </div>
-      </MindDevicesSheet>
+          }}
+        />
+      ) : null}
 
       <MindShareSheet open={shareSheet != null} payload={shareSheet} onClose={() => setShareSheet(null)} />
 
@@ -1784,6 +1517,26 @@ export function MeTab({
           onCrashReportsChange={setPrivacyCrashReports}
         />
       )}
+    </>
+  )
+
+  if (webLayout) {
+    return (
+      <div className="relative h-full min-h-0">
+        <MeTabWebLayout
+          profileHero={webProfileHero}
+          timelinePanel={webTimelinePanel}
+          settingsPanel={webSettingsPanel}
+          overlays={accountAndOverlays}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn("relative flex h-full min-h-0 flex-col", "bg-[#fafaf9] dark:bg-zinc-950")}>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-8">{profileHeroBlock}</div>
+      {accountAndOverlays}
     </div>
   )
 }

@@ -1,0 +1,423 @@
+/**
+ * Modern layout utilities inspired by web prototype
+ * Provides glassmorphism panels, rounded cards, and gradient backgrounds
+ */
+
+/* Modern panel with glassmorphism effect */
+.modern-panel {
+    overflow: hidden;
+    border-radius: 16px;
+    border: 1px solid var(--mind-panel-border);
+    background: var(--mind-panel-bg);
+    box-shadow: var(--mind-panel-shadow);
+    backdrop-filter: blur(8px);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.modern-panel:hover {
+    box-shadow: 0 14px 48px -16px rgba(15, 23, 42, 0.15);
+}
+
+/* Modern card - lighter shadow, more rounded */
+.modern-card {
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: white;
+    box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.08);
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.modern-card:hover {
+    box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.12);
+    transform: translateY(-2px);
+}
+
+/* ============= Global TDesign component overrides ============= */
+
+/* Modern button styling - rounded corners, subtle shadow */
+.t-button {
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+
+.t-button:not(.t-is-disabled):not(.t-button--variant-text):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.12);
+}
+
+.t-button--theme-primary {
+    box-shadow: 0 2px 8px -2px rgba(14, 165, 233, 0.2);
+}
+
+.t-button--theme-primary:not(.t-is-disabled):hover {
+    box-shadow: 0 6px 16px -4px rgba(14, 165, 233, 0.3) !important;
+}
+
+/* Modern input styling */
+.t-input,
+.t-textarea__inner,
+.t-select__wrap {
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+
+.t-input:not(.t-is-disabled):hover,
+.t-textarea__inner:not(.t-is-disabled):hover {
+    border-color: rgba(14, 165, 233, 0.4) !important;
+}
+
+.t-input.t-is-focused,
+.t-textarea__inner:focus {
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1) !important;
+}
+
+/* Modern dialog styling */
+.t-dialog {
+    border-radius: 20px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.18) !important;
+    backdrop-filter: blur(12px);
+}
+
+.t-dialog__mask {
+    backdrop-filter: blur(8px) !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Modern drawer styling */
+.t-drawer__content {
+    border-radius: 20px 0 0 20px !important;
+    box-shadow: -12px 0 40px -12px rgba(15, 23, 42, 0.18) !important;
+}
+
+/* Modern popup styling */
+.t-popup__content {
+    border-radius: 12px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.15) !important;
+    backdrop-filter: blur(8px);
+}
+
+/* Modern dropdown menu */
+.t-dropdown__menu {
+    border-radius: 12px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.15) !important;
+    padding: 4px !important;
+}
+
+.t-dropdown__menu .t-dropdown__item {
+    border-radius: 8px !important;
+    transition: all 0.15s ease !important;
+}
+
+/* Modern message/notification */
+.t-message {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.15) !important;
+}
+
+/* Modern tag */
+.t-tag {
+    border-radius: 8px !important;
+}
+
+/* Modern checkbox/radio */
+.t-checkbox__input,
+.t-radio__input {
+    border-radius: 4px !important;
+}
+
+/* Modern switch */
+.t-switch {
+    transition: all 0.2s ease !important;
+}
+
+/* Modern table */
+.t-table {
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+/* Modern tooltip */
+.t-tooltip {
+    border-radius: 8px !important;
+    backdrop-filter: blur(8px);
+}
+
+/* Dark mode adjustments */
+:root[theme-mode="dark"] .modern-panel {
+    border-color: rgba(63, 63, 70, 0.9);
+    background: var(--mind-panel-bg);
+    box-shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.5);
+}
+
+:root[theme-mode="dark"] .modern-card {
+    border-color: rgba(63, 63, 70, 0.8);
+    background: rgba(24, 24, 27, 0.95);
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+}
+
+:root[theme-mode="dark"] .modern-card:hover {
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
+:root[theme-mode="dark"] .t-dialog {
+    border-color: rgba(63, 63, 70, 0.9) !important;
+    background: rgba(24, 24, 27, 0.98) !important;
+}
+
+:root[theme-mode="dark"] .t-popup__content,
+:root[theme-mode="dark"] .t-dropdown__menu {
+    border-color: rgba(63, 63, 70, 0.9) !important;
+    background: rgba(24, 24, 27, 0.98) !important;
+}
+
+/* Page header styling */
+.modern-page-header {
+    margin-bottom: 24px;
+}
+
+.modern-page-header h1 {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--td-text-color-primary);
+    margin: 0 0 4px 0;
+}
+
+.modern-page-header p {
+    font-size: 14px;
+    color: var(--td-text-color-secondary);
+    margin: 0;
+}
+
+/* Content container with max width */
+.modern-content-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+/* Grid layouts */
+.modern-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.modern-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.modern-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 1024px) {
+    .modern-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .modern-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .modern-grid-4,
+    .modern-grid-3,
+    .modern-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Modern button styles */
+.modern-button-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px -4px rgba(20, 184, 166, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modern-button-primary:hover {
+    box-shadow: 0 8px 20px -6px rgba(20, 184, 166, 0.4);
+    transform: translateY(-1px);
+}
+
+.modern-button-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    background: white;
+    color: var(--td-text-color-primary);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modern-button-secondary:hover {
+    background: var(--td-bg-color-container-hover);
+    border-color: rgba(226, 232, 240, 1);
+}
+
+/* Scrollbar styling for modern look */
+.modern-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+:root[theme-mode="dark"] .modern-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+:root[theme-mode="dark"] .modern-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ============= Web Design Tokens (from web/components/mind-v2/web-design.ts) ============= */
+
+/* Canvas and panel backgrounds */
+.web-canvas {
+    background: #f7f7f8;
+}
+
+.web-panel {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+}
+
+.web-panel-shadow {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.web-hairline {
+    border-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Navigation selection gradient (teal/violet) */
+.web-nav-selection {
+    background: linear-gradient(135deg, rgba(204, 251, 241, 0.95) 0%, rgba(237, 233, 254, 0.75) 100%);
+}
+
+.web-nav-item-active {
+    background: linear-gradient(135deg, rgba(204, 251, 241, 0.95) 0%, rgba(237, 233, 254, 0.75) 100%);
+    font-weight: 500;
+    color: #27272a;
+}
+
+.web-nav-item-idle {
+    color: #52525b;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.web-nav-item-idle:hover {
+    background: rgba(255, 255, 255, 0.55);
+    color: #27272a;
+}
+
+/* Rail tab styles */
+.web-rail-tab-active {
+    background: linear-gradient(135deg, rgba(204, 251, 241, 0.95) 0%, rgba(237, 233, 254, 0.75) 100%);
+    color: #27272a;
+}
+
+.web-rail-tab-idle {
+    color: #71717a;
+}
+
+.web-rail-tab-idle:hover {
+    background: rgba(255, 255, 255, 0.5);
+    color: #3f3f46;
+}
+
+/* Rail icon circle (44x44px rounded-full) */
+.web-rail-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: background 0.2s ease;
+}
+
+.web-rail-icon-circle-active {
+    background: linear-gradient(135deg, #ccfbf1 0%, #ede9fe 100%);
+}
+
+/* Text colors */
+.web-text-primary {
+    color: #3f3f46;
+}
+
+.web-text-secondary {
+    color: #52525b;
+}
+
+.web-text-muted {
+    color: #71717a;
+}
+
+.web-text-subtle {
+    color: #a1a1aa;
+}
+
+.web-accent {
+    color: rgba(13, 148, 136, 0.9);
+}
+
+/* Dark mode variants */
+:root[theme-mode="dark"] .web-canvas {
+    background: #1a1a1a;
+}
+
+:root[theme-mode="dark"] .web-panel {
+    background: rgba(26, 26, 26, 0.9);
+}
+
+:root[theme-mode="dark"] .web-nav-item-active {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.4) 0%, rgba(139, 92, 246, 0.3) 100%);
+    color: #fafafa;
+}
+
+:root[theme-mode="dark"] .web-rail-tab-active {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.4) 0%, rgba(139, 92, 246, 0.3) 100%);
+    color: #e4e4e7;
+}
+
+:root[theme-mode="dark"] .web-rail-icon-circle-active {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.4) 0%, rgba(139, 92, 246, 0.3) 100%);
+}
