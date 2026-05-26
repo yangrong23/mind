@@ -11,11 +11,11 @@ import { MindarLogoMark } from "@/components/mind-v2/mindar-logo"
 import { Compass, Layers, NotebookPen, Settings, Sparkles } from "lucide-react"
 import type { WebTabType } from "@/components/mind-v2/web-sidebar-nav"
 
-/** High-frequency first: Agent → Library → discover → Memos */
+/** Plaza discover first; Library / Agent / Notes match recents sidebar order. */
 const tabs: { id: WebTabType; label: string; icon: LucideIcon }[] = [
-  { id: "agent", label: "Agent", icon: Sparkles },
-  { id: "library", label: "Library", icon: Layers },
   { id: "plaza", label: "Square", icon: Compass },
+  { id: "library", label: "Library", icon: Layers },
+  { id: "agent", label: "Agent", icon: Sparkles },
   { id: "memos", label: "Notes", icon: NotebookPen },
 ]
 

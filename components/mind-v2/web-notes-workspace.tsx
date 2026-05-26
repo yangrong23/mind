@@ -187,12 +187,28 @@ function WebNoteShareDialog({
 
 export function WebNotesWorkspace({
   requireAuthThen,
+  initialSelectedNoteId,
+  onNoteActivated,
 }: {
   requireAuthThen?: (run: () => void) => void
+  initialSelectedNoteId?: number
+  onNoteActivated?: (note: Note) => void
 }) {
   const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const [notes, setNotes] = useState<Note[]>(seedWebNotes)
-  const [selectedId, setSelectedId] = useState<number>(() => WEB_DEMO_NOTE.id)
+  const [selectedId, setSelectedId] = useState<number>(() => initialSelectedNoteId ?? WEB_DEMO_NOTE.id)
+
+  useEffect(() => {
+    if (initialSelectedNoteId == null) return
+    if (notes.some((n) => n.id === initialSelectedNoteId)) {
+      setSelectedId(initialSelectedNoteId)
+    }
+  }, [initialSelectedNoteId, notes])
+
+  function selectNote(note: Note) {
+    setSelectedId(note.id)
+    onNoteActivated?.(note)
+  }
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
@@ -304,7 +320,7 @@ export function WebNotesWorkspace({
         source: "Rich text",
       }
       setNotes((prev) => [note, ...prev])
-      setSelectedId(id)
+      selectNote(note)
       setAiPanelOpen(false)
       toast.message("New memo", { description: "Start writing in the editor." })
     })
@@ -412,7 +428,7 @@ export function WebNotesWorkspace({
                         type="button"
                         onClick={() => {
                           persistTextNote()
-                          setSelectedId(note.id)
+                          selectNote(note)
                         }}
                         className={webNavListItem(active, {
                           className: "w-full px-3 py-2.5 text-left",

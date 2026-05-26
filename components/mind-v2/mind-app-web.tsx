@@ -41,14 +41,22 @@ import {
 } from "@/lib/plaza-subscription-store"
 import { agentFromPublicKbSettings, libraryAssistantChatMeta } from "@/lib/plaza-agent-runtime"
 import { getKbAgentSuggestions } from "@/lib/kb-agent-suggestions"
+import { mockNotes } from "@/lib/mock-notes"
+import type { Note } from "@/lib/note-types"
 import {
   readRecentAgentIds,
-  readRecentKbIds,
+  readRecentNoteIds,
+  readRecentPrivateKbIds,
+  readRecentPublicKbIds,
   resolveRecentAgentIds,
-  resolveRecentKbIds,
+  resolveRecentNoteIds,
+  resolveRecentPrivateKbIds,
+  resolveRecentPublicKbIds,
   touchRecentAgent,
-  touchRecentKb,
+  touchRecentKbFromBase,
+  touchRecentNote,
 } from "@/lib/web-recent-usage"
+import { WebRecentsNavPanel } from "@/components/mind-v2/web-recents-nav-panel"
 import { WebShellHeader } from "@/components/mind-v2/web-shell-header"
 
 const DEMO_AUTH_SESSION_KEY = "mind-v2-demo-auth"
@@ -59,10 +67,10 @@ const DEMO_CREDITS = {
 }
 
 const SHELL_TAB_LABELS: Record<WebTabType, { title: string; subtitle?: string }> = {
-  agent: { title: "Agent", subtitle: "Recent agents first — then your full roster" },
-  library: { title: "Library", subtitle: "Recent libraries, then personal, following, and shared" },
-  plaza: { title: "Square", subtitle: "Discover public libraries to follow" },
-  memos: { title: "Notes", subtitle: "Memos and drafts" },
+  plaza: { title: "Square", subtitle: "Discover and follow public libraries" },
+  library: { title: "Library", subtitle: "Personal, following, shared — full browser" },
+  agent: { title: "Agent", subtitle: "Chat and generate from your libraries" },
+  memos: { title: "Notes", subtitle: "Memos, drafts, and rich text" },
   me: { title: "Me", subtitle: "Profile, timeline, and billing" },
 }
 
@@ -150,14 +158,30 @@ export function MindAppWeb() {
   const [creditsModalOpen, setCreditsModalOpen] = useState(false)
   const [creditsOpenSignal, setCreditsOpenSignal] = useState(0)
   const [plazaSubscribedKbs, setPlazaSubscribedKbs] = useState<KnowledgeBase[]>(() => readPlazaSubscriptions())
-  const [recentKbIds, setRecentKbIds] = useState<number[]>(() => resolveRecentKbIds(readRecentKbIds()))
+  const [recentPublicKbIds, setRecentPublicKbIds] = useState<number[]>(() =>
+    resolveRecentPublicKbIds(readRecentPublicKbIds())
+  )
+  const [recentPrivateKbIds, setRecentPrivateKbIds] = useState<number[]>(() =>
+    resolveRecentPrivateKbIds(readRecentPrivateKbIds())
+  )
   const [recentAgentIds, setRecentAgentIds] = useState<number[]>(() =>
     resolveRecentAgentIds(readRecentAgentIds())
   )
+  const [recentNoteIds, setRecentNoteIds] = useState<number[]>(() =>
+    resolveRecentNoteIds(readRecentNoteIds())
+  )
+  const [focusNoteId, setFocusNoteId] = useState<number | null>(null)
+
+  const recentKbIds = useMemo(
+    () => [...recentPublicKbIds, ...recentPrivateKbIds],
+    [recentPublicKbIds, recentPrivateKbIds]
+  )
 
   function syncRecentsFromStorage() {
-    setRecentKbIds(resolveRecentKbIds(readRecentKbIds()))
+    setRecentPublicKbIds(resolveRecentPublicKbIds(readRecentPublicKbIds()))
+    setRecentPrivateKbIds(resolveRecentPrivateKbIds(readRecentPrivateKbIds()))
     setRecentAgentIds(resolveRecentAgentIds(readRecentAgentIds()))
+    setRecentNoteIds(resolveRecentNoteIds(readRecentNoteIds()))
   }
 
   const allKbsById = useMemo(() => {
@@ -168,12 +192,20 @@ export function MindAppWeb() {
     return map
   }, [plazaSubscribedKbs])
 
-  const recentKbs = useMemo(
+  const recentPublicKbs = useMemo(
     () =>
-      recentKbIds
+      recentPublicKbIds
         .map((id) => allKbsById.get(id))
         .filter((kb): kb is KnowledgeBase => Boolean(kb)),
-    [recentKbIds, allKbsById]
+    [recentPublicKbIds, allKbsById]
+  )
+
+  const recentPrivateKbs = useMemo(
+    () =>
+      recentPrivateKbIds
+        .map((id) => allKbsById.get(id))
+        .filter((kb): kb is KnowledgeBase => Boolean(kb)),
+    [recentPrivateKbIds, allKbsById]
   )
 
   const recentAgents = useMemo(
@@ -182,6 +214,14 @@ export function MindAppWeb() {
         .map((id) => WEB_AGENT_ROSTER.find((a) => a.id === id))
         .filter((a): a is Agent => Boolean(a)),
     [recentAgentIds]
+  )
+
+  const recentNotes = useMemo(
+    () =>
+      recentNoteIds
+        .map((id) => mockNotes.find((n) => n.id === id))
+        .filter((n): n is Note => Boolean(n)),
+    [recentNoteIds]
   )
 
   function noteAgentUsed(agent: Agent) {
@@ -299,7 +339,7 @@ export function MindAppWeb() {
     kb: KnowledgeBase,
     options?: { openTeamInfo?: boolean; initialFocusStudio?: boolean }
   ) {
-    touchRecentKb(kb.id)
+    touchRecentKbFromBase(kb)
     syncRecentsFromStorage()
     setSelectedKbId(kb.id)
     setActiveTab("library")
@@ -341,6 +381,39 @@ export function MindAppWeb() {
           onOpenSettings={() => setSettingsOpen((v) => !v)}
           settingsActive={settingsOpen}
         />
+
+        {shellMain && !settingsOpen ? (
+          <WebRecentsNavPanel
+            recentPublicKbs={recentPublicKbs}
+            recentPrivateKbs={recentPrivateKbs}
+            recentAgents={recentAgents}
+            recentNotes={recentNotes}
+            selectedKbId={selectedKbId}
+            selectedAgentId={selectedAgentId}
+            selectedNoteId={focusNoteId}
+            onOpenPlaza={() => switchTab("plaza")}
+            onOpenPublicKb={(kb) => requireAuthThen(() => openNotebook(kb))}
+            onOpenPrivateKb={(kb) => requireAuthThen(() => openNotebook(kb))}
+            onOpenAgent={(agent) => {
+              noteAgentUsed(agent)
+              if (agent.id === MINDAR_COPILOT_AGENT.id) {
+                switchTab("agent")
+              } else {
+                requireAuthThen(() => setCurrentView({ type: "agent-chat", agent }))
+              }
+            }}
+            onOpenNote={(note) => {
+              touchRecentNote(note.id)
+              syncRecentsFromStorage()
+              setFocusNoteId(note.id)
+              switchTab("memos")
+            }}
+            onMorePublic={() => switchTab("library")}
+            onMorePrivate={() => switchTab("library")}
+            onMoreAgents={() => switchTab("agent")}
+            onMoreNotes={() => switchTab("memos")}
+          />
+        ) : null}
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {shellMain ? (
@@ -459,7 +532,15 @@ export function MindAppWeb() {
           )}
 
           {shellMain && !settingsOpen && activeTab === "memos" && (
-            <WebNotesWorkspace requireAuthThen={requireAuthThen} />
+            <WebNotesWorkspace
+              requireAuthThen={requireAuthThen}
+              initialSelectedNoteId={focusNoteId ?? undefined}
+              onNoteActivated={(note) => {
+                touchRecentNote(note.id)
+                syncRecentsFromStorage()
+                setFocusNoteId(note.id)
+              }}
+            />
           )}
 
           {shellMain && !settingsOpen && activeTab === "agent" && (
@@ -467,24 +548,6 @@ export function MindAppWeb() {
               draftSeed={agentHistoryDraft}
               onDraftSeedConsumed={() => setAgentHistoryDraft(null)}
               requireAuthThen={requireAuthThen}
-              recentKbs={recentKbs}
-              recentAgents={recentAgents}
-              onOpenLibrary={(kb) => requireAuthThen(() => openNotebook(kb))}
-              onSeeAllLibraries={() => {
-                switchTab("library")
-                requestAnimationFrame(() =>
-                  document.getElementById("web-all-libraries")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  })
-                )
-              }}
-              onSeeAllAgents={() =>
-                document.getElementById("web-all-agents")?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                })
-              }
               onAgentChat={(agent, options) =>
                 requireAuthThen(() => {
                   noteAgentUsed(agent)
