@@ -19,6 +19,8 @@ import { getAgentExamplePrompts } from "@/lib/agent-chat-example-prompts"
 import { MINDAR_COPILOT_AGENT, type Agent, type AgentChatLaunchOptions } from "@/components/mind-v2/agent-tab"
 import { MindarLogo } from "@/components/mind-v2/mindar-logo"
 import { MindUseCasesSection } from "@/components/mind-v2/mind-use-case-guide-panel"
+import { WebQuickRecentsPanel } from "@/components/mind-v2/web-quick-recents-panel"
+import type { KnowledgeBase } from "@/lib/mock-knowledge-bases"
 
 /** Mindar Agent home — composer + landing-aligned use cases */
 export function WebAgentCopilotPage({
@@ -26,11 +28,21 @@ export function WebAgentCopilotPage({
   requireAuthThen,
   draftSeed,
   onDraftSeedConsumed,
+  recentKbs = [],
+  recentAgents = [],
+  onOpenLibrary,
+  onSeeAllLibraries,
+  onSeeAllAgents,
 }: {
   onAgentChat: (agent: Agent, options?: AgentChatLaunchOptions) => void
   requireAuthThen?: (run: () => void) => void
   draftSeed?: string | null
   onDraftSeedConsumed?: () => void
+  recentKbs?: KnowledgeBase[]
+  recentAgents?: Agent[]
+  onOpenLibrary?: (kb: KnowledgeBase) => void
+  onSeeAllLibraries?: () => void
+  onSeeAllAgents?: () => void
 }) {
   const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const [draft, setDraft] = useState("")
@@ -63,11 +75,20 @@ export function WebAgentCopilotPage({
         webNavMotion.contentEnter
       )}
     >
-      <section aria-label="Agent home" className="shrink-0 px-6 pb-8 pt-16 sm:pt-20">
+      <section aria-label="Agent home" className="shrink-0 px-6 pb-8 pt-6 sm:pt-8">
+        <WebQuickRecentsPanel
+          recentKbs={recentKbs}
+          recentAgents={recentAgents}
+          onOpenKb={(kb) => runWithAuth(() => onOpenLibrary?.(kb))}
+          onOpenAgent={(agent) => runWithAuth(() => onAgentChat(agent))}
+          onSeeAllLibraries={() => onSeeAllLibraries?.()}
+          onSeeAllAgents={() => onSeeAllAgents?.()}
+          className="mb-8"
+        />
         <div className="mx-auto flex w-full max-w-2xl flex-col items-center text-center">
           <div className="flex flex-col items-center px-2 pb-8 pt-2">
             <MindarLogo height={40} priority className="max-w-[7.5rem]" />
-            <h2 className="mt-8 text-center text-[22px] font-semibold tracking-tight text-zinc-800 sm:text-[26px]">
+            <h2 className="mt-4 text-center text-[22px] font-semibold tracking-tight text-zinc-800 sm:text-[26px]">
               What can I help you with?
             </h2>
             <AgentExamplePromptRail

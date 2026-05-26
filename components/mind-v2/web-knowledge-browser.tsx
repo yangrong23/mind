@@ -260,6 +260,7 @@ export function WebKnowledgeBrowser({
   onDeleteKnowledgeBase,
   onOpenKnowledgeBaseSettings,
   extraSubscribedKbs = [],
+  recentKbIds = [],
 }: {
   selectedKbId: number | null
   onSelectKb: (kb: KnowledgeBase) => void
@@ -278,6 +279,8 @@ export function WebKnowledgeBrowser({
   onDeleteKnowledgeBase?: (kbId: number) => Promise<void>
   /** Opens legacy Vue KB settings (chunking, models, datasources) — do not replace in React */
   onOpenKnowledgeBaseSettings?: (kbId: number) => void
+  /** Recently opened libraries — shown above full sidebar sections */
+  recentKbIds?: number[]
 }) {
   const [expanded, setExpanded] = useState<Record<SidebarSectionId, boolean>>({
     mine: true,
@@ -448,6 +451,15 @@ export function WebKnowledgeBrowser({
       toast.success("Library updated", { description: `"${payload.name}" saved.` })
     },
     [createDialogMode, nextKbId, customKBs, onSelectKb]
+  )
+
+  const recentKbs = useMemo(
+    () =>
+      recentKbIds
+        .map((id) => allKBs.find((k) => k.id === id))
+        .filter((k): k is KnowledgeBase => Boolean(k))
+        .slice(0, 5),
+    [allKBs, recentKbIds]
   )
 
   const grouped = useMemo(() => {
@@ -816,6 +828,52 @@ export function WebKnowledgeBrowser({
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pt-3 pb-0">
+          {recentKbs.length > 0 ? (
+            <div>
+              <p className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+                Recent
+              </p>
+              <ul className="mt-0.5 space-y-0.5 pl-1">
+                {recentKbs.map((kb) => {
+                  const displayKb = kbForList(kb)
+                  const active = selectedKbId === kb.id
+                  const itemCount = hubByKb[kb.id]?.length ?? kb.count
+                  return (
+                    <li key={`recent-${kb.id}`}>
+                      <button
+                        type="button"
+                        onClick={() => onSelectKb(kb)}
+                        className={webNavListItem(active, {
+                          className:
+                            "flex w-full items-center gap-2 px-2.5 py-2 text-left text-[13px] font-medium",
+                        })}
+                      >
+                        <div className="h-6 w-6 shrink-0 overflow-hidden rounded-md">
+                          <LibraryCoverFromKb kb={displayKb} showMiniUi={false} />
+                        </div>
+                        <span className="min-w-0 flex-1 truncate text-zinc-700">{displayKb.name}</span>
+                        <span
+                          className={cn(
+                            "shrink-0 tabular-nums text-[10px]",
+                            active ? web.navItemActiveCount : "text-zinc-400"
+                          )}
+                        >
+                          {itemCount}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              <p
+                id="web-all-libraries"
+                className="mt-3 px-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-zinc-400"
+              >
+                All libraries
+              </p>
+            </div>
+          ) : null}
+
           {SIDEBAR_SECTIONS.map((section) => {
             const items = grouped[section.id]
             const open = expanded[section.id]

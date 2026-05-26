@@ -13,7 +13,7 @@ import {
   getMindAgentProfile,
   MINDAR_COPILOT_PROFILE,
 } from "@/lib/mind-agent-catalog"
-import { Bot, LayoutDashboard, MessageCirclePlus, PanelLeftClose, Search } from "lucide-react"
+import { Bot, ChevronRight, LayoutDashboard, MessageCirclePlus, PanelLeftClose, Search } from "lucide-react"
 
 export type AgentChatThread = {
   id: string
@@ -76,6 +76,8 @@ export function WebAgentSidebar({
   onSelectThread,
   onDiscoverAgents,
   onSearchAgents,
+  recentAgentIds = [],
+  onScrollToAllAgents,
 }: {
   selectedAgentId: number
   onSelectAgent: (agent: Agent) => void
@@ -84,9 +86,17 @@ export function WebAgentSidebar({
   onSelectThread?: (thread: AgentChatThread) => void
   onDiscoverAgents?: () => void
   onSearchAgents?: () => void
+  recentAgentIds?: number[]
+  onScrollToAllAgents?: () => void
 }) {
   const threadsForAgent = DEMO_THREADS.filter((t) => t.agentId === selectedAgentId)
   const selectedAgent = AGENT_ROSTER.find((a) => a.id === selectedAgentId) ?? MINDAR_COPILOT_AGENT
+  const recentAgents = recentAgentIds
+    .map((id) => AGENT_ROSTER.find((a) => a.id === id))
+    .filter((a): a is Agent => Boolean(a))
+    .slice(0, 4)
+  const recentIdSet = new Set(recentAgents.map((a) => a.id))
+  const rosterRest = AGENT_ROSTER.filter((a) => !recentIdSet.has(a.id))
 
   return (
     <aside
@@ -144,11 +154,57 @@ export function WebAgentSidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2">
-        <p className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
-          Your agents
+        {recentAgents.length > 0 ? (
+          <>
+            <div className="flex items-center justify-between px-2 pb-1.5">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Recent</p>
+              {onScrollToAllAgents ? (
+                <button
+                  type="button"
+                  onClick={onScrollToAllAgents}
+                  className="inline-flex items-center gap-0.5 text-[11px] font-medium text-mind hover:underline"
+                >
+                  All
+                  <ChevronRight className="h-3 w-3" />
+                </button>
+              ) : null}
+            </div>
+            <ul className="space-y-0.5 pb-3">
+              {recentAgents.map((agent) => {
+                const active = selectedAgentId === agent.id
+                const profile = agent.profile ?? getMindAgentProfile(agent.id)
+                return (
+                  <li key={`recent-${agent.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectAgent(agent)}
+                      className={webNavListItem(active, {
+                        className: "flex w-full items-center gap-2.5 px-2.5 py-2 text-left",
+                      })}
+                    >
+                      <AgentSidebarAvatar agent={agent} size={30} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium text-zinc-800">{agent.name}</p>
+                        <p className="truncate text-[11px] text-zinc-500">
+                          {profile?.tagline ?? agentTagline(agent)}
+                        </p>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        ) : null}
+
+        <p
+          id="web-all-agents"
+          className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400"
+        >
+          All agents
         </p>
         <ul className="space-y-0.5 pb-3">
-          {AGENT_ROSTER.map((agent) => {
+          {(recentAgents.length > 0 ? rosterRest : AGENT_ROSTER).map((agent) => {
             const active = selectedAgentId === agent.id
             const profile = agent.profile ?? getMindAgentProfile(agent.id)
             return (

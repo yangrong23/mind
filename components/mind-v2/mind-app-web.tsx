@@ -1,12 +1,17 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import type { MindAccountId } from "@/lib/mind-accounts"
 import { KnowledgeDetail, type LibraryChatLaunchContext } from "./knowledge-detail"
 import { MINDAR_COPILOT_AGENT, MINDAR_DEMO_MY_AGENTS, type Agent } from "./agent-tab"
 import type { FactoryModalKind } from "./content-factory-modals"
-import type { KBCategory, KnowledgeBase, TeamLibrarySettings } from "@/lib/mock-knowledge-bases"
+import {
+  MOCK_KNOWLEDGE_BASES,
+  type KBCategory,
+  type KnowledgeBase,
+  type TeamLibrarySettings,
+} from "@/lib/mock-knowledge-bases"
 import { MindAuthWeb } from "./mind-auth-web"
 import type { WebTabType } from "./web-sidebar-nav"
 import { WebIconRail } from "./web-icon-rail"
@@ -36,6 +41,15 @@ import {
 } from "@/lib/plaza-subscription-store"
 import { agentFromPublicKbSettings, libraryAssistantChatMeta } from "@/lib/plaza-agent-runtime"
 import { getKbAgentSuggestions } from "@/lib/kb-agent-suggestions"
+import {
+  readRecentAgentIds,
+  readRecentKbIds,
+  resolveRecentAgentIds,
+  resolveRecentKbIds,
+  touchRecentAgent,
+  touchRecentKb,
+} from "@/lib/web-recent-usage"
+import { WebShellHeader } from "@/components/mind-v2/web-shell-header"
 
 const DEMO_AUTH_SESSION_KEY = "mind-v2-demo-auth"
 
@@ -43,6 +57,16 @@ const DEMO_CREDITS = {
   creditsRemaining: 32_400,
   creditsMonthlyAllowance: 50_000,
 }
+
+const SHELL_TAB_LABELS: Record<WebTabType, { title: string; subtitle?: string }> = {
+  agent: { title: "Agent", subtitle: "Recent agents first — then your full roster" },
+  library: { title: "Library", subtitle: "Recent libraries, then personal, following, and shared" },
+  plaza: { title: "Square", subtitle: "Discover public libraries to follow" },
+  memos: { title: "Notes", subtitle: "Memos and drafts" },
+  me: { title: "Me", subtitle: "Profile, timeline, and billing" },
+}
+
+const WEB_AGENT_ROSTER: Agent[] = [MINDAR_COPILOT_AGENT, ...MINDAR_DEMO_MY_AGENTS]
 
 type KbDetailPayload = {
   id?: number
@@ -126,6 +150,45 @@ export function MindAppWeb() {
   const [creditsModalOpen, setCreditsModalOpen] = useState(false)
   const [creditsOpenSignal, setCreditsOpenSignal] = useState(0)
   const [plazaSubscribedKbs, setPlazaSubscribedKbs] = useState<KnowledgeBase[]>(() => readPlazaSubscriptions())
+  const [recentKbIds, setRecentKbIds] = useState<number[]>(() => resolveRecentKbIds(readRecentKbIds()))
+  const [recentAgentIds, setRecentAgentIds] = useState<number[]>(() =>
+    resolveRecentAgentIds(readRecentAgentIds())
+  )
+
+  function syncRecentsFromStorage() {
+    setRecentKbIds(resolveRecentKbIds(readRecentKbIds()))
+    setRecentAgentIds(resolveRecentAgentIds(readRecentAgentIds()))
+  }
+
+  const allKbsById = useMemo(() => {
+    const map = new Map<number, KnowledgeBase>()
+    for (const kb of [...MOCK_KNOWLEDGE_BASES, ...plazaSubscribedKbs]) {
+      map.set(kb.id, kb)
+    }
+    return map
+  }, [plazaSubscribedKbs])
+
+  const recentKbs = useMemo(
+    () =>
+      recentKbIds
+        .map((id) => allKbsById.get(id))
+        .filter((kb): kb is KnowledgeBase => Boolean(kb)),
+    [recentKbIds, allKbsById]
+  )
+
+  const recentAgents = useMemo(
+    () =>
+      recentAgentIds
+        .map((id) => WEB_AGENT_ROSTER.find((a) => a.id === id))
+        .filter((a): a is Agent => Boolean(a)),
+    [recentAgentIds]
+  )
+
+  function noteAgentUsed(agent: Agent) {
+    touchRecentAgent(agent.id)
+    syncRecentsFromStorage()
+    setSelectedAgentId(agent.id)
+  }
 
   function refreshPlazaSubscriptions() {
     setPlazaSubscribedKbs(readPlazaSubscriptions())
@@ -236,6 +299,8 @@ export function MindAppWeb() {
     kb: KnowledgeBase,
     options?: { openTeamInfo?: boolean; initialFocusStudio?: boolean }
   ) {
+    touchRecentKb(kb.id)
+    syncRecentsFromStorage()
     setSelectedKbId(kb.id)
     setActiveTab("library")
     setCurrentView({
@@ -273,13 +338,23 @@ export function MindAppWeb() {
           activeTab={activeTab}
           onTabChange={switchTab}
           activeAccountId={activeAccountId}
-          creditsRemaining={DEMO_CREDITS.creditsRemaining}
-          creditsMonthlyAllowance={DEMO_CREDITS.creditsMonthlyAllowance}
-          onOpenCredits={() => setCreditsModalOpen(true)}
           onOpenSettings={() => setSettingsOpen((v) => !v)}
           settingsActive={settingsOpen}
         />
 
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {shellMain ? (
+            <WebShellHeader
+              title={settingsOpen ? "Settings" : SHELL_TAB_LABELS[activeTab].title}
+              subtitle={
+                settingsOpen ? "Preferences, display, and workspace" : SHELL_TAB_LABELS[activeTab].subtitle
+              }
+              creditsRemaining={DEMO_CREDITS.creditsRemaining}
+              onOpenCredits={() => setCreditsModalOpen(true)}
+            />
+          ) : null}
+
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         <WebCreditsUpgradeModal
           open={creditsModalOpen}
           onClose={() => setCreditsModalOpen(false)}
@@ -295,8 +370,12 @@ export function MindAppWeb() {
         {shellMain && !settingsOpen && activeTab === "agent" ? (
           <WebAgentSidebar
             selectedAgentId={selectedAgentId}
+            recentAgentIds={recentAgentIds}
+            onScrollToAllAgents={() =>
+              document.getElementById("web-all-agents")?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
             onSelectAgent={(agent) => {
-              setSelectedAgentId(agent.id)
+              noteAgentUsed(agent)
               setSelectedThreadId(null)
               setAgentHistoryDraft(null)
               if (agent.id === MINDAR_COPILOT_AGENT.id) {
@@ -321,12 +400,12 @@ export function MindAppWeb() {
             selectedThreadId={selectedThreadId}
             onSelectThread={(thread) => {
               setSelectedThreadId(thread.id)
-              setSelectedAgentId(thread.agentId)
               const agent =
                 thread.agentId === MINDAR_COPILOT_AGENT.id
                   ? MINDAR_COPILOT_AGENT
                   : MINDAR_DEMO_MY_AGENTS.find((a) => a.id === thread.agentId)
               if (!agent) return
+              noteAgentUsed(agent)
               if (thread.agentId === MINDAR_COPILOT_AGENT.id) {
                 setAgentHistoryDraft(thread.title)
                 if (currentView.type !== "shell") setCurrentView({ type: "shell" })
@@ -365,6 +444,7 @@ export function MindAppWeb() {
           {shellMain && !settingsOpen && activeTab === "library" && (
             <WebKnowledgeBrowser
               selectedKbId={selectedKbId}
+              recentKbIds={recentKbIds}
               onSelectKb={(kb) => setSelectedKbId(kb.id)}
               onDeselectKb={() => setSelectedKbId(null)}
               onOpenWorkspace={(kb) => openNotebook(kb)}
@@ -387,14 +467,33 @@ export function MindAppWeb() {
               draftSeed={agentHistoryDraft}
               onDraftSeedConsumed={() => setAgentHistoryDraft(null)}
               requireAuthThen={requireAuthThen}
+              recentKbs={recentKbs}
+              recentAgents={recentAgents}
+              onOpenLibrary={(kb) => requireAuthThen(() => openNotebook(kb))}
+              onSeeAllLibraries={() => {
+                switchTab("library")
+                requestAnimationFrame(() =>
+                  document.getElementById("web-all-libraries")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  })
+                )
+              }}
+              onSeeAllAgents={() =>
+                document.getElementById("web-all-agents")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
+              }
               onAgentChat={(agent, options) =>
-                requireAuthThen(() =>
+                requireAuthThen(() => {
+                  noteAgentUsed(agent)
                   setCurrentView({
                     type: "agent-chat",
                     agent,
                     initialPrompt: options?.initialPrompt,
                   })
-                )
+                })
               }
             />
           )}
@@ -444,7 +543,7 @@ export function MindAppWeb() {
               agent={currentView.agent}
               initialPrompt={currentView.initialPrompt}
               onBack={() => {
-                setSelectedAgentId(currentView.agent.id)
+                noteAgentUsed(currentView.agent)
                 setCurrentView({ type: "shell" })
                 setActiveTab("agent")
               }}
@@ -487,6 +586,8 @@ export function MindAppWeb() {
             />
           )}
         </main>
+          </div>
+        </div>
 
         {authOverlayOpen ? (
           <div

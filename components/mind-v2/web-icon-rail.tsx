@@ -8,14 +8,15 @@ import { web } from "@/components/mind-v2/web-design"
 import { webNavMotion } from "@/components/mind-v2/web-nav-motion"
 import { getMindAccount, type MindAccountId } from "@/lib/mind-accounts"
 import { MindarLogoMark } from "@/components/mind-v2/mindar-logo"
-import { Compass, Layers, NotebookPen, Settings, Sparkles, Zap } from "lucide-react"
+import { Compass, Layers, NotebookPen, Settings, Sparkles } from "lucide-react"
 import type { WebTabType } from "@/components/mind-v2/web-sidebar-nav"
 
+/** High-frequency first: Agent → Library → discover → Memos */
 const tabs: { id: WebTabType; label: string; icon: LucideIcon }[] = [
-  { id: "plaza", label: "Square", icon: Compass },
-  { id: "library", label: "Library", icon: Layers },
-  { id: "memos", label: "Memos", icon: NotebookPen },
   { id: "agent", label: "Agent", icon: Sparkles },
+  { id: "library", label: "Library", icon: Layers },
+  { id: "plaza", label: "Square", icon: Compass },
+  { id: "memos", label: "Notes", icon: NotebookPen },
 ]
 
 function WebIconRailItem({
@@ -25,7 +26,6 @@ function WebIconRailItem({
   icon: Icon,
   label,
   iconStroke = 1.75,
-  subtitle,
 }: {
   active?: boolean
   onClick?: () => void
@@ -33,7 +33,6 @@ function WebIconRailItem({
   icon: LucideIcon
   label: ReactNode
   iconStroke?: number
-  subtitle?: string
 }) {
   return (
     <button
@@ -66,9 +65,6 @@ function WebIconRailItem({
       >
         {label}
       </span>
-      {subtitle ? (
-        <span className="text-[10px] font-medium tabular-nums leading-none text-zinc-400">{subtitle}</span>
-      ) : null}
     </button>
   )
 }
@@ -77,17 +73,12 @@ export function WebIconRail({
   activeTab,
   onTabChange,
   activeAccountId = "work",
-  creditsRemaining = 32_400,
-  onOpenCredits,
   onOpenSettings,
   settingsActive = false,
 }: {
   activeTab: WebTabType
   onTabChange: (tab: WebTabType) => void
   activeAccountId?: MindAccountId
-  creditsRemaining?: number
-  creditsMonthlyAllowance?: number
-  onOpenCredits?: () => void
   onOpenSettings?: () => void
   settingsActive?: boolean
 }) {
@@ -97,52 +88,24 @@ export function WebIconRail({
     <aside
       className={cn(
         "flex h-full min-h-0 shrink-0 flex-col items-stretch px-2.5",
-        /* Less top padding + extra bottom inset so wordmark isn’t flush with screen corner */
         "pt-2 pb-[max(14px,calc(env(safe-area-inset-bottom,0px)+20px))]",
         web.railWidth,
         web.railSurface
       )}
       aria-label="Main navigation"
     >
-      <button
-        type="button"
-        onClick={() => onTabChange("me")}
-        title={`${account.displayName} — Me`}
-        aria-label={`Open Me — ${account.displayName}`}
-        className={cn(
-          "mx-auto mb-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
-          "bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-500 text-sm font-bold text-white shadow-sm shadow-sky-300/40",
-          "focus-visible:outline-none focus-visible:ring-0",
-          webNavMotion.pressable,
-          activeTab === "me" ? "opacity-100" : "opacity-90 hover:opacity-100"
-        )}
-      >
-        {account.initial}
-      </button>
-
-      <nav className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain">
+      <nav className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain pt-1">
         {tabs.map((item) => {
           const active = activeTab === item.id
           return (
-            <div key={item.id}>
-              <WebIconRailItem
-                active={active}
-                onClick={() => onTabChange(item.id)}
-                title={item.label}
-                icon={item.icon}
-                label={item.label}
-              />
-              {item.id === "agent" ? (
-                <WebIconRailItem
-                  onClick={onOpenCredits}
-                  title="Credits"
-                  icon={Zap}
-                  label="Credits"
-                  subtitle={creditsRemaining.toLocaleString("en-US")}
-                  iconStroke={2}
-                />
-              ) : null}
-            </div>
+            <WebIconRailItem
+              key={item.id}
+              active={active}
+              onClick={() => onTabChange(item.id)}
+              title={item.label}
+              icon={item.icon}
+              label={item.label}
+            />
           )
         })}
       </nav>
@@ -155,6 +118,37 @@ export function WebIconRail({
           icon={Settings}
           label="Settings"
         />
+
+        <button
+          type="button"
+          onClick={() => onTabChange("me")}
+          title={`${account.displayName} — Me`}
+          aria-label={`Open Me — ${account.displayName}`}
+          className={cn(
+            web.railTabBase,
+            activeTab === "me" ? web.railTabActive : web.railTabIdle,
+            "focus-visible:outline-none focus-visible:ring-0",
+            webNavMotion.pressable
+          )}
+        >
+          <span
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-sm transition-[background-color,box-shadow] duration-200",
+              "bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-500 shadow-sky-300/40",
+              activeTab === "me" && web.railTabActiveWell
+            )}
+          >
+            {account.initial}
+          </span>
+          <span
+            className={cn(
+              "text-center text-[11px] font-semibold leading-tight tracking-tight",
+              activeTab === "me" ? web.navSelectionText : "text-zinc-500"
+            )}
+          >
+            Me
+          </span>
+        </button>
 
         <Link
           href="/landing"
