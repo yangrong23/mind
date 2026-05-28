@@ -17,6 +17,7 @@ export function WebStudioPanel({
       onSelect={onSelectFactory}
       surface="filled"
       layout="kb"
+      studioCompact
       className="!mt-0"
     />
   )

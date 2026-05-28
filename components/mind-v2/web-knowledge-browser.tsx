@@ -10,9 +10,20 @@ import {
   KnowledgeAddSourceMenu,
   type KnowledgeAddSourceAction,
 } from "@/components/mind-v2/knowledge-add-source-menu"
-import { LibraryCover, LibraryCoverFromKb, LibraryCoverWithUpdateBadge } from "@/components/mind-v2/library-cover"
-import { HubItemThumb } from "@/components/mind-v2/mind-media-art"
-import { hubItemKindFromLabel } from "@/lib/product-media"
+import {
+  KbContentUpdateDot,
+  LibraryCover,
+  LibraryCoverFromKb,
+  LibraryCoverWithUpdateBadge,
+} from "@/components/mind-v2/library-cover"
+import { LibraryListThumbnail } from "@/components/mind-v2/library-list-thumbnail"
+import { KbListMetaBadges } from "@/components/mind-v2/library-kb-badges"
+import {
+  WebLibraryContentEmpty,
+  WebLibraryHubWelcome,
+  WebLibrarySectionEmpty,
+} from "@/components/mind-v2/web-library-empty-guide"
+import { LIBRARY_HUB_SECTIONS } from "@/lib/library-hub-sections"
 import {
   DEFAULT_TEAM_LIBRARY_SETTINGS,
   MOCK_KNOWLEDGE_BASES,
@@ -29,9 +40,37 @@ import {
 } from "@/components/mind-v2/web-create-kb-dialog"
 import { MINDAR_COPILOT_AGENT, MINDAR_DEMO_MY_AGENTS } from "@/components/mind-v2/agent-tab"
 import type { PublicKbSettings } from "@/lib/public-kb-settings"
-import { publicAgentDisplayName } from "@/lib/public-kb-settings"
+import {
+  defaultAgentSettingsForCreate,
+  publicAgentDisplayName,
+} from "@/lib/public-kb-settings"
 import { WebKbShareDialog } from "@/components/mind-v2/web-kb-share-dialog"
 import {
+  PublicKbEngagementBar,
+  PublicKbEngagementStats,
+} from "@/components/mind-v2/public-kb-engagement-bar"
+import {
+  engagementMetricsForKb,
+  readPlazaLikedKbIds,
+  writePlazaLikedKbIds,
+} from "@/lib/plaza-kb-engagement"
+import {
+  isLibrarySubscribed,
+  subscribePlazaLibrary,
+  unsubscribePlazaLibrary,
+} from "@/lib/plaza-subscription-store"
+import {
+  WebKbDetailHero,
+  WebKbDetailSortSelect,
+  WebKbDetailToolbar,
+  WebKbHubContentList,
+  type WebKbHubListItem,
+} from "@/components/mind-v2/web-kb-detail-chrome"
+import { WebLibraryNavPanel } from "@/components/mind-v2/web-library-nav-panel"
+import { WebKbMaterialsGrid, WebKbMaterialsList } from "@/components/mind-v2/web-kb-materials-grid"
+import {
+  SHARED_KB_PRODUCT_LINE,
+  WebKbOverflowMenu,
   WebPersonalKbHeader,
   WebSharedKbContentBar,
   WebSharedKbHeader,
@@ -42,27 +81,21 @@ import {
   ChevronRight,
   FileText,
   Image as ImageIcon,
+  LayoutGrid,
   Link2,
+  List,
   Plus,
   Search,
-  Store,
-  Upload,
+  Share2,
+  Users,
 } from "lucide-react"
+import { KbUploadFileIcon } from "@/components/mind-v2/kb-upload-file-icon"
+export type { LibraryHubSectionId } from "@/lib/library-hub-sections"
+import type { LibraryHubSectionId } from "@/lib/library-hub-sections"
 
-type SidebarSectionId = "mine" | "followed" | "team" | "published"
+type SidebarSectionId = LibraryHubSectionId
 
-/** Sidebar order: Personal → Following → Shared → Published */
-const SIDEBAR_SECTIONS: {
-  id: SidebarSectionId
-  label: string
-  canCreate: boolean
-  browsePlaza?: boolean
-}[] = [
-  { id: "mine", label: "Personal", canCreate: true },
-  { id: "followed", label: "Following", canCreate: false, browsePlaza: true },
-  { id: "team", label: "Shared", canCreate: true },
-  { id: "published", label: "Published", canCreate: false },
-]
+const SIDEBAR_SECTIONS = LIBRARY_HUB_SECTIONS
 
 function subscribedRoleOf(kb: KnowledgeBase): SubscribedKbRole {
   return kb.subscribedRole === "published" ? "published" : "followed"
@@ -165,6 +198,13 @@ function sortKnowledgeBases(items: KnowledgeBase[], sort: KbSortId): KnowledgeBa
   }
 }
 
+/** Following — libraries with new content surface first, then usual sort */
+function sortFollowingLibraries(items: KnowledgeBase[], sort: KbSortId): KnowledgeBase[] {
+  const withUpdate = items.filter((k) => k.hasContentUpdate)
+  const rest = items.filter((k) => !k.hasContentUpdate)
+  return [...sortKnowledgeBases(withUpdate, sort), ...sortKnowledgeBases(rest, sort)]
+}
+
 function sortHubItems(items: HubLibraryItem[], sort: ContentSortId): HubLibraryItem[] {
   const copy = [...items]
   switch (sort) {
@@ -185,7 +225,7 @@ function matchesQuery(text: string, q: string) {
 }
 
 const selectClass =
-  "appearance-none rounded-full bg-white py-2 pl-3 pr-8 text-[12px] font-medium text-zinc-600 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04] outline-none focus:ring-teal-200/50"
+  "appearance-none rounded-full bg-white py-2 pl-3 pr-8 text-[12px] font-medium text-zinc-600 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04] outline-none focus:ring-2 focus:ring-mind/20"
 
 type KbDisplayMeta = {
   name: string
@@ -246,9 +286,11 @@ function mergeKbWithMeta(kb: KnowledgeBase, meta?: KbDisplayMeta): KnowledgeBase
 
 /** 知识库浏览 — 分类树 + 可搜索/排序/添加的内容列表 */
 export function WebKnowledgeBrowser({
+  integratedNav = false,
   selectedKbId,
   onSelectKb,
   onOpenWorkspace,
+  onOpenDocument,
   onDeselectKb,
   onBrowsePlaza,
   requireAuthThen,
@@ -261,10 +303,16 @@ export function WebKnowledgeBrowser({
   onOpenKnowledgeBaseSettings,
   extraSubscribedKbs = [],
   recentKbIds = [],
+  onKbCreated,
+  onLibraryPublished,
 }: {
+  /** Hide inner library sidebar — shell nav already lists recents + More opens this view */
+  integratedNav?: boolean
   selectedKbId: number | null
   onSelectKb: (kb: KnowledgeBase) => void
   onOpenWorkspace: (kb: KnowledgeBase) => void
+  /** Open article reader for a library item (grid / list click). */
+  onOpenDocument?: (kb: KnowledgeBase, item: WebKbHubListItem) => void
   onDeselectKb?: () => void
   onBrowsePlaza?: () => void
   requireAuthThen?: (run: () => void) => void
@@ -281,6 +329,10 @@ export function WebKnowledgeBrowser({
   onOpenKnowledgeBaseSettings?: (kbId: number) => void
   /** Recently opened libraries — shown above full sidebar sections */
   recentKbIds?: number[]
+  /** After create — e.g. touch recents in parent shell */
+  onKbCreated?: (kb: KnowledgeBase) => void
+  /** When user publishes to plaza from the wizard */
+  onLibraryPublished?: (kb: KnowledgeBase) => void
 }) {
   const [expanded, setExpanded] = useState<Record<SidebarSectionId, boolean>>({
     mine: true,
@@ -289,19 +341,23 @@ export function WebKnowledgeBrowser({
     published: true,
   })
   const [kbSearch, setKbSearch] = useState("")
+  const [materialsView, setMaterialsView] = useState<"grid" | "list">("grid")
   const [kbSort, setKbSort] = useState<KbSortId>("recent")
   const [contentSearch, setContentSearch] = useState("")
   const [contentSort, setContentSort] = useState<ContentSortId>("newest")
   const [hubByKb, setHubByKb] = useState<Record<number, HubLibraryItem[]>>(buildInitialHubByKb)
   const [customKBs, setCustomKBs] = useState<KnowledgeBase[]>([])
   const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const [openAddMenuForKbId, setOpenAddMenuForKbId] = useState<number | null>(null)
   const [teamMetaById, setTeamMetaById] = useState(buildInitialTeamMeta)
   const [personalMetaById, setPersonalMetaById] = useState(buildInitialPersonalMeta)
   const [shareOpen, setShareOpen] = useState(false)
   const [overflowOpen, setOverflowOpen] = useState(false)
-  const [createDialogMode, setCreateDialogMode] = useState<WebCreateKbDialogMode | null>(null)
   const [contentSearchOpen, setContentSearchOpen] = useState(false)
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
+  const [createDialogMode, setCreateDialogMode] = useState<WebCreateKbDialogMode | null>(null)
+  const [previewLiked, setPreviewLiked] = useState(false)
+  const [previewLikeCount, setPreviewLikeCount] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
 
@@ -325,6 +381,22 @@ export function WebKnowledgeBrowser({
   const isFollowingKb =
     isSubscribedKb && selectedBase != null && subscribedRoleOf(selectedBase) === "followed"
   const kbHubUploadDisabled = isFollowingKb
+  const plazaSubscribed = selectedBase ? isLibrarySubscribed(selectedBase) : false
+
+  const subscribedEngagement = useMemo(() => {
+    if (!selectedBase || !isSubscribedKb) return null
+    return engagementMetricsForKb(selectedBase.id, selectedBase.subscribers ?? 0, {
+      likeCount: selectedBase.likeCount,
+      commentCount: selectedBase.commentCount,
+    })
+  }, [selectedBase, isSubscribedKb])
+
+  useEffect(() => {
+    if (!selectedBase || !subscribedEngagement) return
+    const liked = readPlazaLikedKbIds().has(selectedBase.id)
+    setPreviewLiked(liked)
+    setPreviewLikeCount(subscribedEngagement.likeCount + (liked ? 1 : 0))
+  }, [selectedBase?.id, subscribedEngagement])
   const displayMeta =
     selectedBase && isSharedKb
       ? teamMetaById[selectedBase.id]
@@ -334,6 +406,12 @@ export function WebKnowledgeBrowser({
   const selected = selectedBase ? mergeKbWithMeta(selectedBase, displayMeta) : null
   const kbQuery = kbSearch.trim().toLowerCase()
   const contentQuery = contentSearch.trim().toLowerCase()
+
+  useEffect(() => {
+    if (openAddMenuForKbId == null || selected?.id !== openAddMenuForKbId) return
+    setAddMenuOpen(true)
+    setOpenAddMenuForKbId(null)
+  }, [openAddMenuForKbId, selected?.id])
 
   const runAuth = useCallback(
     (run: () => void) => {
@@ -364,9 +442,42 @@ export function WebKnowledgeBrowser({
       coverVariant: meta?.coverVariant ?? selectedBase.coverVariant,
       category: createDialogMode.category,
       teamSettings: meta?.settings ?? selectedBase.teamSettings,
-      publicSettings: meta?.publicSettings ?? selectedBase.publicSettings,
+      publicSettings:
+        meta?.publicSettings ??
+        selectedBase.publicSettings ??
+        defaultAgentSettingsForCreate(WEB_BINDABLE_AGENTS),
     }
   }, [createDialogMode, selectedBase, teamMetaById, personalMetaById])
+
+  const completeLibraryCreate = useCallback(
+    (kb: KnowledgeBase, payload: WebCreateKbPayload) => {
+      onSelectKb(kb)
+      onKbCreated?.(kb)
+      const published = Boolean(payload.publicSettings?.isPublic)
+      if (published) {
+        onLibraryPublished?.(kb)
+        setExpanded((e) => ({ ...e, published: true }))
+        toast.success("Published to plaza", {
+          description: `“${publicAgentDisplayName(payload.publicSettings)}” is live in Published.`,
+          action: onBrowsePlaza
+            ? {
+                label: "View plaza",
+                onClick: () => onBrowsePlaza(),
+              }
+            : undefined,
+        })
+      } else {
+        toast.success("Library created", {
+          description: `"${kb.name}" is ready — add sources to power cited answers.`,
+          action: {
+            label: "Add sources",
+            onClick: () => setOpenAddMenuForKbId(kb.id),
+          },
+        })
+      }
+    },
+    [onSelectKb, onKbCreated, onLibraryPublished, onBrowsePlaza]
+  )
 
   const handleCreateOrEditKb = useCallback(
     (payload: WebCreateKbPayload) => {
@@ -375,9 +486,8 @@ export function WebKnowledgeBrowser({
         if (onCreateKnowledgeBase) {
           void onCreateKnowledgeBase(payload).then((kb) => {
             if (!kb) return
-            onSelectKb(kb)
             onRefreshKnowledgeBases?.()
-            toast.success("Library created", { description: `"${kb.name}" is ready.` })
+            completeLibraryCreate(kb, payload)
           })
           return
         }
@@ -389,21 +499,14 @@ export function WebKnowledgeBrowser({
           description: kb.description,
           coverVariant: kb.coverVariant,
           settings: kb.teamSettings,
-          publicSettings: kb.publicSettings,
+          publicSettings: kb.publicSettings ?? payload.publicSettings,
         }
         if (kb.category === "team") {
           setTeamMetaById((prev) => ({ ...prev, [kb.id]: meta }))
         } else {
           setPersonalMetaById((prev) => ({ ...prev, [kb.id]: meta }))
         }
-        onSelectKb(kb)
-        toast.success("Library created", {
-          description: payload.publicSettings?.isPublic
-            ? `"${kb.name}" is published to the plaza with assistant “${publicAgentDisplayName(payload.publicSettings)}”.`
-            : payload.category === "team"
-              ? `"${kb.name}" is ready for your team.`
-              : `"${kb.name}" is in Personal.`,
-        })
+        completeLibraryCreate(kb, payload)
         return
       }
       const id = createDialogMode.kbId
@@ -448,9 +551,26 @@ export function WebKnowledgeBrowser({
       } else {
         setPersonalMetaById((prev) => ({ ...prev, [id]: meta }))
       }
-      toast.success("Library updated", { description: `"${payload.name}" saved.` })
+      const wasPublished = payload.publicSettings?.isPublic
+      if (wasPublished) {
+        const updated =
+          customKBs.find((k) => k.id === id) ??
+          allKBs.find((k) => k.id === id)
+        if (updated) {
+          onLibraryPublished?.({
+            ...updated,
+            name: payload.name,
+            description: payload.description,
+            publicSettings: payload.publicSettings,
+            isPublicPublished: true,
+          })
+        }
+      }
+      toast.success("Library updated", {
+        description: wasPublished ? `"${payload.name}" plaza listing saved.` : `"${payload.name}" saved.`,
+      })
     },
-    [createDialogMode, nextKbId, customKBs, onSelectKb]
+    [createDialogMode, nextKbId, customKBs, allKBs, onSelectKb, completeLibraryCreate, onLibraryPublished]
   )
 
   const recentKbs = useMemo(
@@ -464,11 +584,20 @@ export function WebKnowledgeBrowser({
 
   const grouped = useMemo(() => {
     const subscribed = allKBs.filter((k) => k.category === "subscribed")
+    const publishedOwned = allKBs.filter(
+      (k) =>
+        (k.category === "mine" || k.category === "team") &&
+        k.isPublicPublished &&
+        k.publicSettings?.isPublic
+    )
     const base: Record<SidebarSectionId, KnowledgeBase[]> = {
       mine: allKBs.filter((k) => k.category === "mine"),
       followed: subscribed.filter((kb) => subscribedRoleOf(kb) === "followed"),
       team: allKBs.filter((k) => k.category === "team"),
-      published: subscribed.filter((kb) => subscribedRoleOf(kb) === "published"),
+      published: [
+        ...subscribed.filter((kb) => subscribedRoleOf(kb) === "published"),
+        ...publishedOwned,
+      ],
     }
     const filtered = Object.fromEntries(
       SIDEBAR_SECTIONS.map((s) => [
@@ -482,7 +611,12 @@ export function WebKnowledgeBrowser({
       ])
     ) as Record<SidebarSectionId, KnowledgeBase[]>
     return Object.fromEntries(
-      SIDEBAR_SECTIONS.map((s) => [s.id, sortKnowledgeBases(filtered[s.id], kbSort)])
+      SIDEBAR_SECTIONS.map((s) => [
+        s.id,
+        s.id === "followed"
+          ? sortFollowingLibraries(filtered[s.id], kbSort)
+          : sortKnowledgeBases(filtered[s.id], kbSort),
+      ])
     ) as Record<SidebarSectionId, KnowledgeBase[]>
   }, [allKBs, kbQuery, kbSort])
 
@@ -496,8 +630,6 @@ export function WebKnowledgeBrowser({
     setShareOpen(false)
     setCreateDialogMode(null)
     setAddMenuOpen(false)
-    setSortMenuOpen(false)
-    setContentSearchOpen(false)
   }, [selectedKbId])
 
   const hubItems = selected ? hubByKb[selected.id] ?? [] : []
@@ -588,27 +720,6 @@ export function WebKnowledgeBrowser({
     ])
     toast.success("Note added")
   }, [selected, addHubItems, kbHubUploadDisabled])
-
-  const sortPopover = (
-    <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg">
-      {CONTENT_SORT_OPTIONS.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          onClick={() => {
-            setContentSort(o.id)
-            setSortMenuOpen(false)
-          }}
-          className={cn(
-            "flex w-full px-3 py-2 text-left text-[13px] text-zinc-700 hover:bg-stone-50",
-            contentSort === o.id && "font-semibold text-teal-700"
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
 
   function handleHubAddSource(action: KnowledgeAddSourceAction) {
     setAddMenuOpen(false)
@@ -705,44 +816,78 @@ export function WebKnowledgeBrowser({
       addHubItems(selected.id, [
         {
           id: now,
-          title: title || (isSharedKb ? "粘贴的文字" : "Pasted text"),
-          source: isSharedKb ? "文字" : "Text",
+          title: title || "Pasted text",
+          source: "Text",
           author: "Me",
           date: "Just now",
           dateSort: now,
         },
       ])
-      toast.success(isSharedKb ? "已添加文字" : "Text added")
+      toast.success("Text added")
     })
   }, [addHubItems, isSharedKb, runAuth, selected])
 
+  const openHubItem = useCallback(
+    (item: WebKbHubListItem) => {
+      if (!selected) return
+      if (onOpenDocument) {
+        onOpenDocument(selected, item)
+      } else {
+        onOpenWorkspace(selected)
+      }
+    },
+    [onOpenDocument, onOpenWorkspace, selected]
+  )
+
+  const sortPopover = (
+    <div className="overflow-hidden rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg">
+      {CONTENT_SORT_OPTIONS.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          onClick={() => {
+            setContentSort(o.id)
+            setSortMenuOpen(false)
+          }}
+          className={cn(
+            "flex w-full px-3 py-2 text-left text-[13px] text-zinc-700 hover:bg-stone-50",
+            contentSort === o.id && "font-semibold text-mind"
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  const sharedKbMemberCount =
+    selectedBase?.subscribers ??
+    (selectedBase?.teamRole === "owner" ? 6 : selectedBase ? Math.max(3, Math.min(24, Math.round(selectedBase.count / 12))) : undefined)
+
+  const sharedKbCreatedLabel = selected
+    ? `Updated ${selected.lastUpdate}${selectedBase?.teamRole === "owner" ? " · You created" : ""}`
+    : undefined
+
   const hubListBody = (
-    <div className="min-h-0 flex-1 overflow-y-auto px-8 pb-0">
+    <div className="min-h-0 flex-1 overflow-y-auto">
       {visibleHubItems.length === 0 && !contentQuery ? (
         kbHubUploadDisabled ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-[15px] font-medium text-zinc-700">Read-only library</p>
-            <p className="mt-2 max-w-sm text-[13px] text-zinc-500">
-              Following libraries cannot accept uploads. Open the workspace to browse sources and chat
-              with the library agent.
-            </p>
-            {selected ? (
-              <button
-                type="button"
-                onClick={() => onOpenWorkspace(selected)}
-                className="mt-6 rounded-full bg-zinc-900 px-5 py-2.5 text-[13px] font-semibold text-white hover:bg-zinc-800"
-              >
-                Open workspace
-              </button>
-            ) : null}
-          </div>
+          <WebLibraryContentEmpty
+            libraryName={selected?.name ?? "Library"}
+            readOnly
+            onOpenWorkspace={selected ? () => onOpenWorkspace(selected) : undefined}
+          />
         ) : (
-          <div className="space-y-4 py-8 sm:py-12">
+          <div className="space-y-4 py-6 sm:py-10">
+            <WebLibraryContentEmpty
+              libraryName={selected?.name ?? "Library"}
+              onAddFirst={() => runAuth(() => handleHubAddSource("local-file"))}
+            />
             <KnowledgeUploadGuide
               locale="en"
               hideActionPills
               itemCount={hubItems.length}
-              onFiles={(files) => runAuth(() => ingestFiles(files, "文件"))}
+              onFiles={(files) => runAuth(() => ingestFiles(files, "Files"))}
               onWebsite={() => runAuth(addLinkItem)}
               onCloudDrive={handleCloudDrive}
               onPasteText={handlePasteText}
@@ -755,49 +900,82 @@ export function WebKnowledgeBrowser({
       ) : visibleHubItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <p className="text-[14px] font-medium text-zinc-600">
-            {isSharedKb ? "没有匹配的内容" : "No content matches your search"}
+            No content matches your search
           </p>
           <p className="mt-2 max-w-xs text-[13px] text-zinc-500">
-            {isSharedKb ? "换个关键词，或清空搜索。" : "Try another keyword or clear the search box."}
+            Try another keyword or clear the search box.
           </p>
         </div>
-      ) : (
-        <ul className="divide-y divide-stone-100/90">
-          {visibleHubItems.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => onOpenWorkspace(selected!)}
-                className="flex w-full gap-4 py-4 text-left hover:bg-stone-50/50"
-              >
-                <HubItemThumb
-                  kind={hubItemKindFromLabel(item.source, item.title)}
-                  className="shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold text-zinc-700">{item.title}</p>
-                  <p className="mt-1 text-[12px] text-zinc-500">
-                    {item.source} · {item.author} · {item.date}
-                  </p>
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      ) : selected ? (
+        integratedNav ? (
+          materialsView === "grid" ? (
+            <WebKbMaterialsGrid items={visibleHubItems} onOpenItem={openHubItem} />
+          ) : (
+            <WebKbMaterialsList items={visibleHubItems} onOpenItem={openHubItem} />
+          )
+        ) : (
+          <WebKbHubContentList
+            items={visibleHubItems}
+            onOpenItem={openHubItem}
+            emptyMessage={
+              contentQuery ? "No content matches your search." : "No content in this library yet."
+            }
+          />
+        )
+      ) : null}
     </div>
   )
 
   return (
     <div className={cn("flex h-full min-h-0", web.canvas)}>
+      {integratedNav ? (
+        <WebLibraryNavPanel
+          grouped={grouped}
+          selectedKbId={selectedKbId}
+          searchQuery={kbSearch}
+          onSearchQueryChange={setKbSearch}
+          onSelectKb={onSelectKb}
+          onCreateInSection={(sectionId) =>
+            runAuth(() =>
+              setCreateDialogMode({
+                kind: "create",
+                category: sectionId === "team" ? "team" : "mine",
+              })
+            )
+          }
+        />
+      ) : null}
+      {!integratedNav ? (
       <aside
         className={cn(
           "flex h-full shrink-0 flex-col overflow-hidden",
           web.secondaryWidth,
-          "bg-white/50"
+          "bg-transparent"
         )}
       >
-        <div className="shrink-0 space-y-2 border-b border-black/[0.04] px-2 pb-3 pt-4">
+        <div className="shrink-0 space-y-2.5 border-b border-black/[0.05] px-2.5 pb-3.5 pt-4">
+          <div className={web.kbCreateRow}>
+            <button
+              type="button"
+              onClick={() =>
+                runAuth(() => setCreateDialogMode({ kind: "create", category: "mine" }))
+              }
+              className={cn(web.kbCreateBtn, "text-white ring-1 ring-black/[0.06]", web.kbPrimaryBtn)}
+            >
+              <Plus className="h-3.5 w-3.5 shrink-0 opacity-95" strokeWidth={2.5} aria-hidden />
+              <span>New personal</span>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                runAuth(() => setCreateDialogMode({ kind: "create", category: "team" }))
+              }
+              className={cn(web.kbCreateBtn, web.kbPrimaryBtnOutline)}
+            >
+              <Users className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2.25} aria-hidden />
+              <span>New shared</span>
+            </button>
+          </div>
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
             <input
@@ -805,7 +983,7 @@ export function WebKnowledgeBrowser({
               value={kbSearch}
               onChange={(e) => setKbSearch(e.target.value)}
               placeholder="Search libraries"
-              className="w-full rounded-lg bg-white py-2 pl-8 pr-2 text-[12px] text-zinc-700 ring-1 ring-black/[0.04] outline-none placeholder:text-zinc-400 focus:ring-teal-200/50"
+              className="w-full rounded-lg bg-white py-2 pl-8 pr-2 text-[12px] text-zinc-700 ring-1 ring-black/[0.04] outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-mind/20"
               aria-label="Search libraries"
             />
           </div>
@@ -848,9 +1026,7 @@ export function WebKnowledgeBrowser({
                             "flex w-full items-center gap-2 px-2.5 py-2 text-left text-[13px] font-medium",
                         })}
                       >
-                        <div className="h-6 w-6 shrink-0 overflow-hidden rounded-md">
-                          <LibraryCoverFromKb kb={displayKb} showMiniUi={false} />
-                        </div>
+                        <LibraryListThumbnail kb={displayKb} size="sm" />
                         <span className="min-w-0 flex-1 truncate text-zinc-700">{displayKb.name}</span>
                         <span
                           className={cn(
@@ -884,29 +1060,11 @@ export function WebKnowledgeBrowser({
                 <button
                   type="button"
                   onClick={() => setExpanded((e) => ({ ...e, [section.id]: !e[section.id] }))}
-                  className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-white/60"
+                  className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-zinc-900/[0.04]"
                 >
-                  <span className="text-[13px] font-semibold text-zinc-600">{section.label}</span>
+                  <span className="text-[14px] font-bold text-zinc-800">{section.label}</span>
                   <div className="flex items-center gap-1">
-                    {section.browsePlaza ? (
-                      <button
-                        type="button"
-                        onClick={(ev) => {
-                          ev.stopPropagation()
-                          runAuth(() => {
-                            if (onBrowsePlaza) onBrowsePlaza()
-                            else
-                              toast.message("Library plaza", {
-                                description: "Discover libraries to subscribe.",
-                              })
-                          })
-                        }}
-                        className="rounded-md p-0 text-zinc-400 hover:bg-stone-100 hover:text-zinc-600"
-                        aria-label="Discover libraries"
-                      >
-                        <Store className="h-2 w-2" strokeWidth={2.25} />
-                      </button>
-                    ) : section.canCreate ? (
+                    {section.canCreate ? (
                       <button
                         type="button"
                         onClick={(ev) => {
@@ -918,10 +1076,10 @@ export function WebKnowledgeBrowser({
                             })
                           )
                         }}
-                        className="rounded-md p-0 text-zinc-400 hover:bg-stone-100 hover:text-zinc-600"
+                        className="inline-flex items-center gap-0.5 rounded-md bg-mind/10 px-1.5 py-0.5 text-mind hover:bg-mind/15"
                         aria-label={`New ${section.label} library`}
                       >
-                        <Plus className="h-2 w-2" strokeWidth={2.25} />
+                        <Plus className="h-3 w-3" strokeWidth={2.25} />
                       </button>
                     ) : null}
                     <ChevronRight
@@ -932,7 +1090,27 @@ export function WebKnowledgeBrowser({
                 {open ? (
                   <div className="mt-0.5 space-y-2 pl-0.5">
                     {items.length === 0 ? (
-                      <p className="px-2.5 py-2 text-[11px] text-zinc-400">No libraries match</p>
+                      <div className="px-1 py-1">
+                        {kbQuery ? (
+                          <p className="px-1 text-[12px] text-zinc-500">No libraries match your search.</p>
+                        ) : (
+                          <WebLibrarySectionEmpty
+                            sectionId={section.id}
+                            onBrowsePlaza={section.browsePlaza ? () => onBrowsePlaza?.() : undefined}
+                            onCreate={
+                              section.canCreate
+                                ? () =>
+                                    runAuth(() =>
+                                      setCreateDialogMode({
+                                        kind: "create",
+                                        category: section.id === "team" ? "team" : "mine",
+                                      })
+                                    )
+                                : undefined
+                            }
+                          />
+                        )}
+                      </div>
                     ) : (
                       <ul className="mt-0.5 space-y-0.5 pl-1">
                         {items.map((kb) => {
@@ -951,48 +1129,32 @@ export function WebKnowledgeBrowser({
                                   ),
                                 })}
                               >
-                                {isFollowingSection ? (
-                                  <LibraryCoverWithUpdateBadge
-                                    kb={displayKb}
-                                    hasUpdate={kb.hasContentUpdate}
-                                  />
-                                ) : (
-                                  <div className="h-6 w-6 shrink-0 overflow-hidden rounded-md">
-                                    <LibraryCoverFromKb kb={displayKb} showMiniUi={false} />
-                                  </div>
-                                )}
-                                {isFollowingSection ? (
-                                  <div className="min-w-0 flex-1">
-                                    <span className="block truncate text-zinc-700">{displayKb.name}</span>
-                                    {displayKb.publicSettings ? (
-                                      <span className="mt-0.5 block truncate text-[10px] text-teal-700/80">
-                                        Assistant: {publicAgentDisplayName(displayKb.publicSettings)}
-                                      </span>
-                                    ) : null}
+                                <div className="relative shrink-0">
+                                  <LibraryListThumbnail kb={displayKb} size="sm" />
+                                  {isFollowingSection && kb.hasContentUpdate ? (
+                                    <KbContentUpdateDot className="-translate-y-px translate-x-px" />
+                                  ) : null}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="flex flex-wrap items-center gap-1 truncate text-zinc-700">
+                                    <span className="truncate">{displayKb.name}</span>
+                                    <KbListMetaBadges kb={displayKb} />
+                                  </span>
+                                  {isFollowingSection ? (
                                     <span className="mt-0.5 block truncate text-[10px] tabular-nums text-zinc-400">
                                       Updated {kb.lastUpdate}
                                     </span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <span className="min-w-0 flex-1 truncate text-zinc-700">
-                                      {displayKb.name}
-                                      {displayKb.isPublicPublished || displayKb.publicSettings?.isPublic ? (
-                                        <span className="ml-1.5 inline-flex rounded-full bg-teal-50 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-teal-700 ring-1 ring-teal-200/80">
-                                          Public
-                                        </span>
-                                      ) : null}
-                                    </span>
+                                  ) : (
                                     <span
                                       className={cn(
-                                        "shrink-0 tabular-nums text-[10px]",
+                                        "mt-0.5 block text-[10px] tabular-nums",
                                         active ? web.navItemActiveCount : "text-zinc-400"
                                       )}
                                     >
-                                      {itemCount}
+                                      {itemCount} items
                                     </span>
-                                  </>
-                                )}
+                                  )}
+                                </div>
                               </button>
                             </li>
                           )
@@ -1011,12 +1173,8 @@ export function WebKnowledgeBrowser({
                               })
                           })
                         }
-                        className={cn(
-                          "flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed py-2.5 text-[12px] font-medium transition-colors",
-                          "border-stone-200 bg-stone-50 text-zinc-600 hover:border-stone-300 hover:bg-stone-100"
-                        )}
+                        className={web.kbPlazaBrowseLink}
                       >
-                        <Store className="h-2 w-2 shrink-0 text-zinc-500" strokeWidth={2.25} aria-hidden />
                         Browse library plaza
                       </button>
                     ) : null}
@@ -1027,22 +1185,33 @@ export function WebKnowledgeBrowser({
           })}
         </div>
       </aside>
+      ) : null}
 
-      <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-white/40">
+      <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
         {selected ? (
-          <>
-            {isSharedKb ? (
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col overflow-hidden",
+              integratedNav ? "mx-0" : cn("mx-6 my-6", web.surfaceCard)
+            )}
+          >
+            {integratedNav && isSharedKb ? (
               <>
                 <WebSharedKbHeader
+                  size="detail"
                   title={selected.name}
                   description={selected.description}
                   coverVariant={selected.coverVariant}
                   ownerName={selectedBase?.ownerName}
+                  memberCount={sharedKbMemberCount}
+                  createdLabel={sharedKbCreatedLabel}
                   onShare={() => runAuth(() => setShareOpen(true))}
                   overflowOpen={overflowOpen}
                   onOverflowToggle={() => setOverflowOpen((o) => !o)}
                   onEditInfo={() =>
-                    runAuth(() => setCreateDialogMode({ kind: "edit", category: "team", kbId: selected.id }))
+                    runAuth(() =>
+                      setCreateDialogMode({ kind: "edit", category: "team", kbId: selected.id })
+                    )
                   }
                   onPermissionSettings={() =>
                     runAuth(() =>
@@ -1080,120 +1249,349 @@ export function WebKnowledgeBrowser({
                   onAddClick={() => runAuth(() => setAddMenuOpen((o) => !o))}
                   addMenu={addFilesMenu}
                 />
-                <div className="flex shrink-0 justify-end gap-2 border-b border-black/[0.04] px-8 pb-3">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-b border-black/[0.04] px-5 pb-3 lg:px-8">
+                  <div className="mr-auto flex items-center gap-1 rounded-xl bg-stone-100/90 p-0.5 ring-1 ring-black/[0.04]">
+                    <button
+                      type="button"
+                      onClick={() => setMaterialsView("grid")}
+                      className={cn(
+                        "rounded-lg p-2 transition-colors",
+                        materialsView === "grid"
+                          ? "bg-white text-zinc-900 shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-700"
+                      )}
+                      aria-label="Grid view"
+                      aria-pressed={materialsView === "grid"}
+                    >
+                      <LayoutGrid className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMaterialsView("list")}
+                      className={cn(
+                        "rounded-lg p-2 transition-colors",
+                        materialsView === "list"
+                          ? "bg-white text-zinc-900 shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-700"
+                      )}
+                      aria-label="List view"
+                      aria-pressed={materialsView === "list"}
+                    >
+                      <List className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => onOpenWorkspace(selected)}
-                    className="rounded-full bg-zinc-900 px-4 py-2 text-[13px] font-semibold text-white hover:bg-zinc-800"
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-[14px] font-semibold",
+                      web.kbPrimaryBtn
+                    )}
                   >
                     Open workspace
                   </button>
                 </div>
               </>
-            ) : (
+            ) : integratedNav ? (
               <>
-                <WebPersonalKbHeader
-                  title={selected.name}
-                  description={selected.description}
-                  coverVariant={selected.coverVariant}
-                  hasContentUpdate={isSubscribedKb ? selectedBase?.hasContentUpdate : undefined}
-                  overflowOpen={overflowOpen}
-                  onOverflowToggle={() => setOverflowOpen((o) => !o)}
-                  onEditInfo={
-                    isFollowingKb
-                      ? undefined
-                      : () =>
-                          runAuth(() =>
-                            setCreateDialogMode({ kind: "edit", category: "mine", kbId: selected.id })
-                          )
-                  }
-                  onAddQuickAccess={() =>
-                    runAuth(() =>
-                      toast.success("Added to quick access", {
-                        description: `"${selected.name}" pinned to shortcuts (demo).`,
-                      })
-                    )
-                  }
-                  onDeleteLibrary={
-                    customKBs.some((k) => k.id === selected.id)
-                      ? () =>
-                          runAuth(() => {
-                            if (!window.confirm(`Remove "${selected.name}"?`)) return
-                            setCustomKBs((prev) => prev.filter((k) => k.id !== selected.id))
-                            onDeselectKb?.()
-                            toast.message("Library removed")
-                          })
-                      : undefined
-                  }
-                />
-                <div className="shrink-0 px-8 pb-2">
-                  <p className="text-[12px] text-zinc-400">
-                    {hubItems.length} items · Updated {selected.lastUpdate}
-                    {isFollowingKb ? " · Read-only (following)" : ""}
-                  </p>
-                </div>
-                <div className="relative shrink-0 px-8 pb-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative min-w-[12rem] flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                    <input
-                      type="search"
-                      value={contentSearch}
-                      onChange={(e) => setContentSearch(e.target.value)}
-                      placeholder="Search content in this library"
-                      className="w-full rounded-full bg-white py-2 pl-9 pr-3 text-[13px] ring-1 ring-black/[0.04] outline-none placeholder:text-zinc-400 focus:ring-teal-200/50"
-                      aria-label="Search library content"
-                    />
-                  </div>
-                  <div className="relative">
-                    <select
-                      value={contentSort}
-                      onChange={(e) => setContentSort(e.target.value as ContentSortId)}
-                      className={cn(selectClass, "min-w-[9.5rem]")}
-                      aria-label="Sort content"
-                    >
-                      {CONTENT_SORT_OPTIONS.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-                  </div>
-                  {!kbHubUploadDisabled ? (
-                    <div className="relative">
+                {isPersonalKb ? (
+                  <WebPersonalKbHeader
+                    title={selected.name}
+                    description={selected.description}
+                    coverVariant={selected.coverVariant}
+                    hasContentUpdate={isFollowingKb ? selectedBase?.hasContentUpdate : undefined}
+                    overflowOpen={overflowOpen}
+                    onOverflowToggle={() => setOverflowOpen((o) => !o)}
+                    onEditInfo={() =>
+                      runAuth(() =>
+                        setCreateDialogMode({ kind: "edit", category: "mine", kbId: selected.id })
+                      )
+                    }
+                    onAddQuickAccess={() =>
+                      runAuth(() =>
+                        toast.success("Added to quick access", {
+                          description: `"${selected.name}" pinned to shortcuts (demo).`,
+                        })
+                      )
+                    }
+                    onDeleteLibrary={
+                      customKBs.some((k) => k.id === selected.id)
+                        ? () =>
+                            runAuth(() => {
+                              if (!window.confirm(`Remove "${selected.name}"?`)) return
+                              setCustomKBs((prev) => prev.filter((k) => k.id !== selected.id))
+                              onDeselectKb?.()
+                              toast.message("Library removed")
+                            })
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/45 bg-white/40 px-5 py-3 backdrop-blur-md lg:px-8">
+                    <h1 className={cn("min-w-0 break-words", web.typePageTitle)}>{selected.name}</h1>
+                    <div className="flex shrink-0 items-center gap-1 rounded-xl bg-stone-100/90 p-0.5 ring-1 ring-black/[0.04]">
                       <button
                         type="button"
-                        onClick={() => setAddMenuOpen((o) => !o)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-zinc-800"
+                        onClick={() => setMaterialsView("grid")}
+                        className={cn(
+                          "rounded-lg p-2 transition-colors",
+                          materialsView === "grid"
+                            ? "bg-white text-zinc-900 shadow-sm"
+                            : "text-zinc-500 hover:text-zinc-700"
+                        )}
+                        aria-label="Grid view"
+                        aria-pressed={materialsView === "grid"}
                       >
-                        <Upload className="h-4 w-4" strokeWidth={2} />
-                        Add files
-                        <ChevronDown
-                          className={cn("h-3.5 w-3.5 transition-transform", addMenuOpen && "rotate-180")}
-                        />
+                        <LayoutGrid className="h-4 w-4" strokeWidth={2} />
                       </button>
-                      {addFilesMenu}
+                      <button
+                        type="button"
+                        onClick={() => setMaterialsView("list")}
+                        className={cn(
+                          "rounded-lg p-2 transition-colors",
+                          materialsView === "list"
+                            ? "bg-white text-zinc-900 shadow-sm"
+                            : "text-zinc-500 hover:text-zinc-700"
+                        )}
+                        aria-label="List view"
+                        aria-pressed={materialsView === "list"}
+                      >
+                        <List className="h-4 w-4" strokeWidth={2} />
+                      </button>
                     </div>
-                  ) : null}
-                </div>
-                  <p className="mt-2 text-[12px] text-zinc-500">
-                    {contentQuery
-                      ? `${visibleHubItems.length} result${visibleHubItems.length === 1 ? "" : "s"}`
-                      : `Content (${hubItems.length})`}
-                  </p>
-                </div>
-                <div className="flex shrink-0 justify-end gap-2 border-b border-black/[0.04] px-8 pb-3">
-                  <button
-                    type="button"
-                    onClick={() => onOpenWorkspace(selected)}
-                    className="rounded-full bg-zinc-900 px-4 py-2 text-[13px] font-semibold text-white hover:bg-zinc-800"
-                  >
-                    Open workspace
-                  </button>
-                </div>
+                  </div>
+                )}
               </>
-            )}
+            ) : null}
+            {!integratedNav ? (
+            <WebKbDetailHero
+              title={selected.name}
+              description={
+                isSharedKb
+                  ? [SHARED_KB_PRODUCT_LINE, selected.description].filter(Boolean).join(" · ")
+                  : selected.description
+              }
+              cover={
+                isFollowingKb ? (
+                  <LibraryCoverWithUpdateBadge
+                    kb={selected}
+                    hasUpdate={selectedBase?.hasContentUpdate}
+                    coverClassName="h-[72px] w-[72px] rounded-2xl"
+                  />
+                ) : (
+                  <div className="h-[72px] w-[72px] overflow-hidden rounded-2xl">
+                    <LibraryCoverFromKb
+                      kb={selected}
+                      showMiniUi={false}
+                      size="lg"
+                      className="h-full w-full"
+                    />
+                  </div>
+                )
+              }
+              actions={
+                isSharedKb ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => runAuth(() => setShareOpen(true))}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 hover:text-zinc-800"
+                      aria-label="Share library"
+                    >
+                      <Share2 className="h-5 w-5" strokeWidth={1.75} />
+                    </button>
+                    <WebKbOverflowMenu
+                      open={overflowOpen}
+                      onToggle={() => setOverflowOpen((o) => !o)}
+                      onEditInfo={() =>
+                        runAuth(() =>
+                          setCreateDialogMode({ kind: "edit", category: "team", kbId: selected.id })
+                        )
+                      }
+                      onPermissionSettings={() =>
+                        runAuth(() =>
+                          onOpenKnowledgeBaseSettings
+                            ? onOpenKnowledgeBaseSettings(selected.id)
+                            : setCreateDialogMode({ kind: "edit", category: "team", kbId: selected.id })
+                        )
+                      }
+                      onAddQuickAccess={() =>
+                        runAuth(() =>
+                          toast.success("Added to quick access", {
+                            description: `"${selected.name}" will appear in the sidebar shortcuts (demo).`,
+                          })
+                        )
+                      }
+                      onLeaveLibrary={() =>
+                        runAuth(() => {
+                          if (window.confirm(`Leave "${selected.name}"?`)) {
+                            toast.message("Left library", { description: "Demo: removed from shared list." })
+                            onDeselectKb?.()
+                          }
+                        })
+                      }
+                    />
+                  </>
+                ) : (
+                  <WebKbOverflowMenu
+                    open={overflowOpen}
+                    onToggle={() => setOverflowOpen((o) => !o)}
+                    onEditInfo={
+                      isFollowingKb
+                        ? undefined
+                        : () =>
+                            runAuth(() =>
+                              setCreateDialogMode({ kind: "edit", category: "mine", kbId: selected.id })
+                            )
+                    }
+                    onAddQuickAccess={() =>
+                      runAuth(() =>
+                        toast.success("Added to quick access", {
+                          description: `"${selected.name}" pinned to shortcuts (demo).`,
+                        })
+                      )
+                    }
+                    onLeaveLibrary={
+                      customKBs.some((k) => k.id === selected.id)
+                        ? () =>
+                            runAuth(() => {
+                              if (!window.confirm(`Remove "${selected.name}"?`)) return
+                              setCustomKBs((prev) => prev.filter((k) => k.id !== selected.id))
+                              onDeselectKb?.()
+                              toast.message("Library removed")
+                            })
+                        : undefined
+                    }
+                    leaveLabel="Remove library"
+                    showPermissions={false}
+                    showLeave={customKBs.some((k) => k.id === selected.id)}
+                  />
+                )
+              }
+              engagement={
+                isSubscribedKb && selectedBase && subscribedEngagement ? (
+                  <>
+                    <PublicKbEngagementStats
+                      metrics={{
+                        subscriberCount: selectedBase.subscribers ?? 0,
+                        likeCount: previewLikeCount,
+                        commentCount: subscribedEngagement.commentCount,
+                      }}
+                    />
+                    <PublicKbEngagementBar
+                      metrics={{
+                        subscriberCount: selectedBase.subscribers ?? 0,
+                        likeCount: previewLikeCount,
+                        commentCount: subscribedEngagement.commentCount,
+                      }}
+                      subscribed={plazaSubscribed}
+                      liked={previewLiked}
+                      onToggleSubscribe={() =>
+                        runAuth(() => {
+                          if (plazaSubscribed) {
+                            unsubscribePlazaLibrary(selectedBase.id)
+                            toast.message("Unsubscribed", {
+                              description: `"${selected.name}" removed from following.`,
+                            })
+                          } else {
+                            subscribePlazaLibrary(selectedBase)
+                            toast.success("Subscribed", {
+                              description: `"${selected.name}" added to your libraries.`,
+                            })
+                          }
+                          onRefreshKnowledgeBases?.()
+                        })
+                      }
+                      onToggleLike={() =>
+                        runAuth(() => {
+                          setPreviewLiked((prev) => {
+                            const next = !prev
+                            setPreviewLikeCount((c) => (prev ? Math.max(0, c - 1) : c + 1))
+                            const liked = readPlazaLikedKbIds()
+                            if (next) liked.add(selectedBase.id)
+                            else liked.delete(selectedBase.id)
+                            writePlazaLikedKbIds(liked)
+                            return next
+                          })
+                        })
+                      }
+                      onOpenComments={() => runAuth(() => onOpenWorkspace(selected))}
+                      onOpenChat={() => runAuth(() => onOpenWorkspace(selected))}
+                    />
+                  </>
+                ) : undefined
+              }
+              meta={
+                <>
+                  {isSharedKb && selectedBase?.ownerName ? (
+                    <span className="font-medium text-zinc-500">{selectedBase.ownerName}</span>
+                  ) : null}
+                  {isSharedKb && selectedBase?.ownerName ? (
+                    <span className="text-zinc-300"> · </span>
+                  ) : null}
+                  {isSharedKb && sharedKbMemberCount != null ? (
+                    <>
+                      <span>{sharedKbMemberCount} joined</span>
+                      <span className="text-zinc-300"> · </span>
+                    </>
+                  ) : null}
+                  <span>
+                    {hubItems.length} items · Updated {selected.lastUpdate}
+                    {isFollowingKb ? " · Read-only (following)" : ""}
+                  </span>
+                </>
+              }
+            />
+            ) : null}
+            {!(integratedNav && isSharedKb) ? (
+              <WebKbDetailToolbar
+                searchValue={contentSearch}
+                onSearchChange={setContentSearch}
+                sortControl={
+                  <WebKbDetailSortSelect
+                    value={contentSort}
+                    onChange={(v) => setContentSort(v as ContentSortId)}
+                    options={CONTENT_SORT_OPTIONS}
+                  />
+                }
+                trailing={
+                  <>
+                    {!kbHubUploadDisabled ? (
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => runAuth(() => setAddMenuOpen((o) => !o))}
+                          className={cn(web.kbPill, "gap-2 px-4 py-2.5 text-[13px] font-semibold")}
+                        >
+                          <KbUploadFileIcon className="h-4 w-4" strokeWidth={2} />
+                          Add files
+                          <ChevronDown
+                            className={cn("h-3.5 w-3.5 transition-transform", addMenuOpen && "rotate-180")}
+                          />
+                        </button>
+                        {addFilesMenu}
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => onOpenWorkspace(selected)}
+                      className={cn(
+                        "inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-[14px] font-semibold",
+                        web.kbPrimaryBtn
+                      )}
+                    >
+                      Open workspace
+                    </button>
+                  </>
+                }
+                sectionLabel="Content"
+                sectionHint={
+                  contentQuery
+                    ? `${visibleHubItems.length} match${visibleHubItems.length === 1 ? "" : "es"}`
+                    : `${hubItems.length} item${hubItems.length === 1 ? "" : "s"}`
+                }
+              />
+            ) : null}
 
             {hubListBody}
 
@@ -1226,14 +1624,31 @@ export function WebKnowledgeBrowser({
               onClose={() => setCreateDialogMode(null)}
               onSubmit={handleCreateOrEditKb}
             />
-          </>
+          </div>
+        ) : integratedNav ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-8">
+            <WebLibraryHubWelcome
+              variant="panel"
+              onBrowsePlaza={() => onBrowsePlaza?.()}
+              onCreatePersonal={() =>
+                runAuth(() => setCreateDialogMode({ kind: "create", category: "mine" }))
+              }
+              onCreateShared={() =>
+                runAuth(() => setCreateDialogMode({ kind: "create", category: "team" }))
+              }
+            />
+          </div>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <p className="text-[15px] font-medium text-zinc-700">Select a library on the left</p>
-            <p className="mt-2 max-w-sm text-[13px] text-zinc-500">
-              Search and sort libraries in the sidebar. After you pick one, search content, change sort
-              order, and add files before opening the workspace.
-            </p>
+          <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-8 py-10">
+            <WebLibraryHubWelcome
+              onBrowsePlaza={() => onBrowsePlaza?.()}
+              onCreatePersonal={() =>
+                runAuth(() => setCreateDialogMode({ kind: "create", category: "mine" }))
+              }
+              onCreateShared={() =>
+                runAuth(() => setCreateDialogMode({ kind: "create", category: "team" }))
+              }
+            />
           </div>
         )}
       </section>

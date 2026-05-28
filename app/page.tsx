@@ -1,5 +1,5 @@
-import { MindAppV2 } from "@/components/mind-v2/mind-app-v2"
+import { redirect } from "next/navigation"
 
 export default function Home() {
-  return <MindAppV2 />
+  redirect("/landing")
 }

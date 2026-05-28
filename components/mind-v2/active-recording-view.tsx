@@ -101,7 +101,7 @@ export function ActiveRecordingView({
             onClick={() => setPaused((p) => !p)}
             className="min-w-[3.5rem] text-left text-[15px] font-medium text-zinc-800 dark:text-zinc-200"
           >
-            {paused ? "继续" : "暂停"}
+            {paused ? "Resume" : "Pause"}
           </button>
           <button
             type="button"
@@ -129,7 +129,7 @@ export function ActiveRecordingView({
             onClick={() => onEnd({ durationSec: duration, entries })}
             className="min-w-[3.5rem] text-right text-[15px] font-medium text-zinc-800 dark:text-zinc-200"
           >
-            结束
+            End
           </button>
         </div>
         {!headerCollapsed && title ? (
@@ -206,19 +206,19 @@ export function ActiveRecordingView({
             <span className="flex h-14 w-14 items-center justify-center rounded-full border border-stone-300 bg-white dark:border-zinc-600 dark:bg-zinc-900">
               <Pencil className="h-5 w-5 text-zinc-700 dark:text-zinc-300" strokeWidth={1.75} />
             </span>
-            <span className="text-[12px] text-zinc-500">输入</span>
+            <span className="text-[12px] text-zinc-500">Note</span>
           </button>
           <button type="button" onClick={addPhoto} className="flex flex-col items-center gap-2">
             <span className="flex h-14 w-14 items-center justify-center rounded-full border border-stone-300 bg-white dark:border-zinc-600 dark:bg-zinc-900">
               <Camera className="h-5 w-5 text-zinc-700 dark:text-zinc-300" strokeWidth={1.75} />
             </span>
-            <span className="text-[12px] text-zinc-500">拍照</span>
+            <span className="text-[12px] text-zinc-500">Photo</span>
           </button>
           <button type="button" onClick={addMark} className="flex flex-col items-center gap-2">
             <span className="flex h-14 w-14 items-center justify-center rounded-full border border-stone-300 bg-white dark:border-zinc-600 dark:bg-zinc-900">
               <Flag className="h-5 w-5 text-zinc-700 dark:text-zinc-300" strokeWidth={1.75} />
             </span>
-            <span className="text-[12px] text-zinc-500">标记</span>
+            <span className="text-[12px] text-zinc-500">Mark</span>
           </button>
         </div>
         <button
@@ -229,7 +229,7 @@ export function ActiveRecordingView({
           }}
           className="mt-4 w-full text-center text-[12px] text-zinc-400 underline-offset-2 hover:underline"
         >
-          最小化
+          Minimize
         </button>
       </footer>
     </div>

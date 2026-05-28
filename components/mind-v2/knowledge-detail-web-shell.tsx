@@ -25,11 +25,7 @@ export type KnowledgeDetailWebShellProps = {
   studioHighlight?: boolean
 }
 
-const panelClass = cn(
-  "flex flex-col overflow-hidden rounded-2xl bg-white/90",
-  web.panelShadow,
-  "ring-1 ring-sky-100/50"
-)
+const panelClass = cn(web.kbPanel, "flex flex-col overflow-hidden")
 
 /** NotebookLM 工作区 — 淡化边框 */
 export function KnowledgeDetailWebShell({
@@ -123,7 +119,7 @@ export function KnowledgeDetailWebShell({
               subscribed
                 ? "w-[min(300px,28vw)] min-w-[240px] shrink-0"
                 : "w-[min(340px,30vw)] min-w-[280px] shrink-0 scroll-mt-3 transition-shadow duration-500",
-              !subscribed && studioHighlight && "ring-2 ring-mind/35 shadow-md shadow-sky-200/40"
+              !subscribed && studioHighlight && "ring-2 ring-mind/30 shadow-md shadow-[0_12px_40px_-12px_rgba(15,23,42,0.12)]"
             )}
             aria-label="Studio"
           >
@@ -148,12 +144,12 @@ export function WebPanelHeader({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-between gap-2 px-3.5 py-2.5",
+        "grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-black/[0.05] px-3.5 py-2.5",
         className
       )}
     >
-      <h2 className="text-[13px] font-semibold text-zinc-600">{title}</h2>
-      {trailing}
+      <h2 className="truncate text-[13px] font-semibold text-zinc-600">{title}</h2>
+      {trailing ? <div className="flex items-center justify-end">{trailing}</div> : null}
     </div>
   )
 }

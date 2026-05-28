@@ -25,7 +25,6 @@ import {
   SectionBlock,
   SectionTitle,
   landingCard,
-  landingCtaGradient,
 } from "@/components/mind-landing/landing-primitives"
 export function MindLandingPage() {
   return (
@@ -37,7 +36,7 @@ export function MindLandingPage() {
         <LandingContainer>
           <div className="grid items-center gap-14 lg:grid-cols-2 lg:gap-12">
             <div className="max-w-[480px]">
-              <p className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-teal-200/80 bg-teal-50/80 px-3 py-1 text-xs font-medium text-teal-800">
+              <p className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 backdrop-blur-sm">
                 <span aria-hidden>✨</span>
                 {t.hero.badge}
               </p>
@@ -50,7 +49,8 @@ export function MindLandingPage() {
               <div className="mt-9 flex flex-wrap gap-3">
                 <Button
                   asChild
-                  className={cn("h-12 rounded-full px-7 text-[15px] font-semibold", landingCtaGradient)}
+                  variant="landing"
+                  className="h-12 rounded-full px-7 text-[15px] font-semibold"
                 >
                   <Link href={LANDING_WEB_APP_HREF}>{t.hero.ctaPrimary}</Link>
                 </Button>
@@ -101,8 +101,8 @@ export function MindLandingPage() {
             <ul className="space-y-5">
               {t.qa.bullets.map((item) => (
                 <li key={item} className="flex gap-3.5 text-[15px] leading-relaxed text-slate-600">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-teal-200/90 ring-1 ring-teal-300/50">
-                    <Check className="size-3.5 text-teal-800" strokeWidth={3} />
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/80">
+                    <Check className="size-3.5 text-slate-600" strokeWidth={3} />
                   </span>
                   {item}
                 </li>
@@ -224,7 +224,8 @@ export function MindLandingPage() {
             <p className="mt-4 max-w-xl text-base text-slate-500">{t.footer.subtitle}</p>
             <Button
               asChild
-              className={cn("mt-8 h-12 rounded-full px-8 text-[15px] font-semibold", landingCtaGradient)}
+              variant="landing"
+              className="mt-8 h-12 rounded-full px-8 text-[15px] font-semibold"
             >
               <Link href={LANDING_WEB_APP_HREF}>{t.footer.cta}</Link>
             </Button>

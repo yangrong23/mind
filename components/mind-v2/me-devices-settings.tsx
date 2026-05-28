@@ -102,7 +102,7 @@ export function MeDevicesSettingsPanel({
               }}
               className={cn(
                 "flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white",
-                "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]"
+                "mind-btn rounded-lg"
               )}
             >
               <RefreshCw className="h-5 w-5" />
@@ -122,7 +122,7 @@ export function MeDevicesSettingsPanel({
             onClick={() => onSetDeviceConnected(true)}
             className={cn(
               "flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white",
-              "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]"
+              "mind-btn rounded-lg"
             )}
           >
             <Bluetooth className="h-5 w-5" />

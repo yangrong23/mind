@@ -11,10 +11,10 @@ import { cn } from "@/lib/utils"
 const filterTabs = ["All", "Notes", "Docs", "Images", "Web Clips", "Projects"] as const
 
 const tagColors: Record<string, string> = {
-  Technology: "bg-sky-600",
+  Technology: "bg-mind",
   Strategy: "bg-teal-600",
   Design: "bg-fuchsia-600",
-  Research: "bg-sky-600",
+  Research: "bg-mind",
   Personal: "bg-amber-600",
 }
 
@@ -46,12 +46,12 @@ export function WebLibraryGridPage({
     <WebPageCanvas>
       <div className="mx-auto max-w-[1400px] p-6 lg:p-8">
         <WebPageHeader
-          title="知识库"
-          subtitle="打开笔记本工作区：来源、对话、知识图谱与内容工厂同屏呈现"
+          title="Libraries"
+          subtitle="Open a notebook workspace: sources, chat, AI view, and Studio on one screen"
           actions={
-            <WebGradientButton onClick={() => toast.message("新建知识库", { description: "Demo." })}>
+            <WebGradientButton onClick={() => toast.message("New library", { description: "Demo." })}>
               <Plus className="h-2 w-2" strokeWidth={2.25} />
-              新建知识库
+              New library
             </WebGradientButton>
           }
         />

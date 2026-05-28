@@ -239,8 +239,8 @@ export const USE_CASE_GUIDES: UseCaseGuide[] = [
         action: "Create “Personal” for your own articles, PDFs, and audio.",
       },
       {
-        where: "Workspace · Graph",
-        action: "When available, open the graph to see topic links.",
+        where: "Workspace · AI view",
+        action: "Open AI view for a quick summary and the knowledge graph.",
       },
       {
         where: "Me · insights",

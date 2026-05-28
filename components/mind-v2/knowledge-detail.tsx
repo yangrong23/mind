@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { web } from "@/components/mind-v2/web-design"
 import { SocialShareRow } from "@/components/mind-v2/social-share-row"
 import { ContentFactoryModals, type FactoryGenerationSettings, type FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import {
@@ -15,7 +16,7 @@ import {
 import { TextNoteEditor } from "@/components/mind-v2/text-note-editor"
 import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
 import { MindarContentFactoryGrid } from "@/components/mind-v2/mindar-content-factory-grid"
-import { WebPublicFactoryGallery } from "@/components/mind-v2/web-public-factory-gallery"
+import { WebStudioOutputsPanel } from "@/components/mind-v2/web-studio-outputs-panel"
 import { publicFactoryOutputsForKb } from "@/lib/public-factory-outputs"
 import type { PublicKbSettings } from "@/lib/public-kb-settings"
 import { MindChatHeaderActions } from "@/components/mind-v2/mind-chat-header-actions"
@@ -34,10 +35,12 @@ import { KnowledgeAddSourcesModal } from "@/components/mind-v2/knowledge-add-sou
 import { LibraryCover } from "@/components/mind-v2/library-cover"
 import { HubItemThumb } from "@/components/mind-v2/mind-media-art"
 import { getKbAgentSuggestions } from "@/lib/kb-agent-suggestions"
-import { PlazaLibraryAgentIntro } from "@/components/mind-v2/plaza-library-agent-intro"
 import { publicAgentDisplayName } from "@/lib/public-kb-settings"
 import { KbAgentSuggestionRail } from "@/components/mind-v2/kb-agent-suggestion-rail"
+import { KbUploadFileIcon } from "@/components/mind-v2/kb-upload-file-icon"
 import { hubItemKindFromLabel } from "@/lib/product-media"
+import { bodyForLibraryDocument } from "@/lib/library-document-body"
+import { isKbPinned, readPinnedKbIds, togglePinnedKb } from "@/lib/web-pinned-kbs"
 import type { LibraryCoverVariant } from "@/lib/product-media"
 import { libraryCoverVariantForId } from "@/lib/product-media"
 import {
@@ -53,7 +56,6 @@ import {
 import {
   ChevronLeft,
   MoreHorizontal,
-  Upload,
   Camera,
   Image,
   Mic,
@@ -83,9 +85,15 @@ import {
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import {
   KnowledgeDetailWebShell,
-  KnowledgeGraphPreview,
   WebPanelHeader,
 } from "@/components/mind-v2/knowledge-detail-web-shell"
+import { AgentExamplePromptRail } from "@/components/mind-v2/agent-example-prompt-rail"
+import {
+  WebKbAiViewChatToggle,
+  WebKbAiViewEntry,
+  WebKbAiViewPanel,
+  type WebKbCenterSurface,
+} from "@/components/mind-v2/web-kb-ai-view"
 import {
   WebNotebookDialogueBlock,
   WebNotebookDialogueComposer,
@@ -97,14 +105,34 @@ import {
   WebSubscribedKbProfileHeader,
   WebSubscribedKbContentPanel,
 } from "@/components/mind-v2/web-subscribed-kb-chrome"
+import { PublicKbCommentsPanel } from "@/components/mind-v2/public-kb-comments-panel"
 import {
-  WebPlazaKbAgentHome,
-  WebPlazaKbGraphSection,
+  PublicKbEngagementBar,
+  PublicKbEngagementStats,
+} from "@/components/mind-v2/public-kb-engagement-bar"
+import {
+  demoCommentsForKb,
+  engagementMetricsForKb,
+  readPlazaLikedKbIds,
+  writePlazaLikedKbIds,
+  type PublicKbComment,
+} from "@/lib/plaza-kb-engagement"
+import {
+  WebPlazaKbChatEmptyCenter,
 } from "@/components/mind-v2/web-plaza-kb-overview"
 
 type ShareTarget =
   | { scope: "library" }
   | { scope: "item"; title: string }
+
+export type KbLibraryDocument = {
+  id: number
+  title: string
+  excerpt: string
+  source: string
+  author: string
+  date: string
+}
 
 export type LibraryChatLaunchContext = {
   kbName: string
@@ -148,7 +176,7 @@ interface KnowledgeDetailProps {
     publisherName?: string
     teamSettings?: TeamLibrarySettings
   }
-  initialView?: "content" | "graph" | "factory"
+  initialView?: "content" | "ai" | "graph" | "factory"
   /** Open team Library information on mount (e.g. after creating a team library). */
   initialOpenTeamInfo?: boolean
   /** Restore a library article after returning from library Chat. */
@@ -164,6 +192,10 @@ interface KnowledgeDetailProps {
   /** Desktop: Sources | Hub/Chat | Graph + Studio on one screen (NotebookLM-style). */
   webLayout?: boolean
   onOpenDocumentEditor?: (title: string) => void
+  /** Web: open dedicated article reader with side agent chat + content factory. */
+  onOpenDocumentReader?: (doc: KbLibraryDocument) => void
+  /** Web: rich-text note editor with right AI co-write column. */
+  onOpenRichTextEditor?: () => void
   /** Vue admin: chunking, models, datasources — not replaced in React web shell */
   onOpenAdvancedKbSettings?: () => void
   /** Plaza preview / subscribed public library — subscribe gate + assistant panel */
@@ -360,51 +392,11 @@ function formatCompactCount(n: number): string {
   }).format(n)
 }
 
-function bodyForContent(id: number, title: string, excerpt: string): string[] {
-  const common = [
-    excerpt,
-    "This entry is part of your notebook corpus. In production, the full text, attachments, and revision history would load here.",
-    `Sections below expand on “${title}” with structured headings, pull quotes, and links back to the original capture or import.`,
-  ]
-  if (id === 1) {
-    return [
-      ...common,
-      "Operational guidance: start with a single collection per project, version your embedding model explicitly, and log chunk boundaries so you can diff retrieval quality after changes.",
-    ]
-  }
-  if (id === 3) {
-    return [
-      ...common,
-      "From the recording: emphasize lightweight contribution flows—if publishing a note takes more than one step, most updates never leave private drafts.",
-    ]
-  }
-  return common
-}
-
 /** Rolling summary from sources (mock copy, reads like editorial notes). */
 function notebookSummaryForLibrary(name: string, sourceCount: number): string {
   const unit = sourceCount === 1 ? "file" : "files"
   return `Across the ${sourceCount} ${unit} in “${name}”, we pull a single thread you can read in one pass: what each source contributes, where they reinforce each other, and where they diverge. Skim this first, then jump into chat when you want detail—replies stay tied to the passages they came from.`
 }
-
-type PublicComment = {
-  id: string
-  user: string
-  isAuthor?: boolean
-  meta: string
-  body: string
-}
-
-const DEMO_PUBLIC_COMMENTS: PublicComment[] = [
-  {
-    id: "pc-1",
-    user: "Patent desk",
-    isAuthor: true,
-    meta: "Seattle · Dec 10, 2025",
-    body:
-      "Step 1: Map claims to the specification so formal objections are easy to preempt.\nStep 2: Build a feature table against the closest prior art before drafting the response.\nStep 3: If divisionals or priority are in play, align filing dates with the published text and cite them in the reply.\nStep 4: When creativity is challenged, add experiments or technical effects with paragraph anchors so the narrative stays closed-loop.",
-  },
-]
 
 export function KnowledgeDetail({
   onBack,
@@ -419,6 +411,8 @@ export function KnowledgeDetail({
   embedded = false,
   webLayout = false,
   onOpenDocumentEditor,
+  onOpenDocumentReader,
+  onOpenRichTextEditor,
   onOpenAdvancedKbSettings,
   plazaAccess,
 }: KnowledgeDetailProps) {
@@ -427,7 +421,7 @@ export function KnowledgeDetail({
   const [addSourcesModalOpen, setAddSourcesModalOpen] = useState(false)
   const kbFileInputRef = useRef<HTMLInputElement>(null)
   const kbFolderInputRef = useRef<HTMLInputElement>(null)
-  const studioPanelRef = useRef<HTMLElement>(null)
+  const studioPanelRef = useRef<HTMLDivElement>(null)
   const [studioHighlight, setStudioHighlight] = useState(initialFocusStudio)
   const [hubRichNoteOpen, setHubRichNoteOpen] = useState(false)
   const [showNotebookAsk, setShowNotebookAsk] = useState(false)
@@ -441,7 +435,10 @@ export function KnowledgeDetail({
   const [webNotebookMessages, setWebNotebookMessages] = useState<WebNotebookMessage[]>([])
   const { feedbackById: webFeedbackById, setFeedback: setWebMessageFeedback } =
     useWebNotebookFeedback()
-  const [activeView, setActiveView] = useState<"content" | "graph" | "factory">(initialView)
+  const [activeView, setActiveView] = useState<"content" | "ai" | "factory">(
+    initialView === "graph" ? "ai" : initialView === "ai" ? "ai" : initialView
+  )
+  const [webCenterSurface, setWebCenterSurface] = useState<WebKbCenterSurface>("chat")
   const [showContentDetail, setShowContentDetail] = useState<LibraryDoc | null>(null)
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   const [libraryOverflowOpen, setLibraryOverflowOpen] = useState(false)
@@ -453,9 +450,11 @@ export function KnowledgeDetail({
   )
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
   const [showCommentSheet, setShowCommentSheet] = useState(false)
-  const [publicComments, setPublicComments] = useState<PublicComment[]>(() => DEMO_PUBLIC_COMMENTS.map((c) => ({ ...c })))
-  const [commentExpandedIds, setCommentExpandedIds] = useState<Set<string>>(new Set())
-  const [commentComposerDraft, setCommentComposerDraft] = useState("")
+  const [publicComments, setPublicComments] = useState<PublicKbComment[]>([])
+  const [pinnedKbIds, setPinnedKbIds] = useState<number[]>(() => readPinnedKbIds())
+  const commentSeedLenRef = useRef(0)
+  const [commentCountBase, setCommentCountBase] = useState(0)
+  const [subscribedContentTab, setSubscribedContentTab] = useState<"content" | "comments">("content")
   const [publicLiked, setPublicLiked] = useState(false)
   const [publicLikeCount, setPublicLikeCount] = useState(0)
   const [subscribePromptOpen, setSubscribePromptOpen] = useState(false)
@@ -473,15 +472,56 @@ export function KnowledgeDetail({
   const kbUploadDisabled = isSubscribedKb
 
   useEffect(() => {
-    if (!knowledgeBase?.isPublicKb) return
-    setPublicLikeCount(knowledgeBase.initialLikeCount ?? 56)
-  }, [knowledgeBase?.isPublicKb, knowledgeBase?.initialLikeCount, knowledgeBase?.name])
+    setWebCenterSurface("chat")
+  }, [knowledgeBase?.id])
 
   useEffect(() => {
-    if (!showCommentSheet) {
-      setCommentComposerDraft("")
+    if (!knowledgeBase?.isPublicKb || knowledgeBase.id == null) return
+    const kbId = knowledgeBase.id
+    const subs = knowledgeBase.subscriberCount ?? 0
+    const seeded = demoCommentsForKb(kbId)
+    commentSeedLenRef.current = seeded.length
+    const engagement = engagementMetricsForKb(kbId, subs, {
+      likeCount: knowledgeBase.initialLikeCount,
+      commentCount: knowledgeBase.initialCommentCount,
+    })
+    const liked = readPlazaLikedKbIds().has(kbId)
+    setPublicComments(seeded)
+    setCommentCountBase(engagement.commentCount)
+    setPublicLikeCount(engagement.likeCount + (liked ? 1 : 0))
+    setPublicLiked(liked)
+    setSubscribedContentTab("content")
+  }, [
+    knowledgeBase?.id,
+    knowledgeBase?.isPublicKb,
+    knowledgeBase?.initialLikeCount,
+    knowledgeBase?.initialCommentCount,
+    knowledgeBase?.subscriberCount,
+    knowledgeBase?.name,
+  ])
+
+  const togglePublicLike = () => {
+    const kbId = knowledgeBase?.id
+    setPublicLiked((prev) => {
+      const next = !prev
+      setPublicLikeCount((c) => (prev ? Math.max(0, c - 1) : c + 1))
+      if (kbId != null) {
+        const liked = readPlazaLikedKbIds()
+        if (next) liked.add(kbId)
+        else liked.delete(kbId)
+        writePlazaLikedKbIds(liked)
+      }
+      return next
+    })
+  }
+
+  const openPublicComments = () => {
+    if (webLayout && isSubscribedKb) {
+      setSubscribedContentTab("comments")
+      return
     }
-  }, [showCommentSheet])
+    setShowCommentSheet(true)
+  }
 
   useEffect(() => {
     if (initialFactoryModal) {
@@ -521,6 +561,21 @@ export function KnowledgeDetail({
   const publicContentMetric = knowledgeBase?.contentCount ?? sourceCount
   const publicSubscribeMetric = knowledgeBase?.subscriberCount ?? 0
   const publicViewMetric = knowledgeBase?.viewCount ?? 0
+
+  const publicCommentCount = Math.max(
+    commentCountBase,
+    commentCountBase + (publicComments.length - commentSeedLenRef.current)
+  )
+
+  const publicEngagementMetrics = useMemo(
+    () => ({
+      subscriberCount: publicSubscribeMetric,
+      likeCount: publicLikeCount,
+      commentCount: publicCommentCount,
+    }),
+    [publicSubscribeMetric, publicLikeCount, publicCommentCount]
+  )
+
   useEffect(() => {
     setKbName(knowledgeBase?.name ?? "Notebook")
     setKbDescription(knowledgeBase?.description ?? "")
@@ -553,6 +608,10 @@ export function KnowledgeDetail({
   }
 
   function openLibraryDoc(doc: LibraryDoc) {
+    if (webLayout && onOpenDocumentReader) {
+      onOpenDocumentReader(doc)
+      return
+    }
     setShowContentDetail(doc)
     if (webLayout) setWebCenterMode("hub")
   }
@@ -563,6 +622,7 @@ export function KnowledgeDetail({
   }
 
   const kbDisplayName = kbName
+  const kbPinned = knowledgeBase?.id != null && isKbPinned(knowledgeBase.id, pinnedKbIds)
 
   const kbAgentSuggestions = useMemo(
     () =>
@@ -646,7 +706,7 @@ export function KnowledgeDetail({
     if (desc) {
       return `${desc} “${kbDisplayName}” is built from ${sourceCount} ${srcWord} right now. Overview shows how ideas connect; Studio turns the same sources into audio, slides, and reports without starting from a blank page.`
     }
-    return `“${kbDisplayName}” gathers ${sourceCount} ${srcWord} you can trust as one place to think from. Read and search here, explore the graph below, then use Studio when it’s time to ship something finished.`
+    return `“${kbDisplayName}” gathers ${sourceCount} ${srcWord} you can trust as one place to think from. Read and search here, open AI view for a quick map of themes, then use Studio when it’s time to ship something finished.`
   }, [knowledgeBase?.description, kbDisplayName, sourceCount])
 
   const sharePublicFactory =
@@ -797,6 +857,7 @@ export function KnowledgeDetail({
     }
     setWebNotebookMessages((prev) => [...prev, ...buildWebNotebookExchange(q, selectedSourceCount)])
     setNotebookAskDraft("")
+    setWebCenterSurface("chat")
     setWebCenterMode("hub")
   }
 
@@ -988,7 +1049,11 @@ export function KnowledgeDetail({
           break
         }
         case "note-rich":
-          setHubRichNoteOpen(true)
+          if (webLayout && onOpenRichTextEditor) {
+            onOpenRichTextEditor()
+          } else {
+            setHubRichNoteOpen(true)
+          }
           break
         case "recording":
           toast.message("Recording summary", { description: "Open recorder and generate summary (demo)." })
@@ -1205,16 +1270,17 @@ export function KnowledgeDetail({
 
         </div>
 
-        <div className="shrink-0 bg-white/85 px-3 pb-2 pt-1.5 backdrop-blur-sm dark:bg-zinc-900/85">
+        <div className="shrink-0 px-3 pb-3 pt-1.5">
           <KbAgentSuggestionRail
             suggestions={kbAgentSuggestions}
             libraryName={kbDisplayName}
             onSelect={setNotebookAskDraft}
-            className="mb-2.5 px-0.5"
+            className="relative z-[1] mb-2.5 px-0.5"
           />
           <MindChatComposer
             variant="thread"
             className="max-w-none"
+            uploadIconStyle="kb-file"
             value={notebookAskDraft}
             onChange={setNotebookAskDraft}
             onSubmit={submitNotebookAsk}
@@ -1259,7 +1325,7 @@ export function KnowledgeDetail({
     )
   }
 
-  if (hubRichNoteOpen) {
+  if (hubRichNoteOpen && !webLayout) {
     return (
       <TextNoteEditor variant="hubRich" onBack={() => setHubRichNoteOpen(false)} />
     )
@@ -1306,7 +1372,7 @@ export function KnowledgeDetail({
             <span>{showContentDetail.date}</span>
           </div>
           <div className="space-y-4 text-[15px] leading-[1.7] text-zinc-600">
-            {bodyForContent(
+            {bodyForLibraryDocument(
               showContentDetail.id,
               showContentDetail.title,
               showContentDetail.excerpt
@@ -1400,161 +1466,134 @@ export function KnowledgeDetail({
       toast.success("Link added")
     }
 
-    const webDocActive = showContentDetail != null
-
     const plazaAgentName =
       isPublicKb && publicSettings ? publicAgentDisplayName(publicSettings) : null
 
     const webSubscriberNotebook = isSubscribedKb
     const webKbReadOnly = kbUploadDisabled
 
+    const webChatPanelTitle = plazaAgentName ?? "Assistant"
+
     const webChatPanelHeader = (
       <WebPanelHeader
-        title={webDocActive ? showContentDetail!.title : plazaAgentName ?? "Assistant"}
+        title={webChatPanelTitle}
         trailing={
-          webDocActive ? (
-            <button
-              type="button"
-              onClick={() => {
-                closeLibraryDoc()
-                setWebCenterMode("hub")
-              }}
-              className="text-[12px] font-medium text-zinc-600 hover:underline"
+          <div className="flex items-center gap-2">
+            <WebKbAiViewChatToggle mode={webCenterSurface} onChange={setWebCenterSurface} />
+            <span
+              className={cn(
+                "hidden w-[6.25rem] shrink-0 text-right text-[12px] tabular-nums text-zinc-500 sm:inline",
+                webCenterSurface !== "chat" && "invisible"
+              )}
+              aria-hidden={webCenterSurface !== "chat"}
             >
-              Back to chat
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] tabular-nums text-zinc-500">
-                {webSelectedCount} in context
-              </span>
-              <MindChatHeaderActions
-                size="compact"
-                newChatAccent={false}
-                onNewChat={() => {
-                  setNotebookAskDraft("")
-                  setWebNotebookMessages([])
-                  setNotebookQaHistoryOpen(false)
-                  toast.message("New session", { description: "Dialogue cleared (demo)." })
-                }}
-                onOpenHistory={() => setNotebookQaHistoryOpen(true)}
-              />
-            </div>
-          )
+              {webSelectedCount} in context
+            </span>
+            <MindChatHeaderActions
+              size="compact"
+              newChatAccent={false}
+              onNewChat={() => {
+                setNotebookAskDraft("")
+                setWebNotebookMessages([])
+                setNotebookQaHistoryOpen(false)
+                setWebCenterSurface("chat")
+                toast.message("New session", { description: "Dialogue cleared (demo)." })
+              }}
+              onOpenHistory={() => setNotebookQaHistoryOpen(true)}
+            />
+          </div>
         }
       />
     )
 
-    const webChatBody = webDocActive ? (
-      <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-5 py-4">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
-          {showContentDetail!.source} · {showContentDetail!.date}
-        </p>
-        <div className="mt-4 space-y-4 text-[15px] leading-[1.72] text-zinc-600">
-          {bodyForContent(showContentDetail!.id, showContentDetail!.title, showContentDetail!.excerpt).map(
-            (para, i) => (
-              <p key={i}>{para}</p>
-            )
-          )}
-        </div>
-      </div>
-    ) : (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-4 py-3">
-          {webSubscriberNotebook && publicSettings ? (
-            <>
-              {webNotebookMessages.length === 0 ? (
-                <WebPlazaKbAgentHome
-                  libraryName={kbDisplayName}
-                  libraryDescription={knowledgeBase?.description}
-                  kbId={knowledgeBase?.id}
-                  contentCount={publicContentMetric}
-                  publicSettings={publicSettings}
-                  exampleQuestions={
-                    publicSettings.exampleQuestions.length > 0
-                      ? publicSettings.exampleQuestions
-                      : kbAgentSuggestions.map((s) => s.prompt)
-                  }
-                  onTryQuestion={(prompt) => askPlazaAgentInDialogue(prompt)}
-                  chatDisabled={!canUsePlazaChat}
-                  chatDisabledReason={
-                    canUsePlazaChat ? undefined : "Subscribe to chat with this library assistant"
-                  }
-                />
+    const webEmptyTryPrompts =
+      publicSettings && publicSettings.exampleQuestions.length > 0
+        ? publicSettings.exampleQuestions
+        : kbAgentSuggestions.map((s) => s.prompt)
+
+    const webChatEmptyWithAiView =
+      webNotebookMessages.length === 0 ? (
+        <div className="mx-auto max-w-3xl space-y-4 pb-2">
+          <WebKbAiViewPanel
+            libraryName={kbDisplayName}
+            sourceCount={sourceCount}
+            description={knowledgeBase?.description}
+            expanded
+            className="!px-0"
+          />
+          {webEmptyTryPrompts.length > 0 ? (
+            <section className="border-t border-black/[0.04] pt-4">
+              <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                <Sparkles className="h-3 w-3 text-mind" strokeWidth={2} aria-hidden />
+                Try asking
+              </p>
+              <AgentExamplePromptRail
+                layout="wrap"
+                prompts={webEmptyTryPrompts.map((q, i) => ({
+                  id: `kb-prompt-${i}`,
+                  label: q,
+                  prompt: q,
+                }))}
+                onSelect={(prompt) => {
+                  if (canUsePlazaChat) askPlazaAgentInDialogue(prompt)
+                }}
+                className="w-full"
+              />
+              {!canUsePlazaChat ? (
+                <p className="mt-3 text-center text-[12px] text-zinc-500">
+                  Subscribe to chat about this library
+                </p>
               ) : null}
-              <WebPlazaKbGraphSection
-                compact
-                embeddedInChat
+            </section>
+          ) : null}
+        </div>
+      ) : null
+
+    const webChatBody = (
+      <div className="flex min-h-0 flex-1 flex-col">
+        {webCenterSurface === "chat" && webNotebookMessages.length > 0 ? (
+          <WebKbAiViewEntry
+            libraryName={kbDisplayName}
+            sourceCount={sourceCount}
+            onOpen={() => setWebCenterSurface("ai")}
+          />
+        ) : null}
+        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          {webCenterSurface === "ai" ? (
+            <WebKbAiViewPanel
+              libraryName={kbDisplayName}
+              sourceCount={sourceCount}
+              description={knowledgeBase?.description}
+              expanded
+              className="!px-0"
+            />
+          ) : (
+            <>
+              {webChatEmptyWithAiView}
+              <WebNotebookDialogueBlock
+                messages={webNotebookMessages}
+                sourceCount={webSelectedCount}
+                feedbackById={webFeedbackById}
+                onFeedback={setWebMessageFeedback}
+                onSaveReply={
+                  kbUploadDisabled
+                    ? undefined
+                    : (content) => runWithAuth(() => saveWebReplyToLibrary(content))
+                }
+                onRegenerate={(id) =>
+                  runWithAuth(() => regenerateWebNotebookReply(id, webSelectedCount))
+                }
                 className={cn(
-                  "!px-0 border-t border-stone-100",
-                  webNotebookMessages.length === 0 ? "mt-5 pt-4" : "mt-4 pt-4"
+                  webNotebookMessages.length === 0 && "hidden",
+                  webNotebookMessages.length > 0 &&
+                    !webSubscriberNotebook &&
+                    isPublicKb &&
+                    publicSettings &&
+                    "mt-4 border-t border-black/[0.04] pt-6"
                 )}
               />
             </>
-          ) : null}
-          {!webSubscriberNotebook && !isPublicKb ? (
-            <p className="text-[15px] leading-[1.72] text-zinc-700">{kbOverviewNarrative}</p>
-          ) : null}
-          {!webSubscriberNotebook && isPublicKb && publicSettings ? (
-            <PlazaLibraryAgentIntro
-              libraryName={kbDisplayName}
-              libraryDescription={knowledgeBase?.description}
-              contentCount={publicContentMetric}
-              kbId={knowledgeBase?.id}
-              publicSettings={publicSettings}
-              exampleQuestions={
-                publicSettings.exampleQuestions.length > 0
-                  ? publicSettings.exampleQuestions
-                  : kbAgentSuggestions.map((s) => s.prompt)
-              }
-              onStartThread={(prompt) => askPlazaAgentInDialogue(prompt)}
-              chatDisabled={!canUsePlazaChat}
-              chatDisabledReason={
-                canUsePlazaChat ? undefined : "Subscribe to chat with this library assistant"
-              }
-              variant="dialogue"
-            />
-          ) : null}
-          {!webSubscriberNotebook && !isPublicKb ? (
-            <section className="mt-8">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-[13px] font-semibold text-zinc-600">Knowledge graph</h3>
-                <button
-                  type="button"
-                  className="text-[12px] font-semibold text-mind hover:underline"
-                  onClick={() =>
-                    toast.message("Full graph", {
-                      description: "Opens immersive graph view (demo).",
-                    })
-                  }
-                >
-                  Expand
-                </button>
-              </div>
-              <div className="mt-4 flex flex-col items-center rounded-2xl bg-gradient-to-b from-stone-50/90 to-white px-4 py-6 ring-1 ring-stone-200/60">
-                <KnowledgeGraphPreview compact />
-                <p className="mt-3 max-w-[280px] text-center text-[12px] leading-relaxed text-zinc-500">
-                  See how concepts, people, and documents in this library connect.
-                </p>
-              </div>
-            </section>
-          ) : null}
-          <WebNotebookDialogueBlock
-            messages={webNotebookMessages}
-            sourceCount={webSelectedCount}
-            feedbackById={webFeedbackById}
-            onFeedback={setWebMessageFeedback}
-            onSaveReply={
-              kbUploadDisabled
-                ? undefined
-                : (content) => runWithAuth(() => saveWebReplyToLibrary(content))
-            }
-            onRegenerate={(id) => runWithAuth(() => regenerateWebNotebookReply(id, webSelectedCount))}
-            className={cn(
-              webSubscriberNotebook && webNotebookMessages.length === 0 && "hidden",
-              !webSubscriberNotebook && isPublicKb && publicSettings && "mt-8 border-t border-stone-100 pt-6"
-            )}
-          />
+          )}
         </div>
         <WebNotebookDialogueComposer
           draft={notebookAskDraft}
@@ -1564,15 +1603,20 @@ export function KnowledgeDetail({
           voiceOn={notebookVoiceOn}
           onVoiceToggle={() => setNotebookVoiceOn((prev) => !prev)}
           requireAuthThen={requireAuthThen}
-          agentSuggestions={webSubscriberNotebook ? undefined : kbAgentSuggestions}
-          libraryName={webSubscriberNotebook ? undefined : plazaAgentName ?? kbDisplayName}
+          agentSuggestions={undefined}
+          onQuickQuestion={(prompt) => runWithAuth(() => askPlazaAgentInDialogue(prompt))}
+          libraryName={kbDisplayName}
           onAddFiles={webKbReadOnly ? undefined : openKbAddSources}
           allowUpload={!webKbReadOnly}
           placeholder={
-            webSubscriberNotebook ? "Ask based on this library…" : "Ask or create content…"
+            webCenterSurface === "ai"
+              ? "Ask about a topic or connection in this library…"
+              : webSubscriberNotebook
+                ? "Ask based on this library…"
+                : "Ask or create content…"
           }
-          selectedFactory={factoryModal}
-          onFactorySelect={(kind) => runWithAuth(() => setFactoryModal(kind))}
+          showFactoryRail={false}
+          disclaimer={publicSettings?.disclaimer}
         />
       </div>
     )
@@ -1585,33 +1629,60 @@ export function KnowledgeDetail({
           publisherName={knowledgeBase?.publisherName}
           kbId={knowledgeBase?.id}
           publicSettings={publicSettings}
-          contentCount={publicContentMetric}
-          subscriberCount={publicSubscribeMetric || 845}
+          metrics={publicEngagementMetrics}
           viewCount={publicViewMetric || 3341}
-          likeCount={publicLikeCount}
-          commentCount={publicComments.length}
+          subscribed={plazaSubscribed}
           liked={publicLiked}
-          onToggleLike={() => {
-            setPublicLiked((prev) => {
-              setPublicLikeCount((c) => (prev ? Math.max(0, c - 1) : c + 1))
-              return !prev
+          isOwner={plazaOwner}
+          onToggleSubscribe={() =>
+            runWithAuth(() => {
+              if (plazaSubscribed) plazaAccess?.onUnsubscribe?.()
+              else plazaAccess?.onSubscribe?.()
             })
-          }}
-          onOpenComments={() => setShowCommentSheet(true)}
+          }
+          onToggleLike={() => runWithAuth(togglePublicLike)}
+          onOpenComments={() => runWithAuth(openPublicComments)}
+          onShare={() => runWithAuth(() => setShareTarget({ scope: "library" }))}
+          pinned={kbPinned}
+          onTogglePin={
+            knowledgeBase?.id != null
+              ? () =>
+                  runWithAuth(() => {
+                    const wasPinned = kbPinned
+                    const next = togglePinnedKb(knowledgeBase.id!)
+                    setPinnedKbIds(next)
+                    toast.message(wasPinned ? "Unpinned" : "Pinned to top", {
+                      description: wasPinned
+                        ? `“${kbDisplayName}” removed from pinned libraries.`
+                        : `“${kbDisplayName}” will appear at the top of your library list.`,
+                    })
+                  })
+              : undefined
+          }
         />
         <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto">
           <div className="min-h-[280px]">
             <WebSubscribedKbContentPanel
               items={contents}
               contentCount={publicContentMetric}
-              commentCount={publicComments.length}
+              comments={publicComments}
+              onCommentsChange={setPublicComments}
+              initialTab={subscribedContentTab}
+              commentCount={publicCommentCount}
               searchQuery={webSourceSearch}
               onSearchQueryChange={setWebSourceSearch}
               selectedIds={webSourceSelected}
               onToggleSelected={(id) => toggleWebSource(id)}
               onOpenItem={(item) => {
-                toggleWebSource(item.id)
-                toast.message("Source in context", { description: item.title })
+                openLibraryDoc({
+                  id: item.id,
+                  title: item.title,
+                  excerpt: item.excerpt,
+                  source: item.source,
+                  author: item.source,
+                  date: item.date,
+                  image: "",
+                })
               }}
             />
           </div>
@@ -1627,7 +1698,7 @@ export function KnowledgeDetail({
                 <button
                   type="button"
                   onClick={() => runWithAuth(() => setAddSourcesModalOpen(true))}
-                  className="rounded-lg px-2 py-1 text-[12px] font-semibold text-teal-600 hover:bg-teal-50"
+                  className="rounded-lg px-2 py-1 text-[12px] font-semibold text-mind hover:bg-mind/8"
                 >
                   Add sources
                 </button>
@@ -1635,7 +1706,7 @@ export function KnowledgeDetail({
               <label className="flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-zinc-500">
                 <input
                   type="checkbox"
-                  className="rounded border-stone-300"
+                  className="rounded border-black/[0.12]"
                   checked={allSourcesSelected}
                   onChange={toggleAllWebSources}
                 />
@@ -1652,7 +1723,7 @@ export function KnowledgeDetail({
               value={webSourceSearch}
               onChange={(e) => setWebSourceSearch(e.target.value)}
               placeholder="Search sources…"
-              className="w-full rounded-lg bg-stone-50/90 py-2 pl-8 pr-2 text-[12px] text-zinc-700 ring-1 ring-stone-200/80 outline-none placeholder:text-zinc-400 focus:ring-teal-200/60"
+              className={cn(web.kbInput, "py-2 pl-8 pr-2")}
               aria-label="Search sources"
             />
           </div>
@@ -1662,7 +1733,7 @@ export function KnowledgeDetail({
             <button
               type="button"
               onClick={() => runWithAuth(() => setAddSourcesModalOpen(true))}
-              className="w-full rounded-xl border border-dashed border-stone-200 py-6 text-[13px] font-medium text-zinc-500 hover:border-stone-300 hover:bg-stone-50/80 hover:text-zinc-700"
+              className="w-full rounded-xl border border-dashed border-black/[0.08] py-6 text-[13px] font-medium text-zinc-500 hover:border-black/[0.12] hover:bg-zinc-900/[0.03] hover:text-zinc-700"
             >
               Add sources to get started
             </button>
@@ -1679,7 +1750,7 @@ export function KnowledgeDetail({
             return (
               <div
                 key={content.id}
-                className="flex items-start gap-2 rounded-lg px-2 py-2 hover:bg-stone-50 dark:hover:bg-zinc-800/60"
+                className={cn("flex items-start gap-2 rounded-lg px-2 py-2", web.kbRowHover)}
               >
                 <button
                   type="button"
@@ -1707,13 +1778,17 @@ export function KnowledgeDetail({
 
     const webStudioPanel = (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <WebPanelHeader title="Studio" trailing={<span className="text-[11px] text-zinc-400">Content factory</span>} />
-        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-3 pb-0">
+        <WebPanelHeader
+          title="Studio"
+          trailing={<span className="text-[10px] text-zinc-400">Create</span>}
+        />
+        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-2.5 pb-4">
           <MindarContentFactoryGrid
             librarySummary={`${webSelectedCount} sources linked`}
             onSelect={(kind) => setFactoryModal(kind)}
             surface="filled"
             layout="kb"
+            studioCompact
             className="!mt-0"
           />
           <StudioFactoryJobsInline
@@ -1722,16 +1797,23 @@ export function KnowledgeDetail({
             onDismissQuotaBanner={() => setFactoryQuotaBanner(false)}
             toastFailedJobId={factoryToastFailedJobId}
             onRetryJob={handleFactoryRetry}
+            showCompletedOutputs={false}
+          />
+          <WebStudioOutputsPanel
+            userJobs={factoryUserJobs}
+            communityOutputs={communityFactoryOutputs}
             onArchiveToLibrary={handleArchiveFactoryJobToHub}
             archiveTargetLabel={kbDisplayName}
             archivedJobIds={archivedFactoryJobIds}
+            className="px-0.5"
           />
-          {factoryUserJobs.length === 0 && communityFactoryOutputs.length === 0 ? (
-            <p className="mt-6 px-1 text-center text-[12px] leading-relaxed text-zinc-500">
-              Pick a format to generate audio, slides, quizzes, and more from your sources.
+          {factoryUserJobs.filter((j) => j.status === "complete").length === 0 &&
+          communityFactoryOutputs.length === 0 &&
+          factoryUserJobs.filter((j) => j.status === "generating").length === 0 ? (
+            <p className="mt-4 px-1 text-center text-[12px] leading-relaxed text-zinc-500">
+              Pick a format above — outputs appear here with type filters.
             </p>
           ) : null}
-          <WebPublicFactoryGallery outputs={communityFactoryOutputs} className="px-0.5 pb-4" />
         </div>
       </div>
     )
@@ -1810,7 +1892,7 @@ export function KnowledgeDetail({
                 type="button"
                 aria-label="Upload to library"
               >
-                <Upload className="h-5 w-5 text-zinc-600" strokeWidth={1.75} aria-hidden />
+                <KbUploadFileIcon className="h-5 w-5 text-zinc-600" />
               </button>
 
               {showAddMenu ? (
@@ -1962,10 +2044,15 @@ export function KnowledgeDetail({
                   {knowledgeBase.publicTagline}
                 </p>
               ) : null}
-              <p className="mt-1 text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">
-                {formatCompactCount(publicContentMetric)} content · {formatCompactCount(publicSubscribeMetric)}{" "}
-                subscribers · {formatCompactCount(publicViewMetric)} views
-              </p>
+              <div className="mt-1">
+                <PublicKbEngagementStats
+                  metrics={publicEngagementMetrics}
+                  className="text-[11px] dark:text-zinc-500"
+                />
+                <p className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+                  {formatCompactCount(publicContentMetric)} items · {formatCompactCount(publicViewMetric)} views
+                </p>
+              </div>
             </>
           ) : (
             <p className="line-clamp-2 text-[12px] leading-snug text-zinc-500 sm:line-clamp-1 dark:text-zinc-400">
@@ -1987,63 +2074,25 @@ export function KnowledgeDetail({
       </div>
 
       {isPublicKb ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-stone-100/90 px-4 pb-3 dark:border-zinc-800">
-          <button
-            type="button"
-            onClick={() => {
-              setPublicLiked((prev) => {
-                setPublicLikeCount((c) => (prev ? Math.max(0, c - 1) : c + 1))
-                return !prev
+        <div className="border-b border-stone-100/90 px-4 pb-3 dark:border-zinc-800">
+          <PublicKbEngagementBar
+            metrics={publicEngagementMetrics}
+            subscribed={plazaSubscribed}
+            liked={publicLiked}
+            onToggleSubscribe={() =>
+              runWithAuth(() => {
+                if (plazaSubscribed) plazaAccess?.onUnsubscribe?.()
+                else plazaAccess?.onSubscribe?.()
               })
-            }}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 px-3 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors dark:border-zinc-600 dark:text-zinc-300",
-              publicLiked && "border-mind/25 bg-mind/5 text-mind dark:border-mind/30 dark:bg-mind/10"
-            )}
-            aria-pressed={publicLiked}
-          >
-            <Heart className={cn("h-3.5 w-3.5", publicLiked && "fill-current")} strokeWidth={2} aria-hidden />
-            {publicLikeCount}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowCommentSheet(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 px-3 py-1.5 text-[12px] font-medium text-zinc-600 transition-colors hover:bg-stone-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
-          >
-            <MessageCircle className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-            {publicComments.length}
-          </button>
-          {plazaAccess ? (
-            <>
-              <button
-                type="button"
-                onClick={() =>
-                  runWithAuth(() => {
-                    if (plazaSubscribed) plazaAccess.onUnsubscribe?.()
-                    else plazaAccess.onSubscribe?.()
-                  })
-                }
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
-                  plazaSubscribed
-                    ? "border-teal-200 bg-teal-50 text-teal-800"
-                    : "border-stone-200/90 text-zinc-600 hover:bg-stone-50"
-                )}
-              >
-                {plazaSubscribed ? "Subscribed ✓" : "Subscribe"}
-              </button>
-              {!plazaOwner ? (
-                <button
-                  type="button"
-                  onClick={() => runWithAuth(() => requestPlazaChat())}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-teal-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-teal-700"
-                >
-                  <Sparkles className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                  Chat
-                </button>
-              ) : null}
-            </>
-          ) : null}
+            }
+            onToggleLike={() => runWithAuth(togglePublicLike)}
+            onOpenComments={() => runWithAuth(openPublicComments)}
+            onOpenChat={plazaOwner ? undefined : () => runWithAuth(() => requestPlazaChat())}
+            showChat={!plazaOwner}
+            subscribeLabel={
+              plazaOwner ? { follow: "Published", following: "Your library" } : undefined
+            }
+          />
         </div>
       ) : null}
 
@@ -2076,7 +2125,7 @@ export function KnowledgeDetail({
                     toast.success("Subscribed", { description: `"${kbDisplayName}" is in your library list.` })
                   })
                 }
-                className="rounded-full bg-teal-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-teal-700"
+                className="rounded-full bg-mind px-4 py-2 text-[13px] font-semibold text-white hover:opacity-90"
               >
                 Subscribe
               </button>
@@ -2089,7 +2138,7 @@ export function KnowledgeDetail({
           <div className="flex w-full">
             {[
               { id: "content" as const, label: "Hub" },
-              { id: "graph" as const, label: "Graph" },
+              { id: "ai" as const, label: "AI view" },
               { id: "factory" as const, label: "Studio" },
             ].map((mode) => {
               const selected = activeView === mode.id
@@ -2175,62 +2224,15 @@ export function KnowledgeDetail({
           </div>
         )}
 
-        {activeView === "graph" && (
-          <div className="h-full flex flex-col items-center justify-center px-5 py-8">
-            <div className="relative w-64 h-64 mb-6">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-zinc-500 flex items-center justify-center text-white font-medium text-sm shadow-lg">
-                Core
-              </div>
-              {[
-                { x: 0, y: -80, label: "Concept A", color: "bg-zinc-400" },
-                { x: 70, y: -40, label: "Project B", color: "bg-zinc-600" },
-                { x: 70, y: 40, label: "Person C", color: "bg-stone-500" },
-                { x: 0, y: 80, label: "Doc D", color: "bg-stone-600" },
-                { x: -70, y: 40, label: "Idea E", color: "bg-zinc-500" },
-                { x: -70, y: -40, label: "Asset F", color: "bg-stone-400" },
-              ].map((node, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "absolute w-14 h-14 rounded-full flex items-center justify-center text-white text-xs shadow-md",
-                    node.color
-                  )}
-                  style={{
-                    left: `calc(50% + ${node.x}px - 28px)`,
-                    top: `calc(50% + ${node.y}px - 28px)`,
-                  }}
-                >
-                  {node.label}
-                </div>
-              ))}
-              <svg className="absolute inset-0 w-full h-full" style={{ zIndex: -1 }}>
-                {[
-                  { x1: 128, y1: 128, x2: 128, y2: 48 },
-                  { x1: 128, y1: 128, x2: 198, y2: 88 },
-                  { x1: 128, y1: 128, x2: 198, y2: 168 },
-                  { x1: 128, y1: 128, x2: 128, y2: 208 },
-                  { x1: 128, y1: 128, x2: 58, y2: 168 },
-                  { x1: 128, y1: 128, x2: 58, y2: 88 },
-                ].map((line, i) => (
-                  <line
-                    key={i}
-                    x1={line.x1}
-                    y1={line.y1}
-                    x2={line.x2}
-                    y2={line.y2}
-                    stroke="#E5E7EB"
-                    strokeWidth="2"
-                  />
-                ))}
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-zinc-700 mb-2">Knowledge graph</h3>
-            <p className="text-sm text-zinc-500 text-center mb-4">
-              Visualize how ideas connect across your library.
-            </p>
-            <button className="px-6 py-2.5 bg-zinc-500 text-white rounded-xl text-sm font-medium hover:bg-zinc-600">
-              Open full graph
-            </button>
+        {activeView === "ai" && (
+          <div className="scrollbar-hide flex min-h-0 flex-1 flex-col overflow-y-auto bg-white px-4 py-4 dark:bg-zinc-950">
+            <WebKbAiViewPanel
+              libraryName={kbDisplayName}
+              sourceCount={sourceCount}
+              description={knowledgeBase?.description}
+              expanded
+              className="!px-0"
+            />
           </div>
         )}
 
@@ -2244,6 +2246,7 @@ export function KnowledgeDetail({
               className="!mt-0"
               surface="filled"
               layout="kb"
+              studioCompact
             />
 
                         <StudioFactoryJobsInline
@@ -2286,7 +2289,7 @@ export function KnowledgeDetail({
           >
             <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
               <h2 id="public-kb-comments-title" className="text-[16px] font-semibold text-zinc-700 dark:text-zinc-50">
-                Comments {publicComments.length}
+                Comments · {publicCommentCount}
               </h2>
               <button
                 type="button"
@@ -2297,102 +2300,11 @@ export function KnowledgeDetail({
                 <X className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
               </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
-              {publicComments.map((c) => {
-                const previewLen = 72
-                const long = c.body.length > previewLen
-                const expanded = commentExpandedIds.has(c.id)
-                const shown = expanded || !long ? c.body : `${c.body.slice(0, previewLen)}…`
-                return (
-                  <div key={c.id} className="border-b border-stone-100 py-4 last:border-b-0 dark:border-zinc-800">
-                    <div className="flex gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
-                        <User className="h-4 w-4" aria-hidden />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[15px] font-semibold text-zinc-700 dark:text-zinc-50">{c.user}</span>
-                          {c.isAuthor ? (
-                            <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-stone-500 dark:text-mind/18">
-                              Author
-                            </span>
-                          ) : null}
-                          <span className="text-[12px] text-zinc-400 dark:text-zinc-500">{c.meta}</span>
-                        </div>
-                        <p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-zinc-600 dark:text-zinc-200">
-                          {shown}
-                        </p>
-                        {long ? (
-                          <button
-                            type="button"
-                            className="mt-1.5 text-[13px] font-medium text-mind dark:text-mind/38"
-                            onClick={() =>
-                              setCommentExpandedIds((prev) => {
-                                const next = new Set(prev)
-                                if (next.has(c.id)) next.delete(c.id)
-                                else next.add(c.id)
-                                return next
-                              })
-                            }
-                          >
-                            {expanded ? "Show less" : "Show more"}
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="shrink-0 border-t border-stone-100 bg-white px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-3 dark:border-zinc-800 dark:bg-zinc-950">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-200 dark:bg-zinc-700">
-                  <User className="h-4 w-4 text-zinc-600 dark:text-zinc-300" aria-hidden />
-                </div>
-                <input
-                  value={commentComposerDraft}
-                  onChange={(e) => setCommentComposerDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault()
-                      const t = commentComposerDraft.trim()
-                      if (!t) return
-                      setPublicComments((prev) => [
-                        { id: `pc-${Date.now()}`, user: "Guest", meta: "Just now", body: t },
-                        ...prev,
-                      ])
-                      setCommentComposerDraft("")
-                      toast.success("Posted", { description: "Comment added to the thread (demo)." })
-                    }
-                  }}
-                  placeholder="Write a comment…"
-                  className="min-h-[44px] flex-1 rounded-full border border-transparent bg-stone-100 px-4 text-[14px] text-zinc-700 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200/60 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:ring-zinc-200/50"
-                />
-                <button
-                  type="button"
-                  disabled={!commentComposerDraft.trim()}
-                  className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
-                    commentComposerDraft.trim()
-                      ? "text-mind hover:bg-stone-50 dark:hover:bg-stone-100"
-                      : "text-zinc-300 dark:text-zinc-600"
-                  )}
-                  aria-label="Send"
-                  onClick={() => {
-                    const t = commentComposerDraft.trim()
-                    if (!t) return
-                    setPublicComments((prev) => [
-                      { id: `pc-${Date.now()}`, user: "Guest", meta: "Just now", body: t },
-                      ...prev,
-                    ])
-                    setCommentComposerDraft("")
-                    toast.success("Posted", { description: "Comment added to the thread (demo)." })
-                  }}
-                >
-                  <Send className="h-5 w-5" strokeWidth={2} />
-                </button>
-              </div>
-            </div>
+            <PublicKbCommentsPanel
+              comments={publicComments}
+              onCommentsChange={setPublicComments}
+              className="min-h-[240px] max-h-[min(72dvh,520px)]"
+            />
           </div>
         </div>
       ) : null}

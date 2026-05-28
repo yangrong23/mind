@@ -17,8 +17,6 @@ import {
   WebCloudSyncView,
   WebContactSupportView,
   WebDataCollectedView,
-  WebDevicesView,
-  WebModelSettingsView,
   WebPersonalizationView,
   WebPrivacyGuideView,
   WebPrivacySettingsView,
@@ -26,13 +24,11 @@ import {
   WebStorageView,
   WebThirdPartyView,
   WebUserGuideView,
-  modelHint,
 } from "@/components/mind-v2/web-settings-views"
 import {
   clearAppCacheExceptEssentials,
   readWebSettingsPrefs,
   writeWebSettingsPrefs,
-  type AiModelId,
   type WebSettingsPrefs,
 } from "@/lib/mind-web-settings-prefs"
 import {
@@ -46,14 +42,12 @@ type ThemePreference = "system" | "light" | "dark"
 
 type SettingsView =
   | null
-  | "model"
   | "storage"
   | "cloud-sync"
   | "privacy-guide"
   | "privacy-settings"
   | "data-collected"
   | "third-party"
-  | "devices"
   | "personalization"
   | "user-guide"
   | "contact"
@@ -140,7 +134,7 @@ export function WebRailSettingsPanel({
             options={languageOptions}
             onChange={(v) => {
               patchPrefs({ language: v })
-              toast.success(v === "zh" ? "语言已保存" : "Language saved")
+              toast.success("Language saved")
             }}
             aria-label="Language"
           />
@@ -159,45 +153,7 @@ export function WebRailSettingsPanel({
         </WebSettingsRow>
       </WebSettingsSection>
 
-      <WebSettingsSection title="Notifications">
-        <WebSettingsRow label="Recording ready">
-          <WebSettingsToggle
-            checked={prefs.notifCaptureReady}
-            onChange={() => {
-              patchPrefs({ notifCaptureReady: !prefs.notifCaptureReady })
-              toast.success("Saved")
-            }}
-            aria-label="Recording ready notifications"
-          />
-        </WebSettingsRow>
-        <WebSettingsRow label="Weekly digest">
-          <WebSettingsToggle
-            checked={prefs.notifDigest}
-            onChange={() => {
-              patchPrefs({ notifDigest: !prefs.notifDigest })
-              toast.success("Saved")
-            }}
-            aria-label="Weekly digest"
-          />
-        </WebSettingsRow>
-      </WebSettingsSection>
-
-      <WebSettingsSection title="AI">
-        <WebSettingsRow
-          label="Default model"
-          hint={modelHint(prefs.aiModel)}
-          onClick={() => setView("model")}
-        />
-        <WebSettingsRow label="Frontier insights">
-          <WebSettingsToggle
-            checked={prefs.frontierInsights}
-            onChange={() => {
-              patchPrefs({ frontierInsights: !prefs.frontierInsights })
-              toast.success("Saved")
-            }}
-            aria-label="Frontier insights"
-          />
-        </WebSettingsRow>
+      <WebSettingsSection title="AI & capture">
         <WebSettingsRow label="Auto-save captures to library">
           <WebSettingsToggle
             checked={prefs.autoSaveNotes}
@@ -244,7 +200,6 @@ export function WebRailSettingsPanel({
             aria-label="Send crash reports"
           />
         </WebSettingsRow>
-        <WebSettingsRow label="Devices" onClick={() => setView("devices")} />
         <WebSettingsRow label="Personalization" onClick={() => setView("personalization")} />
       </WebSettingsSection>
 
@@ -259,14 +214,6 @@ export function WebRailSettingsPanel({
   const subView = (() => {
     const back = () => setView(null)
     switch (view) {
-      case "model":
-        return (
-          <WebModelSettingsView
-            onBack={back}
-            model={prefs.aiModel}
-            onModelChange={(m: AiModelId) => patchPrefs({ aiModel: m })}
-          />
-        )
       case "storage":
         return <WebStorageView onBack={back} />
       case "cloud-sync":
@@ -285,8 +232,6 @@ export function WebRailSettingsPanel({
         return <WebDataCollectedView onBack={back} />
       case "third-party":
         return <WebThirdPartyView onBack={back} />
-      case "devices":
-        return <WebDevicesView onBack={back} />
       case "personalization":
         return <WebPersonalizationView onBack={back} />
       case "user-guide":

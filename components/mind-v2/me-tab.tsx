@@ -4,7 +4,14 @@ import { useState, useEffect, type ReactNode } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { buildDemoActivityTimeline, getTodayTimelineDay } from "@/lib/mock-activity-timeline"
+import { getTodayTimelineDay } from "@/lib/mock-activity-timeline"
+import {
+  DEMO_CAPTURE_DIARY,
+  buildDayShareCardText,
+  formatHeatmapDayLabel,
+  getDayUploads,
+  getDayViralSlogan,
+} from "@/lib/me-capture-diary-helpers"
 import {
   getMindAccount,
   MIND_ACCOUNTS,
@@ -26,7 +33,12 @@ import {
   MeDiaryTimelineEmbed,
   MeDiaryTimelinePanel,
 } from "@/components/mind-v2/me-activity-timeline"
-import { WebMeProfileHeader, WebMeSettingCard, type WebMeStat } from "@/components/mind-v2/web-me-shell"
+import {
+  WebMeProfileHeader,
+  WebMeUpgradeBanner,
+  type WebMeStat,
+} from "@/components/mind-v2/web-me-shell"
+import { MeDailyReview } from "@/components/mind-v2/me-daily-review"
 import { WebMeSettingsDetail } from "@/components/mind-v2/web-me-settings-detail"
 import { buildTimelineSharePayload, type MindSharePayload } from "@/lib/mind-share-payload"
 import {
@@ -72,25 +84,21 @@ import {
   HardDrive,
 } from "lucide-react"
 
-const DEMO_CAPTURE_DIARY = buildDemoActivityTimeline()
+type MeSettingsExtraId =
+  | "display"
+  | "notifications"
+  | "storage"
+  | "devices"
+  | "privacy"
+  | "account"
+  | "help"
 
-function settingsExtraTitle(
-  settingsExtra:
-    | "display"
-    | "notifications"
-    | "storage"
-    | "devices"
-    | "features"
-    | "privacy"
-    | "account"
-    | "help"
-): string {
-  const map: Record<string, string> = {
+function settingsExtraTitle(settingsExtra: MeSettingsExtraId): string {
+  const map: Record<MeSettingsExtraId, string> = {
     display: "Display",
     notifications: "Notifications",
     storage: "Storage",
     devices: "Devices",
-    features: "AI",
     privacy: "Privacy",
     account: "Account",
     help: "Help",
@@ -123,50 +131,6 @@ function MeSettingsShell({
       {children}
     </SettingsScreenShell>
   )
-}
-
-function hashDateString(s: string) {
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i)
-  return Math.abs(h)
-}
-
-function formatHeatmapDayLabel(isoDate: string) {
-  const d = new Date(isoDate + "T12:00:00")
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
-}
-
-function getDayUploads(isoDate: string, activity: number) {
-  if (activity <= 0) return []
-  const h = hashDateString(isoDate)
-  const titles = [
-    "Product requirements sync",
-    "Quick voice memo — ideas",
-    "1:1 with design",
-    "Customer call notes",
-    "Sprint planning snippet",
-  ]
-  const times = ["8:02 AM", "10:18 AM", "12:40 PM", "3:05 PM", "6:22 PM"]
-  const count = Math.min(activity + 1, 5)
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${isoDate}-${i}`,
-    title: titles[(h + i) % titles.length],
-    time: times[(h + i * 2) % times.length],
-    source: (h + i) % 2 === 0 ? "Phone" : "Mind Recorder",
-  }))
-}
-
-function getDailyReviewForDay(isoDate: string, activity: number) {
-  if (activity <= 0) {
-    return "A light day in your capture log—no new uploads. Use the space to reflect or queue one small topic for tomorrow's first recording."
-  }
-  const h = hashDateString(isoDate)
-  const flavors = [
-    "You leaned into product and customer context—several threads point to the same roadmap bet. Carry one concrete decision into your next session.",
-    "Captures skew toward meetings and async notes. The through-line is clarity on next steps; consider tagging follow-ups so they surface in weekly review.",
-    "Mix of device and phone recordings. Energy looks steady; try linking one highlight to your knowledge library so it compounds.",
-  ]
-  return flavors[h % flavors.length]
 }
 
 function DisplayThemeSegment() {
@@ -209,66 +173,6 @@ function DisplayThemeSegment() {
   )
 }
 
-function getDayLeadLine(isoDate: string, activity: number) {
-  const n = getDayUploads(isoDate, activity).length
-  if (n === 0) {
-    return "No captures logged for this date."
-  }
-  return `This day: ${n} capture${n === 1 ? "" : "s"} · activity level ${activity}.`
-}
-
-function buildDayExpandedShareText(isoDate: string, activity: number) {
-  const label = formatHeatmapDayLabel(isoDate)
-  const lead = getDayLeadLine(isoDate, activity)
-  const narrative = getDailyReviewForDay(isoDate, activity)
-  const uploads = getDayUploads(isoDate, activity)
-  const titles = uploads.map((u) => `• ${u.title}`).join("\n")
-  return [label, lead, narrative, uploads.length ? `Recorded:\n${titles}` : ""].filter(Boolean).join("\n\n")
-}
-
-function heatmapDaySharePreview(isoDate: string, activity: number) {
-  const full = buildDayExpandedShareText(isoDate, activity)
-  return full.length > 320 ? full.slice(0, 320) + "…" : full
-}
-
-const HEATMAP_VIRAL_SLOGANS_ACTIVE = [
-  "Your future self is built\none square at a time.",
-  "Ideas decay in memory.\nThey compound on your timeline.",
-  "I didn't wait for inspiration—\nI captured it.",
-  "Consistency is the quiet flex\nnobody sees until they do.",
-  "Every recorded thought is a vote\nfor who you're becoming.",
-  "Show up empty, leave with clarity—\nthat's the whole game.",
-  "The best thinkers don't have better ideas.\nThey have better logs.",
-] as const
-
-const HEATMAP_VIRAL_SLOGANS_QUIET = [
-  "Even quiet days count.\nRest is part of the streak.",
-  "Blank squares aren't failure—\nthey're space for tomorrow.",
-  "Not every day roars.\nSome days whisper—and that's enough.",
-] as const
-
-function getDayViralSlogan(isoDate: string, activity: number) {
-  const h = hashDateString(isoDate)
-  const pool = activity > 0 ? HEATMAP_VIRAL_SLOGANS_ACTIVE : HEATMAP_VIRAL_SLOGANS_QUIET
-  return pool[h % pool.length]
-}
-
-function buildDayShareCardText(
-  isoDate: string,
-  activity: number,
-  displayName: string,
-  streakDays: number
-) {
-  const slogan = getDayViralSlogan(isoDate, activity).replace(/\n/g, " ")
-  const label = formatHeatmapDayLabel(isoDate)
-  const captures = getDayUploads(isoDate, activity).length
-  const activityLine =
-    activity > 0
-      ? `${captures} capture${captures === 1 ? "" : "s"} · level ${activity}`
-      : "A quiet day on my timeline"
-  return `${slogan}\n\n${label} · ${activityLine}\n${streakDays}-day streak on Mind · ${displayName}`
-}
-
 export interface MeTabProps {
   activeAccountId: MindAccountId
   onActiveAccountChange: (id: MindAccountId) => void
@@ -281,6 +185,12 @@ export interface MeTabProps {
   webLayout?: boolean
   /** Increment from web rail to open credits / plans */
   creditsOpenSignal?: number
+  /** Web: navigate to full timeline page */
+  onOpenTimeline?: () => void
+  /** Web: navigate to a single-day log page */
+  onOpenTimelineDay?: (day: { isoDate: string; activity: number }) => void
+  /** Web: open membership comparison (table layout in shell modal) */
+  onOpenCreditsPlans?: () => void
 }
 
 export function MeTab({
@@ -291,6 +201,9 @@ export function MeTab({
   onFontZoomPercentChange,
   webLayout = false,
   creditsOpenSignal = 0,
+  onOpenTimeline,
+  onOpenTimelineDay,
+  onOpenCreditsPlans,
 }: MeTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
   const [activityDiary, setActivityDiary] = useState<{
@@ -299,13 +212,21 @@ export function MeTab({
     listFirst?: boolean
   } | null>(null)
 
-  const openActivityDiaryList = () => {
-    const today = getTodayTimelineDay(DEMO_CAPTURE_DIARY)
-    setActivityDiary({ date: today.isoDate, value: today.activity, listFirst: true })
+  const openActivityDiaryDay = (day: { isoDate: string; activity: number }) => {
+    if (webLayout && onOpenTimelineDay) {
+      onOpenTimelineDay(day)
+      return
+    }
+    setActivityDiary({ date: day.isoDate, value: day.activity, listFirst: false })
   }
 
-  const openActivityDiaryDay = (day: { isoDate: string; activity: number }) => {
-    setActivityDiary({ date: day.isoDate, value: day.activity, listFirst: true })
+  const openActivityDiaryList = () => {
+    if (webLayout && onOpenTimeline) {
+      onOpenTimeline()
+      return
+    }
+    const today = getTodayTimelineDay(DEMO_CAPTURE_DIARY)
+    setActivityDiary({ date: today.isoDate, value: today.activity, listFirst: true })
   }
   const [shareSheet, setShareSheet] = useState<MindSharePayload | null>(null)
   const [showShareCard, setShowShareCard] = useState(false)
@@ -316,8 +237,13 @@ export function MeTab({
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false)
   const [showCreditsPlans, setShowCreditsPlans] = useState(false)
   useEffect(() => {
-    if (creditsOpenSignal > 0) setShowCreditsPlans(true)
-  }, [creditsOpenSignal])
+    if (creditsOpenSignal <= 0) return
+    if (webLayout && onOpenCreditsPlans) {
+      onOpenCreditsPlans()
+      return
+    }
+    setShowCreditsPlans(true)
+  }, [creditsOpenSignal, webLayout, onOpenCreditsPlans])
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false)
   const [wifiOnlySync, setWifiOnlySync] = useState(false)
   const [useMemory, setUseMemory] = useState(false)
@@ -336,28 +262,16 @@ export function MeTab({
   const [offlineOnly, setOfflineOnly] = useState(false)
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
   const [isDeviceConnected, setIsDeviceConnected] = useState(true)
-  const [settingsExtra, setSettingsExtra] = useState<
-    | null
-    | "display"
-    | "notifications"
-    | "storage"
-    | "devices"
-    | "features"
-    | "privacy"
-    | "account"
-    | "help"
-  >(null)
+  const [settingsExtra, setSettingsExtra] = useState<MeSettingsExtraId | null>(null)
   const [showStorageSpace, setShowStorageSpace] = useState(false)
   const [privacyDetail, setPrivacyDetail] = useState<
     null | "guide" | "thirdParty" | "collected" | "privacySettings"
   >(null)
-  const [frontierInsights, setFrontierInsights] = useState(true)
   const themeForHub = useTheme()
   const [themeHubMounted, setThemeHubMounted] = useState(false)
   useEffect(() => setThemeHubMounted(true), [])
-  const [notifCaptureReady, setNotifCaptureReady] = useState(true)
-  const [notifDigest, setNotifDigest] = useState(false)
   const [privacyCrashReports, setPrivacyCrashReports] = useState(true)
+  const [showDailyReview, setShowDailyReview] = useState(false)
 
   const stats = {
     totalNotes: 156,
@@ -378,8 +292,6 @@ export function MeTab({
       : themeForHub.resolvedTheme === "dark"
         ? "Dark"
         : "Light"
-  const notifStatusLabel = notifCaptureReady || notifDigest ? "On" : "Off"
-
   const profileHeroBlock = (
     <div className={cn(webLayout ? "p-0" : cn("px-5 pt-4 pb-4", "bg-[#0a1530] text-white"))}>
         <div className="flex items-start justify-between gap-3">
@@ -425,21 +337,17 @@ export function MeTab({
               </div>
               <p className={cn("mt-0.5 truncate text-[13px]", "text-[#a4a097]")}>{activeAccount.email}</p>
               <p className={cn("mt-0.5 text-[12px]", "text-[#a4a097]")}>
-                {stats.totalDays} days ·{" "}
-                <span className={cn("font-medium", "text-white")}>
-                  {stats.creditsRemaining.toLocaleString("en-US")} credits
-                </span>
+                {stats.totalDays} active days · {stats.consecutiveDays}-day streak
               </p>
             </div>
             <ChevronsUpDown className={cn("h-4 w-4 shrink-0 opacity-50", "text-[#a4a097]")} aria-hidden />
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-stone-200 pt-3">
+        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-stone-200 pt-3">
           {[
             { value: stats.totalNotes, label: "Memos" },
             { value: stats.consecutiveDays, label: "Streak" },
-            { value: `${stats.totalHours}h`, label: "Captured" },
           ].map((s) => (
             <div key={s.label} className="text-center">
               <div className={cn("text-lg font-semibold tabular-nums leading-none", "text-white")}>{s.value}</div>
@@ -449,201 +357,59 @@ export function MeTab({
         </div>
 
         {!webLayout ? (
-          <button
-            type="button"
-            onClick={() => setShowCreditsPlans(true)}
-            className={cn(
-              "mt-3 w-full rounded-xl border border-stone-200 bg-white/60 py-2 text-[13px] font-medium text-mind shadow-sm shadow-stone-900/5 backdrop-blur-sm transition-colors hover:bg-white/90",
-              "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
-            )}
-          >
-            {stats.creditsRemaining.toLocaleString("en-US")} credits · Plans & refill
-          </button>
+          <div className="mt-3">
+            <WebMeUpgradeBanner
+              creditsRemaining={stats.creditsRemaining}
+              creditsMonthlyAllowance={stats.creditsMonthlyAllowance}
+              planName="Standard"
+              onUpgrade={() => setShowCreditsPlans(true)}
+            />
+          </div>
         ) : null}
 
         {!webLayout ? (
         <div className="mt-3 space-y-3 rounded-xl border border-stone-200 bg-white/55 p-3 shadow-sm shadow-stone-900/5 backdrop-blur-sm">
           <MeActivityDiaryPreview
             days={DEMO_CAPTURE_DIARY}
-            gridCells={35}
             onOpenDiary={openActivityDiaryList}
             onOpenDay={openActivityDiaryDay}
           />
-
-          <div>
-            <p className="mb-2 px-0.5 text-[12px] font-semibold text-zinc-800">Settings</p>
-            <SettingsGroup>
-              <SettingsLinkRow
-                label="Display"
-                value={`${appearanceLabel} · ${fontZoomPercent}%`}
-                onClick={() => setSettingsExtra("display")}
-              />
-              <SettingsLinkRow
-                label="Notifications"
-                value={notifStatusLabel}
-                onClick={() => setSettingsExtra("notifications")}
-              />
-              <SettingsLinkRow
-                label="Storage"
-                value="11.2 MB"
-                onClick={() => setSettingsExtra("storage")}
-              />
-              <SettingsLinkRow
-                label="Devices"
-                value={isDeviceConnected ? "Recorder connected" : "Not connected"}
-                onClick={() => setSettingsExtra("devices")}
-              />
-              <SettingsLinkRow
-                label="AI"
-                value={frontierInsights ? "Frontier on" : "Standard"}
-                onClick={() => setSettingsExtra("features")}
-              />
-              <SettingsLinkRow label="Privacy" onClick={() => setSettingsExtra("privacy")} />
-              <SettingsLinkRow label="Account" onClick={() => setSettingsExtra("account")} />
-              <SettingsLinkRow label="Help" onClick={() => setSettingsExtra("help")} last />
-            </SettingsGroup>
-          </div>
         </div>
         ) : null}
     </div>
   )
 
   const webMeStats: WebMeStat[] = [
-    { label: "Memos", value: stats.totalNotes, icon: FileText, tone: "blue" },
+    { label: "Notes", value: stats.totalNotes, icon: FileText, tone: "blue" },
     { label: "Streak", value: stats.consecutiveDays, icon: Award, tone: "orange" },
-    { label: "Captured", value: `${stats.totalHours}h`, icon: Clock, tone: "violet" },
-    {
-      label: "Credits",
-      value: stats.creditsRemaining.toLocaleString("en-US"),
-      icon: Zap,
-      tone: "teal",
-    },
   ]
+
+  const openCreditsPlans = () => {
+    if (webLayout && onOpenCreditsPlans) {
+      onOpenCreditsPlans()
+      return
+    }
+    setShowCreditsPlans(true)
+  }
 
   const webTimelinePanel = (
     <MeDiaryTimelinePanel
       days={DEMO_CAPTURE_DIARY}
-      gridCells={35}
       onOpenDiary={openActivityDiaryList}
       onOpenDay={openActivityDiaryDay}
+      onOpenDailyReview={() => setShowDailyReview(true)}
     />
-  )
-
-  const webSettingsPanel = (
-    <div className="flex flex-col gap-3">
-      <p className="px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-zinc-400">Settings</p>
-      {[
-        {
-          key: "display",
-          node: (
-            <WebMeSettingCard
-              icon={Sun}
-              title="Display"
-              subtitle={`${appearanceLabel} · ${fontZoomPercent}%`}
-              onClick={() => setSettingsExtra("display")}
-            />
-          ),
-        },
-        {
-          key: "notifications",
-          node: (
-            <WebMeSettingCard
-              icon={Bell}
-              title="Notifications"
-              subtitle={notifStatusLabel === "On" ? "Capture ready · digest optional" : "All off"}
-              toggle
-              checked={notifCaptureReady || notifDigest}
-              onToggle={() => {
-                setNotifCaptureReady((v) => !v)
-                toast.success("Saved")
-              }}
-            />
-          ),
-        },
-        {
-          key: "storage",
-          node: (
-            <WebMeSettingCard
-              icon={HardDrive}
-              title="Storage"
-              subtitle="11.2 MB · manage breakdown"
-              onClick={() => setSettingsExtra("storage")}
-            />
-          ),
-        },
-        {
-          key: "devices",
-          node: (
-            <WebMeSettingCard
-              icon={Smartphone}
-              title="Devices"
-              subtitle={isDeviceConnected ? "Recorder connected" : "Not connected"}
-              onClick={() => setSettingsExtra("devices")}
-            />
-          ),
-        },
-        {
-          key: "ai",
-          node: (
-            <WebMeSettingCard
-              icon={Brain}
-              title="AI"
-              subtitle={frontierInsights ? "Frontier on" : "Standard"}
-              onClick={() => setSettingsExtra("features")}
-            />
-          ),
-        },
-        {
-          key: "privacy",
-          node: (
-            <WebMeSettingCard
-              icon={Shield}
-              title="Privacy"
-              subtitle="Guide · data · sharing"
-              onClick={() => setSettingsExtra("privacy")}
-            />
-          ),
-        },
-        {
-          key: "account",
-          node: (
-            <WebMeSettingCard
-              icon={User}
-              title="Account"
-              subtitle="Personalization · sync · security"
-              onClick={() => setSettingsExtra("account")}
-            />
-          ),
-        },
-        {
-          key: "help",
-          node: (
-            <WebMeSettingCard
-              icon={HelpCircle}
-              title="Help"
-              subtitle="Guide · support · feedback"
-              onClick={() => setSettingsExtra("help")}
-            />
-          ),
-        },
-      ].map((row, i) => (
-        <div
-          key={row.key}
-          className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-500"
-          style={{ animationDelay: `${60 + i * 40}ms` }}
-        >
-          {row.node}
-        </div>
-      ))}
-    </div>
   )
 
   const webProfileHero = (
     <WebMeProfileHeader
       account={activeAccount}
       stats={webMeStats}
+      creditsRemaining={stats.creditsRemaining}
+      creditsMonthlyAllowance={stats.creditsMonthlyAllowance}
+      planName="Standard"
       onOpenAccountSwitcher={() => setShowAccountSwitcher(true)}
-      onOpenCredits={() => setShowCreditsPlans(true)}
+      onOpenCredits={openCreditsPlans}
     />
   )
 
@@ -956,7 +722,7 @@ export function MeTab({
                   setOfflineOnly(true)
                   setOfflineConfirmOpen(false)
                 }}
-                className={cn("flex-1 rounded-xl py-3 text-[15px] font-semibold text-white", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")}
+                className={cn("flex-1 rounded-xl py-3 text-[15px] font-semibold text-white", "mind-btn rounded-lg")}
               >
                 Enable offline
               </button>
@@ -1004,21 +770,11 @@ export function MeTab({
           {settingsExtra === "notifications" && (
             <SettingsGroup>
               <SettingsToggleRow
-                label="Recording ready"
-                checked={notifCaptureReady}
+                label="Push notifications"
+                checked
                 onChange={() => {
-                  setNotifCaptureReady((v) => !v)
-                  toast.success("Saved")
+                  toast.message("Notifications", { description: "Preference saved (demo)." })
                 }}
-              />
-              <SettingsToggleRow
-                label="Weekly digest"
-                checked={notifDigest}
-                onChange={() => {
-                  setNotifDigest((v) => !v)
-                  toast.success("Saved")
-                }}
-                last
               />
             </SettingsGroup>
           )}
@@ -1050,29 +806,6 @@ export function MeTab({
               onRequestOfflineEnable={() => setOfflineConfirmOpen(true)}
               onOfflineDisable={() => setOfflineOnly(false)}
             />
-          )}
-
-          {settingsExtra === "features" && (
-            <SettingsGroup>
-              <SettingsLinkRow
-                label="Model"
-                value="Light"
-                onClick={() =>
-                  toast.message("Model settings", {
-                    description: "Custom models and routing (demo).",
-                  })
-                }
-              />
-              <SettingsToggleRow
-                label="Frontier insights"
-                checked={frontierInsights}
-                onChange={() => {
-                  setFrontierInsights((v) => !v)
-                  toast.success("Saved")
-                }}
-                last
-              />
-            </SettingsGroup>
           )}
 
           {settingsExtra === "privacy" && (
@@ -1393,7 +1126,7 @@ export function MeTab({
       )}
 
       {/* Credits & plan purchase */}
-      {showCreditsPlans && (
+      {showCreditsPlans && !(webLayout && onOpenCreditsPlans) && (
         <MeCreditsPlansScreen
           onClose={() => setShowCreditsPlans(false)}
           stats={{
@@ -1467,7 +1200,7 @@ export function MeTab({
         </div>
       )}
 
-      {activityDiary ? (
+      {activityDiary && !(webLayout && (onOpenTimeline || onOpenTimelineDay)) ? (
         <MeActivityTimeline
           days={DEMO_CAPTURE_DIARY}
           initialDate={activityDiary.date}
@@ -1526,8 +1259,27 @@ export function MeTab({
         <MeTabWebLayout
           profileHero={webProfileHero}
           timelinePanel={webTimelinePanel}
-          settingsPanel={webSettingsPanel}
-          overlays={accountAndOverlays}
+          overlays={
+            <>
+              {accountAndOverlays}
+              {showDailyReview ? (
+                <MeDailyReview
+                  presentation="overlay"
+                  displayName={activeAccount.displayName}
+                  onClose={() => setShowDailyReview(false)}
+                  onShare={(payload) => {
+                    setShareSheet(payload)
+                    setShowDailyReview(false)
+                  }}
+                  onOpenTodayActivity={() => {
+                    setShowDailyReview(false)
+                    openActivityDiaryList()
+                  }}
+                  getUploads={getDayUploads}
+                />
+              ) : null}
+            </>
+          }
         />
       </div>
     )

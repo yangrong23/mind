@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { web } from "@/components/mind-v2/web-design"
@@ -10,38 +10,45 @@ import { mockNotes } from "@/lib/mock-notes"
 import type { Note } from "@/lib/note-types"
 import { MindSaveToLibrarySheet } from "@/components/mind-v2/mind-save-to-library-sheet"
 import { AgentChat, MINDAR_COPILOT_AGENT } from "@/components/mind-v2/agent-tab"
-import { MindarLogo } from "@/components/mind-v2/mindar-logo"
 import type { KnowledgeBase } from "@/lib/mock-knowledge-bases"
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
   BookmarkPlus,
+  ChevronDown,
   ChevronRight,
   Clock,
   Download,
   Eraser,
+  Highlighter,
   Italic,
   Library,
   MoreHorizontal,
-  PanelRightClose,
-  Plus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pin,
   Redo2,
   Search,
   Share2,
+  Sparkles,
   Strikethrough,
+  Type,
   Underline,
   Undo2,
   Wand2,
   X,
 } from "lucide-react"
+import { KbUploadFileIcon } from "@/components/mind-v2/kb-upload-file-icon"
 
 type NoteGroupId = "today" | "week" | "month" | "older"
-type MemoFilter = "all" | "pinned" | "drafts" | "rich"
+type NoteFilter = "all" | "pinned" | "drafts"
 
-const MEMO_FILTERS: { id: MemoFilter; label: string }[] = [
+const NOTE_FILTERS: { id: NoteFilter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "pinned", label: "Pinned" },
   { id: "drafts", label: "Drafts" },
-  { id: "rich", label: "Rich text" },
 ]
 
 const NOTE_GROUPS: { id: NoteGroupId; label: string }[] = [
@@ -53,7 +60,7 @@ const NOTE_GROUPS: { id: NoteGroupId; label: string }[] = [
 
 const WEB_DEMO_NOTE: Note = {
   id: 9001,
-  title: "Q2 product memo",
+  title: "Q2 product note",
   type: "text",
   date: "Today",
   preview:
@@ -61,9 +68,29 @@ const WEB_DEMO_NOTE: Note = {
   bodyHtml: `<p><strong>Product</strong> — Ship grounded Ask and Studio handoffs without leaving library context.</p>
 <p><mark style="background-color:#fef08a;padding:0 2px;border-radius:2px">Technical</mark> — RAG pipeline, reranking, and eval harnesses that match production traffic.</p>
 <p><strong>Cognition</strong> — Weekly reviews: what changed our mind, what we would bet on next.</p>
-<ul><li>Align Q2 roadmap with library-first workflow</li><li>Prototype web memos + AI co-writing</li></ul>`,
+<ul><li>Align Q2 roadmap with library-first workflow</li><li>Prototype web notes + AI co-writing</li></ul>`,
   status: "analyzed",
-  source: "Rich text",
+  source: "Notes",
+}
+
+/** Web Notes — every item is a rich-text note (no voice/hardware split in this workspace). */
+function toWebRichTextNote(note: Note): Note {
+  if (note.type === "text" && note.bodyHtml?.trim()) {
+    return { ...note, source: "Notes" }
+  }
+  const text = (note.preview || note.title || "").trim()
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+  return {
+    ...note,
+    type: "text",
+    source: "Notes",
+    status: note.status === "recording" ? "analyzed" : note.status,
+    bodyHtml: note.bodyHtml?.trim() ? note.bodyHtml : escaped ? `<p>${escaped}</p>` : "<p><br></p>",
+    preview: text.length > 96 ? `${text.slice(0, 96)}…` : text,
+  }
 }
 
 function execFormat(command: "bold" | "italic" | "underline" | "strikeThrough") {
@@ -114,9 +141,43 @@ function noteGroupFor(note: Note): NoteGroupId {
 }
 
 function seedWebNotes(): Note[] {
-  const fromMock = mockNotes.filter((n) => !n.archived && n.status !== "recording")
+  const fromMock = mockNotes
+    .filter((n) => !n.archived && n.status !== "recording")
+    .map(toWebRichTextNote)
   const hasDemo = fromMock.some((n) => n.id === WEB_DEMO_NOTE.id)
   return hasDemo ? fromMock : [WEB_DEMO_NOTE, ...fromMock]
+}
+
+function NoteToolbarBtn({
+  title,
+  onClick,
+  active,
+  children,
+}: {
+  title: string
+  onClick?: () => void
+  active?: boolean
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      className={cn(
+        "rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-stone-100",
+        active && "bg-stone-100 text-zinc-900"
+      )}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
+
+function NoteToolbarDivider() {
+  return <span className="mx-0.5 h-5 w-px shrink-0 bg-stone-200" aria-hidden />
 }
 
 function WebNoteShareDialog({
@@ -131,7 +192,7 @@ function WebNoteShareDialog({
   if (!open) return null
 
   const copyLink = async () => {
-    const url = `https://mindar.app/memos/demo/${encodeURIComponent(title)}`
+    const url = `https://mindar.app/notes/demo/${encodeURIComponent(title)}`
     try {
       await navigator.clipboard.writeText(url)
       toast.success("Link copied")
@@ -150,7 +211,7 @@ function WebNoteShareDialog({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[17px] font-semibold text-zinc-800">Share memo</h2>
+            <h2 className="text-[17px] font-semibold text-zinc-800">Share note</h2>
             <p className="mt-1 text-[13px] text-zinc-500 line-clamp-2">{title}</p>
           </div>
           <button
@@ -211,16 +272,22 @@ export function WebNotesWorkspace({
   }
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [insertOpen, setInsertOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [listCollapsed, setListCollapsed] = useState(false)
+  const [listSearchOpen, setListSearchOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [listQuery, setListQuery] = useState("")
-  const [memoFilter, setMemoFilter] = useState<MemoFilter>("all")
+  const [noteFilter, setNoteFilter] = useState<NoteFilter>("all")
   const [pinnedIds, setPinnedIds] = useState<Set<number>>(() => new Set([WEB_DEMO_NOTE.id]))
   const editorRef = useRef<HTMLDivElement>(null)
   const moreRef = useRef<HTMLDivElement>(null)
+  const insertRef = useRef<HTMLDivElement>(null)
+  const createRef = useRef<HTMLDivElement>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const selected = notes.find((n) => n.id === selectedId) ?? notes[0]
-  const isTextNote = selected?.type === "text"
 
   const [title, setTitle] = useState(selected?.title ?? "")
   const [bodyEmpty, setBodyEmpty] = useState(true)
@@ -230,7 +297,7 @@ export function WebNotesWorkspace({
     setTitle(selected.title)
     const el = editorRef.current
     if (!el) return
-    const raw = selected.type === "text" ? selected.bodyHtml?.trim() ?? "" : ""
+    const raw = selected.bodyHtml?.trim() ?? ""
     const initial = raw
       ? raw.includes("<")
         ? raw
@@ -240,27 +307,33 @@ export function WebNotesWorkspace({
         : "<p><br></p>"
     el.innerHTML = initial
     setBodyEmpty(htmlBodyIsEmpty(initial))
-  }, [selected?.id, selected?.bodyHtml, selected?.preview, selected?.title, selected?.type])
+  }, [selected?.id, selected?.bodyHtml, selected?.preview, selected?.title])
 
   useEffect(() => {
-    if (!moreOpen) return
+    if (!moreOpen && !insertOpen && !createOpen) return
     function onDoc(e: MouseEvent) {
-      if (!moreRef.current?.contains(e.target as Node)) setMoreOpen(false)
+      const t = e.target as Node
+      if (moreOpen && !moreRef.current?.contains(t)) setMoreOpen(false)
+      if (insertOpen && !insertRef.current?.contains(t)) setInsertOpen(false)
+      if (createOpen && !createRef.current?.contains(t)) setCreateOpen(false)
     }
     document.addEventListener("mousedown", onDoc)
     return () => document.removeEventListener("mousedown", onDoc)
-  }, [moreOpen])
+  }, [moreOpen, insertOpen, createOpen])
+
+  const listTitle = NOTE_FILTERS.find((f) => f.id === noteFilter)?.label ?? "All"
+  const selectedPinned = selected ? pinnedIds.has(selected.id) : false
+
+  const focusEditor = () => editorRef.current?.focus()
 
   const filteredNotes = useMemo(() => {
     let list = notes
-    if (memoFilter === "pinned") {
+    if (noteFilter === "pinned") {
       list = list.filter((n) => pinnedIds.has(n.id))
-    } else if (memoFilter === "drafts") {
+    } else if (noteFilter === "drafts") {
       list = list.filter(
         (n) => !n.preview.trim() || n.title.toLowerCase().startsWith("untitled")
       )
-    } else if (memoFilter === "rich") {
-      list = list.filter((n) => n.type === "text")
     }
 
     const q = listQuery.trim().toLowerCase()
@@ -271,7 +344,7 @@ export function WebNotesWorkspace({
         n.preview.toLowerCase().includes(q) ||
         (n.bodyHtml?.toLowerCase().includes(q) ?? false)
     )
-  }, [listQuery, memoFilter, notes, pinnedIds])
+  }, [listQuery, noteFilter, notes, pinnedIds])
 
   const grouped = useMemo(() => {
     const map = new Map<NoteGroupId, Note[]>()
@@ -285,7 +358,7 @@ export function WebNotesWorkspace({
   const readHtml = () => editorRef.current?.innerHTML?.trim() || "<p></p>"
 
   const persistTextNote = useCallback(() => {
-    if (!selected || selected.type !== "text") return
+    if (!selected) return
     const html = readHtml()
     const preview = previewFromHtml(html)
     setNotes((prev) =>
@@ -293,7 +366,7 @@ export function WebNotesWorkspace({
         n.id === selected.id
           ? {
               ...n,
-              title: title.trim() || "Untitled memo",
+              title: title.trim() || "Untitled note",
               preview,
               bodyHtml: html,
             }
@@ -307,29 +380,82 @@ export function WebNotesWorkspace({
   }, [])
 
   function handleNewNote() {
+    setCreateOpen(false)
     runWithAuth(() => {
       const id = Date.now()
       const note: Note = {
         id,
-        title: "Untitled memo",
+        title: "Untitled note",
         type: "text",
         date: "Today",
         preview: "",
         bodyHtml: "<p><br></p>",
         status: "analyzed",
-        source: "Rich text",
+        source: "Notes",
       }
       setNotes((prev) => [note, ...prev])
       selectNote(note)
       setAiPanelOpen(false)
-      toast.message("New memo", { description: "Start writing in the editor." })
+      setListCollapsed(false)
+      toast.message("New note", { description: "Start writing in the editor." })
+    })
+  }
+
+  function handleImportNote(file: File) {
+    setCreateOpen(false)
+    const reader = new FileReader()
+    reader.onload = () => {
+      const raw = String(reader.result ?? "").trim()
+      if (!raw) {
+        toast.error("Import failed", { description: "The file is empty." })
+        return
+      }
+      const baseName = file.name.replace(/\.[^.]+$/, "") || "Imported note"
+      const html = raw.includes("<")
+        ? raw
+        : `<p>${raw
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\n\n+/g, "</p><p>")
+            .replace(/\n/g, "<br>")}</p>`
+      const id = Date.now()
+      const note: Note = {
+        id,
+        title: baseName,
+        type: "text",
+        date: "Today",
+        preview: previewFromHtml(html),
+        bodyHtml: html,
+        status: "analyzed",
+        source: "Notes",
+      }
+      setNotes((prev) => [note, ...prev])
+      selectNote(note)
+      setListCollapsed(false)
+      toast.success("Imported", { description: file.name })
+    }
+    reader.onerror = () => toast.error("Import failed", { description: "Could not read the file." })
+    reader.readAsText(file)
+  }
+
+  function toggleSelectedPin() {
+    if (!selected) return
+    setPinnedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(selected.id)) next.delete(selected.id)
+      else next.add(selected.id)
+      return next
+    })
+    toast.message(selectedPinned ? "Unpinned" : "Pinned", {
+      description: selected.title || "Untitled note",
     })
   }
 
   function handleArchiveToLibrary(kb: KnowledgeBase) {
     setSaveOpen(false)
     toast.success(`Archived to “${kb.name}”`, {
-      description: "Memo saved as a Hub document in your library.",
+      description: "Note saved as a Hub document in your library.",
     })
   }
 
@@ -343,59 +469,116 @@ export function WebNotesWorkspace({
 
   return (
     <div className={cn("flex h-full min-h-0", web.canvas, webNavMotion.contentEnter)}>
-      {/* Memos list */}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".txt,.md,.markdown,.html,.htm,text/plain,text/markdown,text/html"
+        className="sr-only"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ""
+          if (file) runWithAuth(() => handleImportNote(file))
+        }}
+      />
+
+      {/* Notes list */}
       <aside
         className={cn(
-          "flex h-full shrink-0 flex-col border-r border-white/60 bg-white/45 backdrop-blur-xl",
-          web.secondaryWidth
+          "flex h-full shrink-0 flex-col overflow-hidden border-r border-black/[0.05] bg-white/50 transition-[width] duration-200 ease-out",
+          listCollapsed ? "w-0 border-r-0" : "w-[17.5rem]"
         )}
-        aria-label="Memos list"
+        aria-label="Notes list"
+        aria-hidden={listCollapsed}
       >
-        <div className="flex items-center justify-between px-4 pt-5 pb-2">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-teal-700/70">Capture</p>
-            <h1 className="text-[20px] font-semibold tracking-tight text-zinc-800">Memos</h1>
+        <div className="flex items-center gap-1 px-2 pt-3 pb-2">
+          <button
+            type="button"
+            className={cn("rounded-lg p-2 text-zinc-500 hover:bg-white/90", webNavMotion.pressable)}
+            aria-label="Collapse notes list"
+            onClick={() => setListCollapsed(true)}
+          >
+            <PanelLeftClose className="h-4 w-4" strokeWidth={2} />
+          </button>
+
+          <div className="relative min-w-0 flex-1" ref={createRef}>
+            <div className="flex overflow-hidden rounded-lg border border-stone-200/90 bg-white shadow-sm">
+              <button
+                type="button"
+                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2.5 py-2 text-zinc-700 hover:bg-stone-50"
+                aria-label="New note"
+                onClick={handleNewNote}
+              >
+                <KbUploadFileIcon className="h-4 w-4 text-zinc-600" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                className="border-l border-stone-200/90 px-2 py-2 text-zinc-500 hover:bg-stone-50"
+                aria-label="New or import menu"
+                aria-expanded={createOpen}
+                onClick={() => setCreateOpen((v) => !v)}
+              >
+                <ChevronDown className="h-3.5 w-3.5" strokeWidth={2.5} />
+              </button>
+            </div>
+            {createOpen ? (
+              <div
+                role="menu"
+                className="absolute left-0 top-full z-40 mt-1 min-w-[11.5rem] rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] text-zinc-700 hover:bg-stone-50"
+                  onClick={handleNewNote}
+                >
+                  <KbUploadFileIcon className="h-4 w-4 text-zinc-500" strokeWidth={2} />
+                  New note
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] text-zinc-700 hover:bg-stone-50"
+                  onClick={() => {
+                    setCreateOpen(false)
+                    runWithAuth(() => importInputRef.current?.click())
+                  }}
+                >
+                  <Download className="h-4 w-4 text-zinc-500" strokeWidth={2} />
+                  Import
+                </button>
+              </div>
+            ) : null}
           </div>
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              className={cn("rounded-xl p-2 text-zinc-500 hover:bg-white/80", webNavMotion.pressable)}
-              aria-label="Search memos"
-              onClick={() => toast.message("Search", { description: "Use the filter field below." })}
-            >
-              <Search className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-xl bg-zinc-800 p-2 text-white shadow-sm hover:bg-zinc-700",
-                webNavMotion.pressable
-              )}
-              aria-label="New memo"
-              onClick={handleNewNote}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
+
+          <button
+            type="button"
+            className={cn(
+              "rounded-lg p-2 text-zinc-500 hover:bg-white/90",
+              webNavMotion.pressable,
+              listSearchOpen && "bg-white/90 text-zinc-800"
+            )}
+            aria-label="Search notes"
+            aria-pressed={listSearchOpen}
+            onClick={() => setListSearchOpen((v) => !v)}
+          >
+            <Search className="h-4 w-4" strokeWidth={2} />
+          </button>
         </div>
 
-        <p className="px-4 pb-2 text-[12px] text-zinc-500">
-          {notes.length} memos · {pinnedIds.size} pinned
-        </p>
+        <div className="px-3 pb-2">
+          <h1 className="text-[15px] font-semibold text-zinc-800">{listTitle}</h1>
+        </div>
 
-        <div
-          className="flex gap-1.5 overflow-x-auto px-3 pb-2 [scrollbar-width:none]"
-        >
-          {MEMO_FILTERS.map((chip) => (
+        <div className="flex flex-wrap gap-1.5 px-3 pb-2" role="group" aria-label="Filter notes">
+          {NOTE_FILTERS.map((chip) => (
             <button
               key={chip.id}
               type="button"
-              onClick={() => setMemoFilter(chip.id)}
+              onClick={() => setNoteFilter(chip.id)}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-[12px] font-medium transition-all",
-                memoFilter === chip.id
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "bg-white/70 text-zinc-600 ring-1 ring-black/[0.04] hover:bg-white"
+                web.kbPill,
+                "min-w-0 flex-1 justify-center px-2.5 py-1.5 text-[12px]",
+                noteFilter === chip.id && web.kbPillActive
               )}
             >
               {chip.label}
@@ -403,15 +586,18 @@ export function WebNotesWorkspace({
           ))}
         </div>
 
-        <div className="px-3 pb-2">
-          <input
-            type="search"
-            value={listQuery}
-            onChange={(e) => setListQuery(e.target.value)}
-            placeholder="Search memos…"
-            className="w-full rounded-xl border-0 bg-white/90 px-3 py-2 text-[13px] text-zinc-700 shadow-[0_1px_3px_rgba(0,0,0,0.05)] ring-1 ring-black/[0.04] placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-teal-200/60"
-          />
-        </div>
+        {listSearchOpen ? (
+          <div className="px-3 pb-2">
+            <input
+              type="search"
+              value={listQuery}
+              onChange={(e) => setListQuery(e.target.value)}
+              placeholder="Search notes…"
+              className={cn(web.kbInput, "text-[13px]")}
+              autoFocus
+            />
+          </div>
+        ) : null}
 
         <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-2 pb-4">
           {grouped.map((group) => (
@@ -441,19 +627,10 @@ export function WebNotesWorkspace({
                               Pinned
                             </span>
                           ) : null}
-                          {note.type === "text" ? (
-                            <span className="shrink-0 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700">
-                              {note.source ?? "Text"}
-                            </span>
-                          ) : (
-                            <span className="shrink-0 rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
-                              Voice
-                            </span>
-                          )}
                         </div>
                         <p className="mt-0.5 truncate text-[12px] text-zinc-500">
                           {note.date}
-                          {note.preview ? ` · ${note.preview}` : ""}
+                          {note.preview ? ` · ${note.preview}` : " · No additional text"}
                         </p>
                       </button>
                     </li>
@@ -466,87 +643,221 @@ export function WebNotesWorkspace({
       </aside>
 
       {/* Editor */}
-      <div className="relative flex min-w-0 flex-1 flex-col bg-white/95 backdrop-blur-sm">
-        <div className="flex shrink-0 items-center gap-1 border-b border-stone-100 px-3 py-2">
-          <div className="flex items-center gap-0.5">
-            {(
-              [
-                { cmd: "bold" as const, Icon: Bold, label: "Bold" },
-                { cmd: "italic" as const, Icon: Italic, label: "Italic" },
-                { cmd: "underline" as const, Icon: Underline, label: "Underline" },
-                { cmd: "strikeThrough" as const, Icon: Strikethrough, label: "Strikethrough" },
-              ] as const
-            ).map(({ cmd, Icon, label }) => (
-              <button
-                key={cmd}
-                type="button"
-                title={label}
-                disabled={!isTextNote}
-                className="rounded-lg p-2 text-zinc-600 hover:bg-stone-100 disabled:opacity-40"
-                onMouseDown={(e) => e.preventDefault()}
+      <div className="relative flex min-w-0 flex-1 flex-col bg-transparent">
+        <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-black/[0.04] bg-white/70 px-2 py-1.5 backdrop-blur-sm">
+          {listCollapsed ? (
+            <NoteToolbarBtn title="Show notes list" onClick={() => setListCollapsed(false)}>
+              <PanelLeftOpen className="h-4 w-4" strokeWidth={2} />
+            </NoteToolbarBtn>
+          ) : null}
+
+          {listCollapsed ? (
+            <>
+              <NoteToolbarBtn
+                title="Search notes"
+                active={listSearchOpen}
                 onClick={() => {
-                  editorRef.current?.focus()
-                  execFormat(cmd)
-                  syncBodyEmpty()
+                  setListCollapsed(false)
+                  setListSearchOpen(true)
                 }}
               >
-                <Icon className="h-4 w-4" strokeWidth={2} />
-              </button>
-            ))}
+                <Search className="h-4 w-4" strokeWidth={2} />
+              </NoteToolbarBtn>
+              <NoteToolbarDivider />
+            </>
+          ) : null}
+
+          <NoteToolbarBtn
+            title="Undo"
+            onClick={() => {
+              focusEditor()
+              execDoc("undo")
+            }}
+          >
+            <Undo2 className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
+          <NoteToolbarBtn
+            title="Redo"
+            onClick={() => {
+              focusEditor()
+              execDoc("redo")
+            }}
+          >
+            <Redo2 className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
+          <NoteToolbarBtn title={selectedPinned ? "Unpin note" : "Pin note"} active={selectedPinned} onClick={toggleSelectedPin}>
+            <Pin className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
+          <NoteToolbarBtn
+            title="Clear formatting"
+            onClick={() => {
+              focusEditor()
+              execDoc("removeFormat")
+              syncBodyEmpty()
+            }}
+          >
+            <Eraser className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
+
+          <NoteToolbarDivider />
+
+          <div className="relative" ref={insertRef}>
             <button
               type="button"
-              title="Clear formatting"
-              disabled={!isTextNote}
-              className="rounded-lg p-2 text-zinc-600 hover:bg-stone-100 disabled:opacity-40"
-              onMouseDown={(e) => e.preventDefault()}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[13px] font-medium text-zinc-700 hover:bg-stone-100"
+              aria-expanded={insertOpen}
+              onClick={() => setInsertOpen((v) => !v)}
+            >
+              <KbUploadFileIcon className="h-3.5 w-3.5" strokeWidth={2} />
+              Insert
+              <ChevronDown className="h-3 w-3 text-zinc-400" strokeWidth={2.5} />
+            </button>
+            {insertOpen ? (
+              <div
+                role="menu"
+                className="absolute left-0 top-full z-30 mt-1 min-w-[10.5rem] rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg"
+              >
+                {(
+                  [
+                    { label: "Bullet list", run: () => execDoc("insertUnorderedList") },
+                    { label: "Numbered list", run: () => execDoc("insertOrderedList") },
+                    { label: "Divider", run: () => execDoc("insertHorizontalRule") },
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full px-3 py-2 text-left text-[13px] text-zinc-700 hover:bg-stone-50"
+                    onClick={() => {
+                      setInsertOpen(false)
+                      focusEditor()
+                      item.run()
+                      syncBodyEmpty()
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full px-3 py-2 text-left text-[13px] text-zinc-700 hover:bg-stone-50"
+                  onClick={() => {
+                    setInsertOpen(false)
+                    runWithAuth(() => importInputRef.current?.click())
+                  }}
+                >
+                  Import file
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <NoteToolbarDivider />
+
+          {(
+            [
+              { cmd: "bold" as const, Icon: Bold, label: "Bold" },
+              { cmd: "italic" as const, Icon: Italic, label: "Italic" },
+              { cmd: "underline" as const, Icon: Underline, label: "Underline" },
+              { cmd: "strikeThrough" as const, Icon: Strikethrough, label: "Strikethrough" },
+            ] as const
+          ).map(({ cmd, Icon, label }) => (
+            <NoteToolbarBtn
+              key={cmd}
+              title={label}
               onClick={() => {
-                editorRef.current?.focus()
-                execDoc("removeFormat")
+                focusEditor()
+                execFormat(cmd)
                 syncBodyEmpty()
               }}
             >
-              <Eraser className="h-4 w-4" strokeWidth={2} />
-            </button>
-            <span className="mx-1 h-5 w-px bg-stone-200" />
-            <button
-              type="button"
-              title="Undo"
-              disabled={!isTextNote}
-              className="rounded-lg p-2 text-zinc-600 hover:bg-stone-100 disabled:opacity-40"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                editorRef.current?.focus()
-                execDoc("undo")
-              }}
-            >
-              <Undo2 className="h-4 w-4" strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              title="Redo"
-              disabled={!isTextNote}
-              className="rounded-lg p-2 text-zinc-600 hover:bg-stone-100 disabled:opacity-40"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                editorRef.current?.focus()
-                execDoc("redo")
-              }}
-            >
-              <Redo2 className="h-4 w-4" strokeWidth={2} />
-            </button>
-          </div>
+              <Icon className="h-4 w-4" strokeWidth={2} />
+            </NoteToolbarBtn>
+          ))}
+          <NoteToolbarBtn
+            title="Highlight"
+            onClick={() => {
+              focusEditor()
+              execDoc("hiliteColor", "#fef08a")
+              syncBodyEmpty()
+            }}
+          >
+            <Highlighter className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
+          <NoteToolbarBtn
+            title="Text color"
+            onClick={() => {
+              focusEditor()
+              execDoc("foreColor", "#18181b")
+              syncBodyEmpty()
+            }}
+          >
+            <Type className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
 
-          <div className="ml-auto flex items-center gap-2">
+          <label className="sr-only" htmlFor="note-body-style">
+            Body style
+          </label>
+          <select
+            id="note-body-style"
+            defaultValue="p"
+            className="h-8 max-w-[5.5rem] rounded-md border border-stone-200/90 bg-white px-1.5 text-[12px] text-zinc-700"
+            onChange={(e) => {
+              focusEditor()
+              execDoc("formatBlock", e.target.value)
+              syncBodyEmpty()
+            }}
+          >
+            <option value="p">Body</option>
+            <option value="h2">Heading</option>
+            <option value="h3">Subheading</option>
+          </select>
+
+          <NoteToolbarBtn
+            title="Align left"
+            onClick={() => {
+              focusEditor()
+              execDoc("justifyLeft")
+            }}
+          >
+            <AlignLeft className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
+          <NoteToolbarBtn
+            title="Align center"
+            onClick={() => {
+              focusEditor()
+              execDoc("justifyCenter")
+            }}
+          >
+            <AlignCenter className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
+          <NoteToolbarBtn
+            title="Align right"
+            onClick={() => {
+              focusEditor()
+              execDoc("justifyRight")
+            }}
+          >
+            <AlignRight className="h-4 w-4" strokeWidth={2} />
+          </NoteToolbarBtn>
+
+          <div className="ml-auto flex items-center gap-0.5">
+            <NoteToolbarBtn
+              title="Add to knowledge base"
+              onClick={() => runWithAuth(() => setSaveOpen(true))}
+            >
+              <span className="relative inline-flex">
+                <Library className="h-4 w-4" strokeWidth={2} />
+                <Sparkles className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 text-mind" strokeWidth={2.5} />
+              </span>
+            </NoteToolbarBtn>
+
             <div className="relative" ref={moreRef}>
-              <button
-                type="button"
-                className="rounded-lg p-2 text-zinc-600 hover:bg-stone-100"
-                aria-label="More actions"
-                aria-expanded={moreOpen}
-                onClick={() => setMoreOpen((v) => !v)}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
+              <NoteToolbarBtn title="More actions" onClick={() => setMoreOpen((v) => !v)}>
+                <MoreHorizontal className="h-4 w-4" strokeWidth={2} />
+              </NoteToolbarBtn>
               {moreOpen ? (
                 <div
                   role="menu"
@@ -595,23 +906,11 @@ export function WebNotesWorkspace({
                     className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-zinc-700 hover:bg-stone-50"
                     onClick={() => {
                       setMoreOpen(false)
-                      toast.success("Added to quick access")
+                      toggleSelectedPin()
                     }}
                   >
                     <BookmarkPlus className="h-4 w-4 text-zinc-500" />
                     Pin to quick access
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-zinc-700 hover:bg-stone-50"
-                    onClick={() => {
-                      setMoreOpen(false)
-                      runWithAuth(() => setSaveOpen(true))
-                    }}
-                  >
-                    <Library className="h-4 w-4 text-zinc-500" />
-                    Archive to library
                   </button>
                 </div>
               ) : null}
@@ -624,10 +923,8 @@ export function WebNotesWorkspace({
                 else runWithAuth(() => setAiPanelOpen(true))
               }}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors",
-                aiPanelOpen
-                  ? "bg-zinc-800 text-white"
-                  : "bg-zinc-800 text-white hover:bg-zinc-700"
+                "ml-1 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors",
+                aiPanelOpen ? "bg-zinc-900" : "bg-zinc-900 hover:bg-zinc-800"
               )}
             >
               <Wand2 className="h-3.5 w-3.5" strokeWidth={2.25} />
@@ -638,52 +935,43 @@ export function WebNotesWorkspace({
 
         <div className="relative flex min-h-0 flex-1">
           <div className="scrollbar-hide mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto px-10 py-8">
-            {!isTextNote ? (
-              <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50/80 px-6 py-10 text-center">
-                <p className="text-[15px] font-medium text-zinc-700">{selected?.title}</p>
-                <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
-                  This capture opens on mobile for playback and transcript. Create a text memo to edit on web.
-                </p>
-              </div>
-            ) : (
-              <>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+            <>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={persistTextNote}
+                placeholder="Untitled note"
+                className="w-full border-0 bg-transparent text-[28px] font-semibold text-zinc-800 placeholder:text-zinc-300 focus:outline-none"
+              />
+              <div className="relative mt-6 min-h-[320px]">
+                {bodyEmpty ? (
+                  <p className="pointer-events-none absolute left-0 top-0 text-[16px] text-zinc-300">
+                    Type here…
+                  </p>
+                ) : null}
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className={cn(
+                    "min-h-[320px] w-full text-[16px] leading-[1.75] text-zinc-800 outline-none",
+                    "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
+                    "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
+                    "[&_mark]:rounded-sm [&_p]:min-h-[1.4em]"
+                  )}
+                  onInput={() => {
+                    syncBodyEmpty()
+                  }}
                   onBlur={persistTextNote}
-                  placeholder="Untitled memo"
-                  className="w-full border-0 bg-transparent text-[28px] font-semibold text-zinc-800 placeholder:text-zinc-300 focus:outline-none"
+                  onPaste={(e) => {
+                    e.preventDefault()
+                    execDoc("insertText", e.clipboardData.getData("text/plain"))
+                    syncBodyEmpty()
+                  }}
                 />
-                <div className="relative mt-6 min-h-[320px]">
-                  {bodyEmpty ? (
-                    <p className="pointer-events-none absolute left-0 top-0 text-[16px] text-zinc-300">
-                      Start writing…
-                    </p>
-                  ) : null}
-                  <div
-                    ref={editorRef}
-                    contentEditable
-                    suppressContentEditableWarning
-                    className={cn(
-                      "min-h-[320px] w-full text-[16px] leading-[1.75] text-zinc-800 outline-none",
-                      "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
-                      "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
-                      "[&_mark]:rounded-sm [&_p]:min-h-[1.4em]"
-                    )}
-                    onInput={() => {
-                      syncBodyEmpty()
-                    }}
-                    onBlur={persistTextNote}
-                    onPaste={(e) => {
-                      e.preventDefault()
-                      execDoc("insertText", e.clipboardData.getData("text/plain"))
-                      syncBodyEmpty()
-                    }}
-                  />
-                </div>
-              </>
-            )}
+              </div>
+            </>
           </div>
 
           <aside
@@ -696,7 +984,7 @@ export function WebNotesWorkspace({
           </aside>
         </div>
 
-        <p className="shrink-0 border-t border-stone-100 px-6 py-2 text-right text-[12px] tabular-nums text-zinc-400">
+        <p className="shrink-0 px-6 py-2 text-right text-[12px] tabular-nums text-zinc-400">
           {charCount} characters
         </p>
       </div>
@@ -704,12 +992,12 @@ export function WebNotesWorkspace({
       {/* AI co-writing panel */}
       {aiPanelOpen ? (
         <aside
-          className="flex h-full w-[min(22rem,34vw)] shrink-0 flex-col border-l border-stone-200/80 bg-white"
+          className="flex h-full w-[min(26rem,38vw)] shrink-0 flex-col border-l border-stone-200/80 bg-white"
           aria-label="AI writing assistant"
         >
           <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <MindarLogo height={28} />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-teal-700/80">Notes</p>
               <span className="text-[15px] font-semibold text-zinc-800">AI writing</span>
             </div>
             <button
@@ -724,12 +1012,12 @@ export function WebNotesWorkspace({
           <div className="min-h-0 flex-1">
             <AgentChat
               embedded
+              suppressEmbeddedHeader
               agent={MINDAR_COPILOT_AGENT}
               requireAuthThen={requireAuthThen}
               onBack={() => setAiPanelOpen(false)}
-              entryHint={`Co-write “${title.trim() || selected?.title || "this memo"}”—grounded on your memo.`}
               noteContext={{
-                noteTitle: title.trim() || selected?.title || "Memo",
+                noteTitle: title.trim() || selected?.title || "Note",
                 notePreview: previewFromHtml(readHtml()) || selected?.preview,
               }}
             />
@@ -740,7 +1028,7 @@ export function WebNotesWorkspace({
       <WebNoteShareDialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}
-        title={title.trim() || selected?.title || "Memo"}
+        title={title.trim() || selected?.title || "Note"}
       />
 
       {saveOpen ? (
@@ -749,7 +1037,7 @@ export function WebNotesWorkspace({
             open
             onClose={() => setSaveOpen(false)}
             onSelect={handleArchiveToLibrary}
-            title="Archive to library"
+            title="Add to knowledge base"
             preview={title.trim() || selected?.title}
           />
         </div>

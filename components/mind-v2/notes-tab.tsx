@@ -80,9 +80,9 @@ function RecorderGlyph({
       aria-hidden
     >
       {pct != null ? (
-        <span className="flex w-[3px] shrink-0 flex-col justify-end border-r border-sky-200/40 bg-sky-100/35 py-[3px] pl-[2px] dark:border-sky-500/25 dark:bg-sky-950/40">
+        <span className="flex w-[3px] shrink-0 flex-col justify-end border-r border-mind/20 bg-mind/10 py-[3px] pl-[2px] dark:border-mind/30 dark:bg-mind/15">
           <span
-            className="w-[2px] max-h-full min-h-[2px] rounded-[1px] bg-gradient-to-t from-mind/75 to-mind shadow-[0_0_6px_rgba(56,189,248,0.5)]"
+            className="w-[2px] max-h-full min-h-[2px] rounded-[1px] bg-gradient-to-t from-mind/80 to-mind shadow-[0_0_6px_color-mix(in_oklch,var(--mind-blue)_45%,transparent)]"
             style={{ height: `${pct}%` }}
           />
         </span>
@@ -119,11 +119,11 @@ function NotesRecordGlowIcon({
       {isFab ? (
         <>
           <span
-            className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-sky-200 via-sky-100 to-cyan-100 dark:from-sky-900 dark:via-sky-950 dark:to-cyan-950"
+            className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-mind/25 via-mind/12 to-mind/5 dark:from-mind/35 dark:via-mind/20 dark:to-mind/10"
             aria-hidden
           />
           <span
-            className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.55)_0%,rgba(186,230,253,0.28)_38%,rgba(125,211,252,0)_62%)] dark:bg-[radial-gradient(circle_at_50%_36%,rgba(56,189,248,0.4)_0%,rgba(2,132,199,0.15)_42%,rgba(2,132,199,0)_62%)]"
+            className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.55)_0%,color-mix(in_oklch,var(--mind-blue)_22%,transparent)_38%,transparent_62%)] dark:bg-[radial-gradient(circle_at_50%_36%,color-mix(in_oklch,var(--mind-blue)_35%,transparent)_0%,color-mix(in_oklch,var(--mind-blue)_12%,transparent)_42%,transparent_62%)]"
             aria-hidden
           />
         </>
@@ -683,7 +683,7 @@ export function NotesTab({
             <button
               type="button"
               onClick={() => setShowRecordOptions(true)}
-              className={cn("mt-6 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-sm", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")}
+              className="mt-6 rounded-lg bg-mind px-6 py-3 text-[15px] font-semibold text-white shadow-sm shadow-mind/20 hover:opacity-90 active:opacity-95"
             >
               Start recording
             </button>

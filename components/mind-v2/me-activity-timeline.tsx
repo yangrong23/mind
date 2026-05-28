@@ -1,11 +1,12 @@
 "use client"
 
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
-import { ArrowRight, ChevronRight, Share2 } from "lucide-react"
+import { ArrowRight, ChevronRight, Share2, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   activityHeatmapCellClass,
   activityHeatmapCellClassTiny,
+  activityTimelineDotClass,
 } from "@/lib/activity-heatmap-classes"
 import { web } from "@/components/mind-v2/web-design"
 import { HubItemThumb } from "@/components/mind-v2/mind-media-art"
@@ -17,6 +18,7 @@ import {
 } from "@/lib/mock-activity-timeline"
 import { buildDayTimelineBrief } from "@/lib/daily-brief-content"
 import { DailyBriefView } from "@/components/mind-v2/daily-brief-view"
+import { DAILY_REVIEW_HEADLINE } from "@/components/mind-v2/me-daily-review"
 
 export type MeActivityTimelineProps = {
   days: ActivityTimelineDay[]
@@ -27,8 +29,12 @@ export type MeActivityTimelineProps = {
   onSuggestedPrompt?: (prompt: string) => void
   displayName?: string
   webLayout?: boolean
+  /** `overlay` — mobile sheet; `page` — web full main column */
+  presentation?: "overlay" | "page"
   /** Mobile: open full day list first; day detail after tapping a row */
   listFirst?: boolean
+  /** Web: list row opens a dedicated day route instead of inline detail */
+  onNavigateToDay?: (day: ActivityTimelineDay) => void
   getUploads?: (isoDate: string, activity: number) => {
     id: string
     title: string
@@ -63,9 +69,11 @@ function isBubbleEligibleIndex(index: number, cols: number) {
 function TimelineTitleBubble({
   day,
   activeIdx,
+  compact = false,
 }: {
   day: ActivityTimelineDay
   activeIdx: number
+  compact?: boolean
 }) {
   return (
     <div
@@ -95,7 +103,7 @@ function TimelineTitleBubble({
         />
         <p
           className={cn(
-            "relative text-center font-semibold tracking-[0.06em] text-sky-600/90 dark:text-sky-300/90",
+            "relative text-center font-semibold tracking-[0.06em] text-mind/90 dark:text-mind-muted/90",
             compact ? "text-[8px]" : "text-[10px]"
           )}
         >
@@ -401,7 +409,92 @@ function TimelineFlowNode({
   )
 }
 
-/** Level 2 — curve spine with per-row nodes aligned to titles */
+/** Web + Me home — vertical spine with date, title, and preview; tap → day detail */
+export function MeTimelineLinearDayList({
+  days,
+  onSelectDay,
+  className,
+}: {
+  days: ActivityTimelineDay[]
+  onSelectDay?: (day: ActivityTimelineDay) => void
+  className?: string
+}) {
+  if (days.length === 0) {
+    return (
+      <p className={cn("py-8 text-center text-[13px] text-zinc-500", className)}>
+        No capture days yet.
+      </p>
+    )
+  }
+
+  return (
+    <div className={cn("relative", className)}>
+      <div
+        className="pointer-events-none absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-mind/35 via-mind/15 to-transparent"
+        aria-hidden
+      />
+      <ul className="relative">
+        {days.map((day) => {
+          const row = (
+            <>
+              <span
+                className="relative z-[1] mt-2.5 flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full bg-white ring-2 ring-mind/30 dark:bg-zinc-950 dark:ring-mind/40"
+                aria-hidden
+              >
+                <span className={cn("h-2 w-2 rounded-full", activityTimelineDotClass(day.activity))} />
+              </span>
+              <div className="min-w-0 flex-1 pb-3.5 pt-0.5">
+                <span className="text-[11px] font-medium tabular-nums text-zinc-400 dark:text-zinc-500">
+                  {day.homeDateLabel}
+                  <span className="mx-1.5 text-zinc-300 dark:text-zinc-600">·</span>
+                  {day.weekdayLabel}
+                </span>
+                <p className="mt-0.5 text-[14px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+                  {day.title}
+                </p>
+                {day.previewLine ? (
+                  <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    {day.previewLine}
+                  </p>
+                ) : null}
+              </div>
+              {onSelectDay ? (
+                <ChevronRight
+                  className="mt-3 h-4 w-4 shrink-0 text-zinc-300 transition-colors group-hover:text-zinc-500 dark:text-zinc-600"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              ) : null}
+            </>
+          )
+
+          if (onSelectDay) {
+            return (
+              <li key={day.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectDay(day)}
+                  className="group flex w-full gap-3 rounded-xl py-1 pl-0 pr-1 text-left transition-colors hover:bg-sky-50/70 active:bg-sky-50/90 dark:hover:bg-sky-950/25"
+                  aria-label={`${day.homeDateLabel}: ${day.title}`}
+                >
+                  {row}
+                </button>
+              </li>
+            )
+          }
+
+          return (
+            <li key={day.id} className="flex gap-3 py-1 pl-0 pr-1">
+              {row}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+/** Mobile — curve spine with per-row nodes aligned to titles */
 export function MeTimelineVerticalDayList({
   days,
   onSelectDay,
@@ -508,27 +601,30 @@ export function MeTimelineVerticalDayList({
   )
 }
 
-/** Me home — grid + bubbles; tap bubble/cell → linear curved timeline only */
+/** Me home — linear preview; tap a day → detail */
 export function MeActivityDiaryPreview({
   days,
   onOpenDiary,
   onOpenDay,
-  gridCells = 35,
+  previewCount = 6,
   className,
 }: {
   days: ActivityTimelineDay[]
   onOpenDiary: () => void
-  /** Tap a day block / bubble → open linear timeline (level 2) */
   onOpenDay: (day: ActivityTimelineDay) => void
+  /** @deprecated Grid removed — kept for call-site compat */
   gridCells?: number
+  previewCount?: number
   className?: string
 }) {
+  const previewDays = days.slice(0, previewCount)
+
   return (
     <div className={cn("space-y-2", className)}>
       <div className="flex items-center justify-between gap-2 px-0.5">
         <div>
           <p className="text-[12px] font-semibold text-zinc-800 dark:text-zinc-200">Daily diary</p>
-          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Tap a bubble for the day list</p>
+          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Tap a day for the full log</p>
         </div>
         <button
           type="button"
@@ -538,50 +634,38 @@ export function MeActivityDiaryPreview({
           See all
         </button>
       </div>
-      <MeTimelineHeatmapGrid
-        days={days}
-        cellCount={gridCells}
-        sequentialTitles
-        size="sm"
-        onSelectDay={onOpenDay}
-        className=""
-      />
+      <MeTimelineLinearDayList days={previewDays} onSelectDay={onOpenDay} />
     </div>
   )
 }
 
-/** Embedded diary grid — lives inside Me settings card on web */
+/** Embedded diary list — settings card on web */
 export function MeDiaryTimelineEmbed({
   days,
   onOpenDiary,
   onOpenDay,
-  gridCells = 35,
-  size = "sm",
+  previewCount = 8,
   className,
 }: {
   days: ActivityTimelineDay[]
   onOpenDiary: () => void
   onOpenDay: (day: ActivityTimelineDay) => void
+  /** @deprecated */
   gridCells?: number
+  /** @deprecated */
   size?: "xs" | "sm" | "md" | "lg"
+  previewCount?: number
   className?: string
 }) {
   return (
-    <div className={cn("space-y-2", className)}>
-      <MeTimelineHeatmapGrid
-        days={days}
-        cellCount={gridCells}
-        sequentialTitles
-        embed
-        size={size}
-        onSelectDay={onOpenDay}
-      />
-      <div className="flex items-center justify-between px-1 pt-0.5">
-        <p className="text-[11px] text-zinc-400">Titles cycle · tap a square for detail</p>
+    <div className={cn("space-y-3", className)}>
+      <MeTimelineLinearDayList days={days.slice(0, previewCount)} onSelectDay={onOpenDay} />
+      <div className="flex items-center justify-between px-1">
+        <p className="text-[11px] text-zinc-400">Each row is one day — open for captures & summary</p>
         <button
           type="button"
           onClick={onOpenDiary}
-          className="text-[12px] font-semibold text-sky-600 transition-colors hover:text-sky-700"
+          className="text-[12px] font-semibold text-mind transition-colors hover:text-mind/80"
         >
           See all
         </button>
@@ -590,108 +674,110 @@ export function MeDiaryTimelineEmbed({
   )
 }
 
-/** Web Me — left column: diary timeline always visible */
+/** Web Me — left column: linear diary timeline */
 export function MeDiaryTimelinePanel({
   days,
   onOpenDiary,
   onOpenDay,
-  gridCells = 35,
+  onOpenDailyReview,
+  previewCount,
   className,
 }: {
   days: ActivityTimelineDay[]
   onOpenDiary: () => void
   onOpenDay: (day: ActivityTimelineDay) => void
+  onOpenDailyReview?: () => void
+  /** @deprecated Grid removed */
   gridCells?: number
+  /** Defaults to all days */
+  previewCount?: number
   className?: string
 }) {
-  const latest = days[0]
+  const listDays = previewCount != null ? days.slice(0, previewCount) : days
 
   return (
     <section
       className={cn(
-        "rounded-2xl bg-white p-5 shadow-sm shadow-sky-100/30 ring-1 ring-black/[0.04]",
+        web.surfaceCard,
+        "flex min-h-[min(720px,calc(100vh-200px))] flex-col p-5",
         className
       )}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex shrink-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[16px] font-semibold text-zinc-900">Daily diary</h2>
           <p className="mt-1 text-[13px] leading-snug text-zinc-500">
-            {latest
-              ? `${latest.homeDateLabel} · ${latest.title}`
-              : "Your capture activity over time"}
+            Recent days — tap a title to open captures & summary
           </p>
         </div>
         <button
           type="button"
           onClick={onOpenDiary}
-          className="shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-mind transition-colors hover:bg-sky-50"
+          className="shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-mind transition-colors hover:bg-mind/[0.06]"
         >
           See all
         </button>
       </div>
 
-      <div className="mt-5">
-        <MeTimelineHeatmapGrid
-          days={days}
-          cellCount={gridCells}
-          sequentialTitles
-          embed
-          fullWidth
-          size="sm"
-          onSelectDay={onOpenDay}
-        />
-      </div>
+      {onOpenDailyReview ? (
+        <button
+          type="button"
+          onClick={onOpenDailyReview}
+          className="mt-4 flex w-full shrink-0 items-center gap-3 rounded-xl border border-teal-100 bg-teal-50/80 p-3.5 text-left transition-colors hover:border-teal-200 hover:bg-teal-50"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15">
+            <Sparkles className="h-5 w-5 text-teal-600" strokeWidth={2} aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold text-zinc-800">Daily review</span>
+            <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-zinc-500">
+              {DAILY_REVIEW_HEADLINE}
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" strokeWidth={2} aria-hidden />
+        </button>
+      ) : null}
 
-      <p className="mt-4 text-[11px] leading-relaxed text-zinc-400">
-        Titles cycle on highlighted days · tap a square to open that day&apos;s timeline
-      </p>
+      <div className="scrollbar-hide mt-4 min-h-0 flex-1 overflow-y-auto pr-0.5">
+        <MeTimelineLinearDayList days={listDays} onSelectDay={onOpenDay} />
+      </div>
     </section>
   )
 }
 
-/** Web Me — timeline card */
+/** Web Me — timeline card (linear list) */
 export function MeCaptureDiaryWebCard({
   days,
   onOpenDiary,
   onOpenDay,
-  gridCells = 42,
+  previewCount = 10,
   className,
 }: {
   days: ActivityTimelineDay[]
   onOpenDiary: () => void
   onOpenDay: (day: ActivityTimelineDay) => void
+  /** @deprecated */
   gridCells?: number
+  previewCount?: number
   className?: string
 }) {
   return (
-    <section
-      className={cn(
-        "rounded-2xl bg-white p-4 dark:bg-zinc-900",
-        className
-      )}
-    >
+    <section className={cn(web.surfaceCard, "p-4", className)}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold text-zinc-800 dark:text-zinc-100">Daily diary</h2>
-          <p className="mt-0.5 text-[12px] text-zinc-500">Grid timeline — titles cycle day by day</p>
+          <p className="mt-0.5 text-[12px] text-zinc-500">Tap a day to open its log</p>
         </div>
         <button
           type="button"
           onClick={onOpenDiary}
-          className="shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-sky-600 hover:bg-sky-50/80"
+          className="shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-mind hover:bg-mind/[0.06]"
         >
           See all
         </button>
       </div>
-      <div className="mt-4">
-        <MeTimelineHeatmapGrid
-          days={days}
-          cellCount={gridCells}
-          sequentialTitles
-          size="sm"
-          onSelectDay={onOpenDay}
-        />
+      <div className="mt-4 max-h-[400px] overflow-y-auto scrollbar-hide">
+        <MeTimelineLinearDayList days={days.slice(0, previewCount)} onSelectDay={onOpenDay} />
       </div>
     </section>
   )
@@ -797,18 +883,12 @@ function DayDetailPanel({
       )}
     >
       <article className={cn(webLayout ? "px-5 py-4" : "px-3 py-3 pb-6 sm:px-4 sm:py-4 sm:pb-8")}>
-        {day.photoCount > 0 ? (
-          <div
-            className={cn(
-              "mb-5 flex items-center gap-3 overflow-hidden rounded-2xl border border-stone-200/80 px-3 py-3",
-              "bg-[#0a1530] text-white",
-              "dark:border-zinc-800"
-            )}
-          >
+        {day.photoCount > 0 && !webLayout ? (
+          <div className="mb-5 flex items-center gap-3 rounded-2xl bg-stone-50/90 px-3 py-3 dark:bg-zinc-900/50">
             <HubItemThumb
               kind={hubItemKindFromLabel("Note", day.title)}
               size="lg"
-              className="h-14 w-14 shrink-0 rounded-xl ring-1 ring-stone-200/70 dark:ring-zinc-700"
+              className="h-14 w-14 shrink-0 rounded-xl"
             />
             {day.thumbImages.length > 1 ? (
               <div className="flex -space-x-2" aria-hidden>
@@ -832,7 +912,7 @@ function DayDetailPanel({
             onClick={onShare}
             className={cn(
               "mt-8 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[15px] font-semibold text-white",
-              "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]",
+              "mind-btn rounded-lg",
               "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
             )}
           >
@@ -855,7 +935,9 @@ export function MeActivityTimeline({
   onSuggestedPrompt,
   displayName = "You",
   webLayout = false,
+  presentation = "overlay",
   listFirst = false,
+  onNavigateToDay,
   getUploads,
 }: MeActivityTimelineProps) {
   const timelineDays = useMemo(() => {
@@ -894,9 +976,8 @@ export function MeActivityTimeline({
   const header = (
     <header
       className={cn(
-        "flex shrink-0 items-center gap-2 border-b border-stone-100/85 bg-white px-3 py-3",
-        "dark:border-zinc-800 dark:bg-zinc-900",
-        webLayout && "px-4"
+        "flex shrink-0 items-center gap-2 px-3 py-3",
+        webLayout ? "bg-transparent px-4" : "border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900"
       )}
     >
       <button
@@ -922,38 +1003,70 @@ export function MeActivityTimeline({
     </header>
   )
 
+  const isPage = presentation === "page"
+
   return (
     <div
       className={cn(
-        "absolute inset-0 z-[60] flex flex-col",
-        webLayout
-          ? cn("animate-in fade-in duration-150", web.canvas)
-          : cn("animate-in slide-in-from-right duration-200", "bg-[#fafaf9] dark:bg-zinc-950")
+        "flex flex-col",
+        isPage
+          ? cn("relative h-full min-h-0", web.canvas, "bg-[#f8f9fc]")
+          : cn(
+              "absolute inset-0 z-[60]",
+              webLayout
+                ? cn("animate-in fade-in duration-150", web.canvas)
+                : cn("animate-in slide-in-from-right duration-200", "bg-[#fafaf9] dark:bg-zinc-950")
+            )
       )}
     >
       {header}
       {showListOnly ? (
-        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <p className="mb-3 text-[12px] text-zinc-500 dark:text-zinc-400">
-            Your capture diary — tap a day for detail.
+        <div
+          className={cn(
+            "scrollbar-hide min-h-0 flex-1 overflow-y-auto py-4",
+            webLayout ? "px-6" : "px-4"
+          )}
+        >
+          <p className="mb-4 text-[13px] text-zinc-500 dark:text-zinc-400">
+            Your capture diary — each row is one day. Tap to open detail.
           </p>
-          <MeTimelineVerticalDayList
-            days={timelineDays}
-            onSelectDay={(day) => {
-              setSelected(day)
-              setMobilePhase("detail")
-            }}
-          />
+          {webLayout ? (
+            <div className="mx-auto w-full max-w-[640px]">
+              <MeTimelineLinearDayList
+                days={timelineDays}
+                onSelectDay={(day) => {
+                  if (onNavigateToDay) {
+                    onNavigateToDay(day)
+                    return
+                  }
+                  setSelected(day)
+                  setMobilePhase("detail")
+                }}
+              />
+            </div>
+          ) : (
+            <MeTimelineVerticalDayList
+              days={timelineDays}
+              onSelectDay={(day) => {
+                if (onNavigateToDay) {
+                  onNavigateToDay(day)
+                  return
+                }
+                setSelected(day)
+                setMobilePhase("detail")
+              }}
+            />
+          )}
         </div>
       ) : (
-        <div className={cn("flex min-h-0 flex-1", webLayout && "gap-0 p-2")}>
+        <div className={cn("flex min-h-0 flex-1", webLayout && "gap-0 p-2 sm:p-4")}>
           <div
             className={cn(
               "flex min-h-0 min-w-0 flex-1 overflow-hidden",
-              webLayout && "rounded-2xl bg-white/90"
+              webLayout && cn(web.surfaceCard, "bg-white/90")
             )}
           >
-            {webLayout || showCompactRail ? (
+            {showCompactRail ? (
               <TimelineRail
                 year={year}
                 count={timelineDays.length}

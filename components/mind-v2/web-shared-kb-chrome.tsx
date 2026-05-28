@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils"
 import { LibraryCover, LibraryCoverWithUpdateBadge } from "@/components/mind-v2/library-cover"
 import { PersonAvatar } from "@/components/mind-v2/mind-media-art"
 import type { LibraryCoverVariant } from "@/lib/product-media"
+import { KbUploadFileIcon } from "@/components/mind-v2/kb-upload-file-icon"
 import {
   ArrowUpDown,
   BookmarkPlus,
-  FolderPlus,
   Lock,
   LogOut,
   MoreHorizontal,
@@ -27,6 +27,9 @@ export function WebSharedKbHeader({
   description,
   coverVariant,
   ownerName,
+  memberCount,
+  createdLabel,
+  size = "compact",
   onShare,
   overflowOpen,
   onOverflowToggle,
@@ -39,6 +42,9 @@ export function WebSharedKbHeader({
   description?: string
   coverVariant: LibraryCoverVariant
   ownerName?: string
+  memberCount?: number
+  createdLabel?: string
+  size?: "compact" | "detail"
   onShare: () => void
   overflowOpen: boolean
   onOverflowToggle: () => void
@@ -48,21 +54,50 @@ export function WebSharedKbHeader({
   onLeaveLibrary: () => void
 }) {
   const owner = ownerName ?? "Team"
+  const coverClass =
+    size === "detail" ? "h-[4.5rem] w-[4.5rem] rounded-2xl" : "h-12 w-12 rounded-xl"
   return (
-    <div className="shrink-0 border-b border-black/[0.04] bg-white/60 px-8 pb-4 pt-6">
-      <div className="flex items-start gap-3">
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl ring-1 ring-black/[0.04]">
-          <LibraryCover name={title} coverVariant={coverVariant} showMiniUi={false} />
+    <div className="shrink-0 border-b border-black/[0.04] bg-transparent px-5 pb-4 pt-5 lg:px-8">
+      <div className="flex items-start gap-4">
+        <div className={cn("shrink-0 overflow-hidden ring-1 ring-black/[0.04]", coverClass)}>
+          <LibraryCover name={title} coverVariant={coverVariant} showMiniUi={false} className="h-full w-full" />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-[20px] font-semibold leading-snug text-zinc-800">{title}</h1>
-          <p className="mt-0.5 text-[13px] text-zinc-500">{SHARED_KB_PRODUCT_LINE}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <PersonAvatar name={owner} size="sm" className="h-5 w-5 text-[9px] ring-1 ring-black/[0.06]" />
-            <span className="text-[13px] font-medium text-zinc-600">{owner}</span>
+          <h1
+            className={cn(
+              "font-semibold leading-snug text-zinc-800",
+              size === "detail" ? "text-[22px] tracking-tight" : "text-[20px]"
+            )}
+          >
+            {title}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <div className="flex items-center gap-2">
+              <PersonAvatar name={owner} size="sm" className="h-6 w-6 text-[10px] ring-1 ring-black/[0.06]" />
+              <span className="text-[13px] font-medium text-zinc-600">{owner}</span>
+            </div>
+            {createdLabel ? (
+              <span className="text-[12px] text-zinc-400">{createdLabel}</span>
+            ) : null}
           </div>
           {description ? (
-            <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">{description}</p>
+            <p
+              className={cn(
+                "mt-2 leading-relaxed text-zinc-500",
+                size === "detail" ? "line-clamp-3 text-[13px]" : "line-clamp-2 text-[12px]"
+              )}
+            >
+              {description}
+            </p>
+          ) : (
+            <p className="mt-2 text-[12px] text-zinc-400">{SHARED_KB_PRODUCT_LINE}</p>
+          )}
+          {memberCount != null ? (
+            <p className="mt-2.5 flex items-center gap-1.5 text-[12px] text-zinc-500">
+              <span className="font-semibold tabular-nums text-zinc-600">{memberCount}</span>
+              <span>joined</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500/90" aria-hidden />
+            </p>
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
@@ -97,7 +132,7 @@ export function WebKbOverflowMenu({
 }: {
   open: boolean
   onToggle: () => void
-  onEditInfo: () => void
+  onEditInfo?: () => void
   onPermissionSettings?: () => void
   onAddQuickAccess: () => void
   onLeaveLibrary?: () => void
@@ -106,7 +141,7 @@ export function WebKbOverflowMenu({
   showLeave?: boolean
 }) {
   const items = [
-    { icon: Pencil, label: "Edit info", action: onEditInfo },
+    ...(onEditInfo ? [{ icon: Pencil, label: "Edit info", action: onEditInfo }] : []),
     ...(showPermissions && onPermissionSettings
       ? [{ icon: Lock, label: "Permission settings", action: onPermissionSettings }]
       : []),
@@ -172,12 +207,12 @@ export function WebPersonalKbHeader({
   hasContentUpdate?: boolean
   overflowOpen: boolean
   onOverflowToggle: () => void
-  onEditInfo: () => void
+  onEditInfo?: () => void
   onAddQuickAccess: () => void
   onDeleteLibrary?: () => void
 }) {
   return (
-    <div className="shrink-0 border-b border-black/[0.04] bg-white/60 px-8 pb-4 pt-6">
+    <div className="shrink-0 border-b border-black/[0.04] bg-transparent px-6 pb-4 pt-5">
       <div className="flex items-start gap-3">
         <LibraryCoverWithUpdateBadge
           kb={{ id: 0, name: title, coverVariant }}
@@ -238,7 +273,7 @@ export function WebSharedKbContentBar({
       : `Content (${itemCount})`
 
   return (
-    <div className="shrink-0 px-8 pb-3">
+    <div className="shrink-0 border-b border-black/[0.04] px-6 pb-3 pt-1">
       <div className="flex items-center justify-between gap-3">
         <span className="text-[15px] font-semibold text-zinc-700">{label}</span>
         <div className="flex items-center gap-1">
@@ -270,7 +305,7 @@ export function WebSharedKbContentBar({
           </div>
           <div className="relative">
             <button type="button" className={iconBtn} onClick={onAddClick} aria-label="Add files">
-              <FolderPlus className="h-5 w-5" strokeWidth={1.75} />
+              <KbUploadFileIcon className="h-5 w-5" />
             </button>
             {addMenu}
           </div>
@@ -285,7 +320,7 @@ export function WebSharedKbContentBar({
             onChange={(e) => onContentSearchChange(e.target.value)}
             placeholder="Search this library"
             autoFocus
-            className="w-full rounded-full bg-white py-2 pl-9 pr-3 text-[13px] ring-1 ring-black/[0.04] outline-none placeholder:text-zinc-400 focus:ring-teal-200/50"
+            className="w-full rounded-full bg-white/80 py-2 pl-9 pr-3 text-[13px] ring-1 ring-black/[0.04] outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-mind/20"
             aria-label="Search this library"
           />
         </div>

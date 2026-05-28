@@ -35,8 +35,8 @@ export function WebAgentHomePage({
         <div className="mb-8 flex flex-col items-center gap-3 sm:flex-row sm:items-center">
           <MindarLogo height={26} className="max-w-[5.5rem]" />
           <div className="text-center sm:text-left">
-            <h1 className="text-[28px] font-semibold tracking-tight text-zinc-700">智能体</h1>
-            <p className="text-[14px] text-zinc-500">跨知识库提问 · 开启后进入三栏对话工作区</p>
+            <h1 className="text-[28px] font-semibold tracking-tight text-zinc-700">Agents</h1>
+            <p className="text-[14px] text-zinc-500">Ask across libraries · opens a three-column chat workspace</p>
           </div>
         </div>
         <div className="w-full max-w-2xl">

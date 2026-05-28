@@ -33,7 +33,7 @@ import {
 import { cn } from "@/lib/utils"
 import { isLoggedInFromStorage } from "@/auth/session"
 import { useWebData } from "@/web-api/WebDataProvider"
-import { plazaRowToKnowledgeBase } from "@/lib/mock-plaza-libraries"
+import { plazaRowToKnowledgeBase, type PlazaLibraryRow } from "@/lib/mock-plaza-libraries"
 
 const DEMO_CREDITS = {
   creditsRemaining: 32_400,
@@ -170,6 +170,30 @@ export function MindAppWebConnected() {
     setCurrentView({ type: "shell" })
   }
 
+  function openPlazaNotebookFromDiscover(row: PlazaLibraryRow) {
+    requireAuthThen(() => openNotebook(plazaRowToKnowledgeBase(row)))
+  }
+
+  function openPlazaChatFromDiscover(row: PlazaLibraryRow, prompt?: string) {
+    const kb = plazaRowToKnowledgeBase(row)
+    const payload = kbToDetailPayload(kb)
+    requireAuthThen(() => {
+      setSelectedKbId(kb.id)
+      setActiveTab("plaza")
+      setCurrentView({
+        type: "kb-agent-chat",
+        kb: payload,
+        context: {
+          kbName: kb.name,
+          kbId: kb.id,
+          initialPrompt: prompt,
+          publicSettings: kb.publicSettings,
+          publisherName: kb.publisherName,
+        },
+      })
+    })
+  }
+
   const shellMain = currentView.type === "shell"
 
   return (
@@ -290,7 +314,10 @@ export function MindAppWebConnected() {
           )}
 
           {shellMain && !settingsOpen && activeTab === "plaza" && (
-            <WebPlazaDiscoverPage onPickRow={(row) => openNotebook(plazaRowToKnowledgeBase(row))} />
+            <WebPlazaDiscoverPage
+              onBrowseLibrary={openPlazaNotebookFromDiscover}
+              onStartThread={openPlazaChatFromDiscover}
+            />
           )}
 
           {shellMain && !settingsOpen && activeTab === "memos" && (

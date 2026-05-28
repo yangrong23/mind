@@ -6,11 +6,18 @@ import { MindarLogo } from "@/components/mind-v2/mindar-logo"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
+export type MindAuthResult = {
+  /** True when the user completed email verification (new registration path). */
+  isNewSignup?: boolean
+}
+
 export type MindAuthWebProps = {
-  onAuthenticated: () => void
+  onAuthenticated: (result?: MindAuthResult) => void
   onDismiss?: () => void
   /** When true, fills parent (overlay). When false, full viewport page. */
   embedded?: boolean
+  /** `signin` skips post-registration onboarding triggers for email OTP. */
+  authIntent?: "signup" | "signin"
 }
 
 type AuthStep = "join" | "otp"
@@ -131,7 +138,12 @@ function OtpInputRow({
   )
 }
 
-export function MindAuthWeb({ onAuthenticated, onDismiss, embedded = false }: MindAuthWebProps) {
+export function MindAuthWeb({
+  onAuthenticated,
+  onDismiss,
+  embedded = false,
+  authIntent = "signup",
+}: MindAuthWebProps) {
   const [step, setStep] = useState<AuthStep>("join")
   const [email, setEmail] = useState("")
   const [otp, setOtp] = useState("")
@@ -144,9 +156,9 @@ export function MindAuthWeb({ onAuthenticated, onDismiss, embedded = false }: Mi
   }, [resendCooldown])
 
   const finishAuth = useCallback(
-    (label: string) => {
+    (label: string, result?: MindAuthResult) => {
       toast.success(label, { description: "Welcome to Mindar (demo)." })
-      onAuthenticated()
+      onAuthenticated(result)
     },
     [onAuthenticated]
   )
@@ -175,7 +187,7 @@ export function MindAuthWeb({ onAuthenticated, onDismiss, embedded = false }: Mi
       toast.error("Enter the full code")
       return
     }
-    finishAuth("Signed in")
+    finishAuth("Signed in", { isNewSignup: authIntent === "signup" })
   }
 
   function handleResend() {

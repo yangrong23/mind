@@ -48,7 +48,8 @@ import {
   type AgentScenarioTabId,
   type MindAgent,
 } from "@/lib/mind-agent-catalog"
-import { getAgentExamplePrompts } from "@/lib/agent-chat-example-prompts"
+import { getAgentExamplePrompts, type AgentExamplePrompt } from "@/lib/agent-chat-example-prompts"
+import { NOTE_WRITING_PROMPTS } from "@/lib/note-writing-prompts"
 import { AgentMultiRoleBlurb, AgentMultiRoleFlow } from "@/components/mind-v2/agent-profile-ui"
 import {
   Plus,
@@ -155,7 +156,7 @@ function agentAvatarIsRemoteUrl(avatar: string) {
   return /^https?:\/\//i.test(avatar) || avatar.startsWith("/")
 }
 
-function AgentContactAvatar({
+export function AgentContactAvatar({
   agent,
   className,
   size = 48,
@@ -207,7 +208,7 @@ function AgentContactRow({ contact, onOpen }: { contact: AgentContact; onOpen: (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="truncate text-[16px] font-semibold text-zinc-900 dark:text-zinc-50">{contact.name}</span>
           {contact.isOfficial ? (
-            <span className="shrink-0 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-sky-950/40">
+            <span className="shrink-0 rounded-md bg-mind/10 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-mind/20">
               Official
             </span>
           ) : null}
@@ -373,8 +374,8 @@ export function AgentTab({ onAgentChat, requireAuthThen, webLayout = false }: Ag
         </div>
 
         <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-6">
-            <div className="flex flex-col items-center pt-4">
+          <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-12 sm:pt-14">
+            <div className="flex flex-col items-center pt-8 sm:pt-10">
               <div className="flex flex-col items-center" aria-label="Mindar">
                 <MindarLogo height={26} className="max-w-[5.5rem] dark:opacity-95" />
               </div>
@@ -389,7 +390,7 @@ export function AgentTab({ onAgentChat, requireAuthThen, webLayout = false }: Ag
               />
             </div>
 
-            <div className="mt-auto w-full max-w-2xl shrink-0 self-center pt-4">
+            <div className="mt-auto w-full max-w-2xl shrink-0 self-center pt-6 sm:pt-8">
               <AgentHomeComposerStack
                 factoryPlacement="inside"
                 selectedFactoryId={agentHomeSelectedFactory}
@@ -713,7 +714,7 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
                   <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{agent.name}</h3>
                   {agent.isOfficial ? (
-                    <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-sky-950/40">
+                    <span className="rounded bg-mind/10 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-mind/20">
                       Official
                     </span>
                   ) : null}
@@ -740,7 +741,7 @@ function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPagePro
                 className={cn(
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
                   selectedAgents.includes(agent.id)
-                    ? "bg-sky-50 text-mind dark:bg-sky-950/40"
+                    ? "bg-mind/10 text-mind dark:bg-mind/20"
                     : "bg-stone-100 text-zinc-600 dark:bg-zinc-800"
                 )}
                 aria-label={selectedAgents.includes(agent.id) ? "Remove from picks" : "Add to picks"}
@@ -821,6 +822,10 @@ interface AgentChatProps {
   initialPrompt?: string
   /** Web split pane: no back chevron; wider transcript */
   embedded?: boolean
+  /** Parent supplies chrome (e.g. web Notes AI writing column). */
+  suppressEmbeddedHeader?: boolean
+  /** Quick questions for note co-writing empty state; defaults to NOTE_WRITING_PROMPTS. */
+  noteWritingPrompts?: AgentExamplePrompt[]
 }
 
 /** dialog = multi-turn chat; agent = autonomous delivery (demo). */
@@ -836,6 +841,8 @@ export function AgentChat({
   noteContext,
   initialPrompt,
   embedded = false,
+  suppressEmbeddedHeader = false,
+  noteWritingPrompts: noteWritingPromptsProp,
 }: AgentChatProps) {
   const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const avatar = agent.avatar ?? ""
@@ -1068,7 +1075,9 @@ export function AgentChat({
         isLibraryChat
           ? "Ask this knowledge base…"
           : isNoteChat
-            ? "Ask about this note…"
+            ? embedded
+              ? "Refine this note or ask for a rewrite…"
+              : "Ask about this note…"
             : entryHint
               ? "Turn saved knowledge into an outcome…"
               : ""
@@ -1130,6 +1139,10 @@ export function AgentChat({
     })
   }
 
+  const noteWritingPrompts =
+    noteWritingPromptsProp ?? (isNoteChat ? NOTE_WRITING_PROMPTS : [])
+  const showNoteWritingPrompts =
+    messages.length === 0 && isNoteChat && noteWritingPrompts.length > 0
   const showHeroExamplePrompts =
     messages.length === 0 && !isNoteChat && examplePrompts.length > 0
 
@@ -1154,25 +1167,27 @@ export function AgentChat({
     <div className="relative flex h-full flex-col bg-white dark:bg-zinc-950 font-sans dark:bg-zinc-950">
       {/* Header */}
       {embedded ? (
-        <div className="flex shrink-0 items-center gap-3 border-b border-stone-200/90 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="w-10 shrink-0" aria-hidden />
-          <AgentContactAvatar agent={agent} size={40} />
-          <div className="min-w-0 flex-1">
-            <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{agent.name}</h3>
-            <p className="min-w-0 truncate text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
-                <AgentMultiRoleBlurb profile={agentProfile} variant="header" />
-              ) : (
-                agentProfile?.tagline ?? agent.description
-              )}
-            </p>
+        suppressEmbeddedHeader ? null : (
+          <div className="flex shrink-0 items-center gap-3 border-b border-stone-200/90 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="w-10 shrink-0" aria-hidden />
+            <AgentContactAvatar agent={agent} size={40} />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{agent.name}</h3>
+              <p className="min-w-0 truncate text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
+                  <AgentMultiRoleBlurb profile={agentProfile} variant="header" />
+                ) : (
+                  agentProfile?.tagline ?? agent.description
+                )}
+              </p>
+            </div>
+            <MindChatHeaderActions
+              newChatAccent={false}
+              onNewChat={() => runWithAuth(startNewChat)}
+              onOpenHistory={() => runWithAuth(() => setQaHistoryOpen(true))}
+            />
           </div>
-          <MindChatHeaderActions
-            newChatAccent={false}
-            onNewChat={() => runWithAuth(startNewChat)}
-            onOpenHistory={() => runWithAuth(() => setQaHistoryOpen(true))}
-          />
-        </div>
+        )
       ) : (
         <div className="grid shrink-0 grid-cols-[2.75rem_1fr_auto] items-center gap-1 border-b border-stone-200/90 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">
           <button
@@ -1204,7 +1219,7 @@ export function AgentChat({
         </div>
       )}
 
-      {entryHint ? (
+      {entryHint && !showNoteWritingPrompts ? (
         <div className="shrink-0 border-b border-zinc-200/90 bg-zinc-50/95 px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/60">
           <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">{entryHint}</p>
         </div>
@@ -1212,42 +1227,63 @@ export function AgentChat({
 
       {messages.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-5 pt-6 pb-3">
-            <div className="flex flex-col items-center">
-              <AgentContactAvatar agent={agent} size={80} className="mb-3" />
-              <h3 className="mb-1 text-center text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                Hi, I&apos;m {agent.name}
-              </h3>
-              {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
-                <AgentMultiRoleBlurb profile={agentProfile} variant="hero" className="mt-3" />
-              ) : entryHint ? (
-                <p className="max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                  {entryHint}
+          <div
+            className={cn(
+              "scrollbar-hide min-h-0 flex-1 overflow-y-auto pb-3",
+              showNoteWritingPrompts ? "px-4 pt-4" : "px-5 pt-6"
+            )}
+          >
+            {showNoteWritingPrompts ? (
+              <div className="flex w-full flex-col">
+                <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  Quick questions
+                </h3>
+                <p className="mt-1 mb-4 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  {noteTitle
+                    ? `Grounded on “${noteTitle}” — pick a prompt or type below.`
+                    : "Grounded on this note — pick a prompt or type below."}
                 </p>
-              ) : agentProfile ? (
-                <p className="max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                  {agentProfile.tagline}
-                </p>
-              ) : null}
-              {showHeroExamplePrompts ? (
-                <>
-                  {embedded ? (
-                    <h2 className="mb-5 text-center text-[22px] font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-[26px]">
-                      What can I help you with?
-                    </h2>
-                  ) : null}
-                  <AgentExamplePromptRail
-                    layout={embedded ? "wrap" : "stack"}
-                    prompts={examplePrompts}
-                    onSelect={(prompt) => runWithAuth(() => setInput(prompt))}
-                    className={cn(
-                      "w-full",
-                      embedded ? "max-w-3xl" : "mt-4 max-w-md"
-                    )}
-                  />
-                </>
-              ) : null}
-            </div>
+                <AgentExamplePromptRail
+                  layout="stack"
+                  prompts={noteWritingPrompts}
+                  onSelect={(prompt) => runWithAuth(() => setInput(prompt))}
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <AgentContactAvatar agent={agent} size={80} className="mb-3" />
+                <h3 className="mb-1 text-center text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  Hi, I&apos;m {agent.name}
+                </h3>
+                {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
+                  <AgentMultiRoleBlurb profile={agentProfile} variant="hero" className="mt-3" />
+                ) : entryHint ? (
+                  <p className="max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    {entryHint}
+                  </p>
+                ) : agentProfile ? (
+                  <p className="max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    {agentProfile.tagline}
+                  </p>
+                ) : null}
+                {showHeroExamplePrompts ? (
+                  <>
+                    {embedded ? (
+                      <h2 className="mb-5 text-center text-[22px] font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-[26px]">
+                        What can I help you with?
+                      </h2>
+                    ) : null}
+                    <AgentExamplePromptRail
+                      layout={embedded ? "wrap" : "stack"}
+                      prompts={examplePrompts}
+                      onSelect={(prompt) => runWithAuth(() => setInput(prompt))}
+                      className={cn("w-full", embedded ? "max-w-3xl" : "mt-4 max-w-md")}
+                    />
+                  </>
+                ) : null}
+              </div>
+            )}
           </div>
           <div className="shrink-0 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 dark:bg-zinc-950">
             {chatFooter}
@@ -1301,13 +1337,6 @@ export function AgentChat({
                           runWithAuth(() =>
                             toast.message("Edit", {
                               description: "Demo: continue editing this reply in a note.",
-                            })
-                          )
-                        }
-                        onMore={() =>
-                          runWithAuth(() =>
-                            toast.message("More", {
-                              description: "Demo: report, export, or save.",
                             })
                           )
                         }

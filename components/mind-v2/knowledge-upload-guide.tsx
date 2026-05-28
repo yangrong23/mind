@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import { ClipboardPaste, Cloud, Link2, Upload } from "lucide-react"
+import { ClipboardPaste, Cloud, Link2 } from "lucide-react"
+import { KbUploadFileIcon } from "@/components/mind-v2/kb-upload-file-icon"
 import { cn } from "@/lib/utils"
 
 const DEFAULT_MAX_ITEMS = 50
@@ -148,7 +149,7 @@ export function KnowledgeUploadGuide({
               onClick={() => fileRef.current?.click()}
               className={pillClass}
             >
-              <Upload className={iconClass} strokeWidth={1.85} />
+              <KbUploadFileIcon className={iconClass} strokeWidth={1.85} />
               {t.uploadFile}
             </button>
             <button type="button" onClick={onWebsite} className={pillClass}>

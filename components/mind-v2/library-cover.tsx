@@ -1,7 +1,9 @@
 "use client"
 
 import { LibraryCoverArt } from "@/components/mind-v2/mind-media-art"
+import { PlazaLibraryCover } from "@/components/mind-v2/plaza-library-cover"
 import type { KnowledgeBase } from "@/lib/mock-knowledge-bases"
+import { plazaCoverThemeForKb } from "@/lib/plaza-cover-themes"
 import { libraryCoverVariantForId, type LibraryCoverVariant } from "@/lib/product-media"
 import { cn } from "@/lib/utils"
 
@@ -10,7 +12,7 @@ export function LibraryCover({
   coverVariant,
   id,
   className,
-  showMiniUi = true,
+  showMiniUi = false,
 }: {
   name: string
   coverVariant?: LibraryCoverVariant
@@ -74,11 +76,24 @@ export function LibraryCoverFromKb({
   kb,
   className,
   showMiniUi,
+  size = "sm",
 }: {
   kb: Pick<KnowledgeBase, "id" | "name" | "coverVariant">
   className?: string
   showMiniUi?: boolean
+  size?: "sm" | "md" | "lg"
 }) {
+  if (plazaCoverThemeForKb(kb.id)) {
+    return (
+      <PlazaLibraryCover
+        title={kb.name}
+        kbId={kb.id}
+        coverVariant={kb.coverVariant}
+        className={className}
+        size={showMiniUi ? "lg" : size}
+      />
+    )
+  }
   return (
     <LibraryCover
       id={kb.id}

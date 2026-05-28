@@ -514,7 +514,7 @@ function GenerateFooter({ onGenerate, onClose }: { onGenerate?: () => void; onCl
           }}
           className={cn(
             "rounded-full px-6 py-2.5 text-[15px] font-semibold text-white shadow-sm",
-            "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]"
+            "mind-btn rounded-lg"
           )}
         >
           Generate

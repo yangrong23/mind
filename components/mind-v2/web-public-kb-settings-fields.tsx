@@ -20,7 +20,7 @@ import {
 export { normalizePublicKbSettings, validatePublicKbSettings } from "@/lib/public-kb-settings"
 
 const STEPS = [
-  { id: "identity", label: "Assistant identity" },
+  { id: "identity", label: "Plaza listing" },
   { id: "behavior", label: "Capabilities & behavior" },
   { id: "starters", label: "Conversation starters" },
   { id: "trust", label: "Trust & sharing" },
@@ -45,44 +45,11 @@ export function WebPublicKbSettingsFields({
   agents: Agent[]
 }) {
   const [step, setStep] = useState<StepId>("identity")
-  const boundAgent =
-    value.boundAgentId != null ? agents.find((a) => a.id === value.boundAgentId) : undefined
   const previewCanDo = useMemo(() => deriveWhatItCanDo(value.skills), [value.skills])
 
   function setPublic(isPublic: boolean) {
-    onChange({
-      ...value,
-      isPublic,
-      ...(isPublic && value.boundAgentId == null && agents[0]
-        ? {
-            boundAgentId: agents[0].id,
-            boundAgentName: agents[0].name,
-            displayName: value.displayName || agents[0].name,
-          }
-        : {}),
-      ...(!isPublic
-        ? {
-            boundAgentId: null,
-            boundAgentName: "",
-            displayName: "",
-            tagline: "",
-            capabilities: [],
-            skills: [],
-            exampleQuestions: [],
-          }
-        : {}),
-    })
+    onChange({ ...value, isPublic })
     if (isPublic) setStep("identity")
-  }
-
-  function setAgent(agentId: number) {
-    const agent = agents.find((a) => a.id === agentId)
-    onChange({
-      ...value,
-      boundAgentId: agentId,
-      boundAgentName: agent?.name ?? "",
-      displayName: value.displayName.trim() || agent?.name || "",
-    })
   }
 
   function toggleCapability(cap: string) {
@@ -149,7 +116,7 @@ export function WebPublicKbSettingsFields({
             Publish as public knowledge base
           </span>
           <span className="mt-0.5 block text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            List in the plaza with a bound assistant — subscribers get grounded Q&A scoped to your library.
+            List in the plaza — subscribers open Chat to ask questions scoped to your library.
           </span>
         </span>
       </label>
@@ -179,26 +146,8 @@ export function WebPublicKbSettingsFields({
             {step === "identity" ? (
               <>
                 <label className="block">
-                  <span className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">Bound agent</span>
-                  <select
-                    value={value.boundAgentId ?? ""}
-                    onChange={(e) => setAgent(Number(e.target.value))}
-                    className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[14px] text-zinc-800 outline-none focus:border-teal-300 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                  >
-                    <option value="" disabled>
-                      Select an agent
-                    </option>
-                    {agents.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                        {a.description ? ` — ${a.description}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
                   <span className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
-                    Public assistant name
+                    Plaza display name
                   </span>
                   <input
                     type="text"
@@ -207,10 +156,10 @@ export function WebPublicKbSettingsFields({
                       onChange({
                         ...value,
                         displayName: e.target.value,
-                        boundAgentName: e.target.value.trim() || value.boundAgentName,
+                        boundAgentName: e.target.value.trim(),
                       })
                     }
-                    placeholder={boundAgent?.name ?? "How subscribers will see this assistant"}
+                    placeholder="Library name on plaza cards"
                     className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-[14px] outline-none focus:border-teal-300 dark:border-zinc-700 dark:bg-zinc-950"
                   />
                 </label>

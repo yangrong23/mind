@@ -1,5 +1,5 @@
-import { MindAppWeb } from "@/components/mind-v2/mind-app-web"
+import { redirect } from "next/navigation"
 
-export default function WebWorkspacePage() {
-  return <MindAppWeb />
+export default function WebIndexPage() {
+  redirect("/web/agent")
 }

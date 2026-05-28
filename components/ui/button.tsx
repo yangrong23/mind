@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground hover:bg-[#4534b3] active:bg-[#3a2a99]',
+          'mind-btn text-primary-foreground border-0',
         destructive:
           'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
         outline:
@@ -20,6 +20,9 @@ const buttonVariants = cva(
         ghost:
           'rounded-md text-[#1a1a1a] hover:bg-[#f6f5f4] dark:text-zinc-100 dark:hover:bg-zinc-800/60',
         link: 'rounded-none p-0 text-[#0075de] hover:text-[#005bab] hover:underline underline-offset-4',
+        /** Marketing / landing — soft surface, no saturated mesh gradient */
+        landing:
+          'border border-slate-200/65 bg-white/88 text-slate-700 shadow-[0_4px_18px_-10px_rgba(15,23,42,0.07)] backdrop-blur-md hover:border-slate-300/60 hover:bg-white hover:text-slate-900 hover:shadow-[0_6px_22px_-10px_rgba(15,23,42,0.09)] active:scale-[0.99]',
         dark: 'bg-black text-white hover:bg-zinc-800 active:bg-zinc-900',
       },
       size: {

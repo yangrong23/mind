@@ -12,6 +12,17 @@ export function activityHeatmapCellClass(value: number) {
   )
 }
 
+/** Linear timeline row — activity level dot */
+export function activityTimelineDotClass(value: number) {
+  return cn(
+    value === 0 && "bg-stone-200 dark:bg-zinc-700",
+    value === 1 && "bg-mind/30",
+    value === 2 && "bg-mind/45",
+    value === 3 && "bg-mind/60",
+    value >= 4 && "bg-mind"
+  )
+}
+
 export function activityHeatmapCellClassTiny(value: number) {
   return cn(
     "aspect-square w-full min-h-0 min-w-0 p-0 border-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-mind/40",

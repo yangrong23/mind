@@ -67,6 +67,7 @@ export function MindarFactoryCard({
   railStyle = "card",
   surface = "flat",
   gridLayout = "agent",
+  studioCompact = false,
   density = "default",
   selected = false,
   className,
@@ -83,6 +84,8 @@ export function MindarFactoryCard({
   railStyle?: "card" | "pill" | "inline"
   surface?: FactoryOptionSurface
   gridLayout?: "agent" | "kb"
+  /** Smaller KB Studio grid tiles */
+  studioCompact?: boolean
   density?: "default" | "compact"
   className?: string
 }) {
@@ -92,6 +95,7 @@ export function MindarFactoryCard({
   const railInline = isRail && railLayout === "scroll" && railStyle === "inline"
   const railCompact = isRail && density === "compact" && !railGrid && !railPill && !railInline
   const isKbGrid = gridLayout === "kb" && !isRail
+  const kbCompact = isKbGrid && studioCompact
   const filled = surface === "filled" && !isRail
   const tone = filled ? kbFactoryTone(kind) : agentFactoryTone(kind)
 
@@ -104,11 +108,14 @@ export function MindarFactoryCard({
         FACTORY_CARD_RADIUS,
         FACTORY_CARD_SHAPE_HOVER,
         filled && "bg-transparent dark:bg-transparent",
+        filled && tone.filledBorder,
         filled && tone.filledShadow,
         filled && tone.filledShadowHover,
         "group relative flex h-full w-full overflow-hidden active:scale-[0.99]",
         isKbGrid
-          ? "min-h-[5.25rem] flex-col items-center justify-center gap-2.5 py-3.5 px-3 text-center"
+          ? kbCompact
+            ? "min-h-[2.5rem] flex-col items-center justify-center gap-0.5 py-1 px-1 text-center"
+            : "min-h-[5.25rem] flex-col items-center justify-center gap-2.5 py-3.5 px-3 text-center"
           : "flex-col items-center justify-center gap-2 px-2.5 py-3 text-center",
         railPill &&
           cn(
@@ -179,9 +186,20 @@ export function MindarFactoryCard({
                   : railCompact
                     ? cn(FACTORY_ICON_RADIUS, "h-8 w-8")
                     : cn(FACTORY_ICON_RADIUS, "h-10 w-10")
-              : cn(FACTORY_ICON_RADIUS, isKbGrid ? "h-11 w-11" : "h-10 w-10"),
+              : cn(
+                  FACTORY_ICON_RADIUS,
+                  kbCompact ? "h-6 w-6" : isKbGrid ? "h-11 w-11" : "h-10 w-10"
+                ),
             filled
-              ? cn(tone.well, "bg-white/70 ring-1 ring-white/90 dark:bg-zinc-900/70", tone.filledIconRing)
+              ? cn(
+                  tone.well,
+                  kbCompact
+                    ? cn("ring-1", tone.filledIconRing)
+                    : cn(
+                        "bg-white/75 ring-1 ring-stone-200/65 dark:bg-zinc-800/55 dark:ring-zinc-600/40",
+                        tone.filledIconRing
+                      )
+                )
               : tone.icon
           )}
         >
@@ -196,9 +214,11 @@ export function MindarFactoryCard({
                     : railCompact
                       ? "h-3.5 w-3.5"
                       : "h-5 w-5"
-                : isKbGrid
-                  ? "h-5 w-5"
-                  : "h-[18px] w-[18px]",
+                : kbCompact
+                  ? "h-3 w-3"
+                  : isKbGrid
+                    ? "h-5 w-5"
+                    : "h-[18px] w-[18px]",
               filled && tone.icon
             )}
             strokeWidth={1.85}
@@ -219,14 +239,16 @@ export function MindarFactoryCard({
                 : railCompact
                   ? "line-clamp-2 text-[9px]"
                   : "line-clamp-2 text-[10px]"
-            : isKbGrid
-              ? "whitespace-normal break-words text-[13px]"
-              : "line-clamp-2 break-words text-[12px]"
+            : kbCompact
+              ? "line-clamp-1 whitespace-normal break-words text-[9px] leading-none"
+              : isKbGrid
+                ? "whitespace-normal break-words text-[13px]"
+                : "line-clamp-2 break-words text-[12px]"
         )}
       >
         {label}
       </span>
-      {filled ? (
+      {filled && !kbCompact ? (
         <Sparkles
           className={cn(
             "pointer-events-none absolute right-2.5 top-2.5 z-[1] h-3 w-3 opacity-0 transition-opacity duration-300 group-hover:opacity-80",

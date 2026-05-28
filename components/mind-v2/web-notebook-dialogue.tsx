@@ -3,9 +3,7 @@
 import { useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
-import { AgentHomeComposerStack } from "@/components/mind-v2/agent-home-composer-stack"
-import { KbAgentSuggestionRail } from "@/components/mind-v2/kb-agent-suggestion-rail"
+import { WebThreadComposer } from "@/components/mind-v2/web-thread-composer"
 import type { FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import type { KbAgentSuggestion } from "@/lib/kb-agent-suggestions"
 import {
@@ -101,6 +99,7 @@ export function WebNotebookDialogueBlock({
   onFeedback,
   onSaveReply,
   onRegenerate,
+  variant = "notebook",
   className,
 }: {
   messages: WebNotebookMessage[]
@@ -109,14 +108,23 @@ export function WebNotebookDialogueBlock({
   onFeedback: (id: string, value: MessageFeedback) => void
   onSaveReply?: (content: string) => void
   onRegenerate: (assistantId: string) => void
+  /** Notebook embed uses a titled section; agent thread is borderless. */
+  variant?: "notebook" | "thread"
   className?: string
 }) {
   if (messages.length === 0) return null
 
   return (
-    <section className={cn("mt-8 border-t border-stone-100 pt-6", className)}>
-      <h3 className="text-[13px] font-semibold text-zinc-600">Dialogue</h3>
-      <div className="mt-4 space-y-5">
+    <section
+      className={cn(
+        variant === "notebook" ? "mt-8 border-t border-stone-100 pt-6" : "space-y-0",
+        className
+      )}
+    >
+      {variant === "notebook" ? (
+        <h3 className="text-[13px] font-semibold text-zinc-600">Dialogue</h3>
+      ) : null}
+      <div className={cn(variant === "notebook" ? "mt-4 space-y-5" : "space-y-5")}>
         {messages.map((msg) =>
           msg.role === "user" ? (
             <div key={msg.id} className="flex justify-end">
@@ -163,17 +171,20 @@ export function WebNotebookDialogueComposer({
   onDraftChange,
   onSubmit,
   sourceCount,
-  voiceOn,
-  onVoiceToggle,
+  voiceOn: _voiceOn,
+  onVoiceToggle: _onVoiceToggle,
   requireAuthThen,
   agentSuggestions,
+  onQuickQuestion,
   libraryName,
   onAddFiles,
   allowUpload = true,
   placeholder = "Ask or create content…",
   selectedFactory,
   onFactorySelect,
-  factoryToolbar,
+  showFactoryRail = true,
+  factoryToolbar: _factoryToolbar,
+  disclaimer,
   className,
 }: {
   draft: string
@@ -184,92 +195,43 @@ export function WebNotebookDialogueComposer({
   onVoiceToggle: () => void
   requireAuthThen?: (run: () => void) => void
   agentSuggestions?: KbAgentSuggestion[]
+  onQuickQuestion?: (prompt: string) => void
   libraryName?: string
   onAddFiles?: () => void
   allowUpload?: boolean
   placeholder?: string
   selectedFactory?: FactoryModalKind | null
   onFactorySelect?: (kind: FactoryModalKind) => void
+  /** Hide inline factory icons when Studio column is available */
+  showFactoryRail?: boolean
+  /** @deprecated Factory rail is always inline via WebThreadComposer */
   factoryToolbar?: ReactNode
+  disclaimer?: string
   className?: string
 }) {
-  const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
-  const useFactoryStack = Boolean(factoryToolbar && onFactorySelect)
-
   return (
-    <div className={cn("shrink-0 border-t border-stone-100 bg-white/80 px-4 py-3", className)}>
-      <div className="mx-auto w-full max-w-2xl">
-        {agentSuggestions && agentSuggestions.length > 0 ? (
-          <KbAgentSuggestionRail
-            suggestions={agentSuggestions}
-            libraryName={libraryName}
-            onSelect={(prompt) => onDraftChange(prompt)}
-            className="mb-3"
-          />
-        ) : null}
-        {useFactoryStack ? (
-          <AgentHomeComposerStack
-            factoryPlacement="inside"
-            selectedFactoryId={selectedFactory ?? null}
-            onFactorySelect={(kind) => runWithAuth(() => onFactorySelect?.(kind))}
-            composer={
-              <MindChatComposer
-                variant="thread"
-                className="max-w-none"
-                value={draft}
-                onChange={onDraftChange}
-                onSubmit={onSubmit}
-                placeholder={placeholder}
-                voiceOn={voiceOn}
-                onVoiceToggle={() => runWithAuth(onVoiceToggle)}
-                showVoiceButton={false}
-                showUploadButton={allowUpload}
-                atTitle={`${sourceCount} sources`}
-                onAtClick={() =>
-                  toast.message("Sources", {
-                    description: `${sourceCount} selected for this turn (demo).`,
-                  })
-                }
-                onUploadClick={() =>
-                  runWithAuth(() => {
-                    if (onAddFiles) onAddFiles()
-                    else toast.message("Upload", { description: "Demo." })
-                  })
-                }
-                factoryToolbar={factoryToolbar}
-              />
-            }
-          />
-        ) : (
-          <MindChatComposer
-            variant="thread"
-            className="max-w-none"
-            value={draft}
-            onChange={onDraftChange}
-            onSubmit={onSubmit}
-            placeholder={placeholder}
-            voiceOn={voiceOn}
-            onVoiceToggle={() => runWithAuth(onVoiceToggle)}
-            showVoiceButton={false}
-            showUploadButton={allowUpload}
-            atTitle={`${sourceCount} sources`}
-            onAtClick={() =>
-              toast.message("Sources", { description: `${sourceCount} selected for this turn (demo).` })
-            }
-            onUploadClick={() =>
-              runWithAuth(() => {
-                if (onAddFiles) onAddFiles()
-                else toast.message("Upload", { description: "Demo." })
-              })
-            }
-          />
-        )}
-      </div>
-    </div>
+    <WebThreadComposer
+      draft={draft}
+      onDraftChange={onDraftChange}
+      onSubmit={onSubmit}
+      placeholder={placeholder}
+      requireAuthThen={requireAuthThen}
+      selectedFactory={selectedFactory}
+      onFactorySelect={onFactorySelect}
+      showFactoryRail={showFactoryRail && Boolean(onFactorySelect)}
+      sourceCount={sourceCount}
+      onAddFiles={onAddFiles}
+      allowUpload={allowUpload}
+      agentSuggestions={agentSuggestions}
+      onQuickQuestion={onQuickQuestion}
+      libraryName={libraryName}
+      disclaimer={disclaimer}
+      className={className}
+    />
   )
 }
 
-/** Hook-friendly feedback toggle */
+/** Hook-friendly feedback toggle for library / notebook dialogue. */
 export function useWebNotebookFeedback() {
   const [feedbackById, setFeedbackById] = useState<Record<string, MessageFeedback>>({})
 

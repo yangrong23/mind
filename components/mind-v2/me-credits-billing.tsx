@@ -304,7 +304,7 @@ export function MeCreditsPlansScreen({
         <button
           type="button"
           onClick={handleSavePaymentMethod}
-          className={cn("w-full rounded-xl py-3 text-[15px] font-semibold transition-colors", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")}
+          className={cn("w-full rounded-xl py-3 text-[15px] font-semibold transition-colors", "mind-btn rounded-lg")}
         >
           Save payment method
         </button>
@@ -532,7 +532,7 @@ function MembershipComparisonSection({
           "mt-3 w-full min-w-0 rounded-xl px-3 py-3.5 text-center text-[15px] font-semibold leading-snug transition-colors",
           isCurrent || !termsAccepted
             ? "cursor-default bg-stone-200/90 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500"
-            : "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]",
+            : "mind-btn rounded-lg",
           "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
         )}
       >
@@ -584,7 +584,7 @@ function PaymentMethodsList({
         <button
           type="button"
           onClick={onAdd}
-          className={cn("mt-4 rounded-xl px-4 py-2.5 text-[13px] font-semibold", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")}
+          className={cn("mt-4 rounded-xl px-4 py-2.5 text-[13px] font-semibold", "mind-btn rounded-lg")}
         >
           Add card
         </button>

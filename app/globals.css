@@ -3,14 +3,37 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html {
+  font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 :root {
   /**
-   * Single brand blue — fixed hue/saturation/lightness (Tailwind sky-600 equivalent).
-   * Use `mind` utilities only; vary appearance via opacity / color-mix, not other palettes.
+   * Brand — concentrated mesh (landing: sky · cyan · lavender · violet).
+   * Lighter page washes; richer gradient for buttons and accents.
    */
-  --mind-blue: oklch(0.588 0.158 241.966);
-  --mind-page-bg: color-mix(in oklch, var(--mind-blue) 6%, white);
-  --mind-hero-bg: color-mix(in oklch, var(--mind-blue) 8%, white);
+  --mind-mesh-sky: oklch(0.62 0.11 235);
+  --mind-mesh-violet: oklch(0.54 0.14 278);
+  --mind-mesh-lavender: oklch(0.92 0.04 290);
+  --mind-blue: oklch(0.54 0.13 272);
+  --mind-blue-hover: oklch(0.48 0.13 272);
+  --mind-blue-soft: oklch(0.965 0.028 278);
+  --mind-blue-muted: oklch(0.66 0.1 250);
+  --mind-accent: oklch(0.6 0.12 228);
+  --mind-shadow: color-mix(in oklch, var(--mind-mesh-violet) 22%, var(--mind-mesh-sky) 14%);
+  --mind-page-bg: oklch(0.985 0.014 278);
+  --mind-hero-bg: oklch(0.978 0.02 275);
+  --mind-gradient-start: var(--mind-mesh-sky);
+  --mind-gradient-mid: var(--mind-blue);
+  --mind-gradient-end: var(--mind-mesh-violet);
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -18,8 +41,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  /* Low-chroma primary — near-neutral, slight cool bias */
-  --primary: oklch(0.30 0.02 255);
+  --primary: var(--mind-blue);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -31,7 +53,7 @@
   --destructive-foreground: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.50 0.02 255 / 0.28);
+  --ring: color-mix(in oklch, var(--mind-blue) 28%, transparent);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -49,8 +71,17 @@
 }
 
 .dark {
-  --mind-page-bg: color-mix(in oklch, var(--mind-blue) 12%, oklch(0.145 0 0));
-  --mind-hero-bg: color-mix(in oklch, var(--mind-blue) 14%, oklch(0.145 0 0));
+  --mind-mesh-sky: oklch(0.72 0.1 235);
+  --mind-mesh-violet: oklch(0.7 0.12 278);
+  --mind-mesh-lavender: oklch(0.32 0.06 290);
+  --mind-blue: oklch(0.7 0.11 272);
+  --mind-blue-hover: oklch(0.64 0.11 272);
+  --mind-accent: oklch(0.74 0.1 228);
+  --mind-page-bg: color-mix(in oklch, var(--mind-mesh-violet) 14%, oklch(0.145 0 0));
+  --mind-hero-bg: color-mix(in oklch, var(--mind-mesh-sky) 10%, oklch(0.145 0 0));
+  --mind-gradient-start: var(--mind-mesh-sky);
+  --mind-gradient-mid: var(--mind-blue);
+  --mind-gradient-end: var(--mind-mesh-violet);
 
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -90,6 +121,10 @@
   --font-sans: var(--font-app), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-app), ui-sans-serif, system-ui, sans-serif;
   --color-mind: var(--mind-blue);
+  --color-mind-hover: var(--mind-blue-hover);
+  --color-mind-soft: var(--mind-blue-soft);
+  --color-mind-muted: var(--mind-blue-muted);
+  --color-mind-accent: var(--mind-accent);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -299,6 +334,24 @@
   }
 }
 
+/** Primary actions — mesh concentrate (sky → violet) */
+@utility mind-btn {
+  background: linear-gradient(
+    135deg,
+    var(--mind-gradient-start) 0%,
+    var(--mind-gradient-mid) 48%,
+    var(--mind-gradient-end) 100%
+  );
+  color: oklch(0.99 0 0);
+  box-shadow: 0 8px 26px -10px var(--mind-shadow);
+  &:hover {
+    filter: brightness(1.04);
+  }
+  &:active {
+    filter: brightness(0.97);
+  }
+}
+
 @utility scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -315,4 +368,17 @@ html:has(.mind-landing-root) body {
 
 .mind-landing-root {
   isolation: isolate;
+}
+
+/* Landing must not use product mesh-gradient buttons */
+.mind-landing-root .mind-btn {
+  background: oklch(0.99 0.002 278 / 0.92);
+  color: oklch(0.38 0.02 265);
+  border: 1px solid oklch(0.88 0.01 265 / 0.9);
+  box-shadow: 0 4px 18px -10px rgba(15, 23, 42, 0.07);
+  filter: none;
+}
+.mind-landing-root .mind-btn:hover {
+  background: oklch(1 0 0);
+  filter: none;
 }

@@ -78,9 +78,9 @@ export function BrowserChrome({
   )
 }
 
-/** Primary CTA — soft pastels that sit on the lavender/sky mesh background */
+/** @deprecated Prefer Button `variant="landing"` — kept for legacy className merges */
 export const landingCtaGradient =
-  "border border-white/80 bg-gradient-to-r from-white/95 via-teal-50/90 to-sky-50/95 text-slate-800 shadow-[0_4px_20px_-6px_rgba(99,102,241,0.14)] backdrop-blur-md backdrop-saturate-150 hover:border-teal-200/70 hover:from-white hover:via-teal-50 hover:to-violet-50/90 hover:text-teal-900"
+  "border border-slate-200/65 bg-white/88 text-slate-700 shadow-[0_4px_18px_-10px_rgba(15,23,42,0.07)] backdrop-blur-md hover:border-slate-300/60 hover:bg-white hover:text-slate-900 !bg-white/88"
 
 export function MindLogoMark({ className }: { className?: string }) {
   return (
@@ -117,7 +117,8 @@ export function LandingHeaderNav() {
           </Link>
           <Button
             asChild
-            className={cn("h-10 rounded-full px-5 text-sm font-semibold", landingCtaGradient)}
+            variant="landing"
+            className="h-10 rounded-full px-5 text-sm font-semibold"
           >
             <Link href={LANDING_WEB_APP_HREF}>{header.cta}</Link>
           </Button>
@@ -132,8 +133,8 @@ export function CheckRow({ items }: { items: readonly string[] }) {
     <ul className="space-y-5">
       {items.map((item) => (
         <li key={item} className="flex gap-3.5 text-[15px] leading-relaxed text-slate-600">
-          <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-teal-200/90 ring-1 ring-teal-300/50">
-            <Check className="size-3.5 text-teal-800" strokeWidth={3} />
+          <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/80">
+            <Check className="size-3.5 text-slate-600" strokeWidth={3} />
           </span>
           {item}
         </li>

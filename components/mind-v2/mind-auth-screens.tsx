@@ -85,7 +85,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
               onClick={() => setMode("sign-in")}
               className={cn(
                 "w-full rounded-2xl py-3.5 text-[16px] font-semibold shadow-sm transition-colors active:scale-[0.99]",
-                "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]"
+                "mind-btn rounded-lg"
               )}
             >
               Sign in
@@ -178,7 +178,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
         <div className="mt-8 flex w-full flex-col items-center gap-3">
           <button
             type="submit"
-            className={cn("w-full rounded-2xl py-3.5 text-[16px] font-semibold shadow-sm transition-colors active:scale-[0.99]", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")}
+            className={cn("w-full rounded-2xl py-3.5 text-[16px] font-semibold shadow-sm transition-colors active:scale-[0.99]", "mind-btn rounded-lg")}
           >
             {isSignIn ? "Sign in" : "Create account"}
           </button>

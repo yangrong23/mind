@@ -35,7 +35,7 @@ export function WebSettingsPanel({
       <button
         type="button"
         className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px]"
-        aria-label="关闭"
+        aria-label="Close"
         onClick={onClose}
       />
       <aside
@@ -46,7 +46,7 @@ export function WebSettingsPanel({
           "ring-1 ring-black/[0.06]"
         )}
         role="dialog"
-        aria-label="设置"
+        aria-label="Settings"
       >
         <div className="flex items-center justify-between px-4 py-3">
           <span className="text-[15px] font-semibold text-zinc-700">Mindar</span>
@@ -65,15 +65,15 @@ export function WebSettingsPanel({
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-200/90 py-2.5 text-[14px] font-medium text-zinc-700 hover:bg-stone-50"
           >
             <MessageCirclePlus className="h-4 w-4" />
-            新对话
+            New chat
           </button>
         </div>
 
         <nav className="space-y-0.5 px-2">
           {[
-            { tab: "plaza" as const, label: "知识库广场", icon: Compass },
-            { tab: "library" as const, label: "个人知识库", icon: BookOpen },
-            { tab: "agent" as const, label: "问答历史", icon: History },
+            { tab: "plaza" as const, label: "Library Plaza", icon: Compass },
+            { tab: "library" as const, label: "My libraries", icon: BookOpen },
+            { tab: "agent" as const, label: "Q&A history", icon: History },
           ].map((row) => (
             <button
               key={row.label}
@@ -93,7 +93,7 @@ export function WebSettingsPanel({
         <div className="mx-3 mt-3 rounded-xl bg-teal-50/80 px-3 py-2.5">
           <div className="flex items-center gap-2 text-[12px] font-medium text-teal-800">
             <Gift className="h-4 w-4" />
-            限时领取 20G 空间
+            Claim 20 GB storage (limited time)
           </div>
         </div>
 
@@ -104,9 +104,9 @@ export function WebSettingsPanel({
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] text-zinc-600 hover:bg-stone-50"
           >
             {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            {resolvedTheme === "dark" ? "浅色模式" : "深色模式"}
+            {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
           </button>
-          <p className="px-3 py-1 text-[12px] text-zinc-400">关于 Mindar · v2 demo</p>
+          <p className="px-3 py-1 text-[12px] text-zinc-400">About Mindar · v2 demo</p>
         </div>
       </aside>
     </>

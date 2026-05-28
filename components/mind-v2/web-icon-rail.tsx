@@ -12,10 +12,10 @@ import { Compass, Layers, NotebookPen, Settings, Sparkles } from "lucide-react"
 import type { WebTabType } from "@/components/mind-v2/web-sidebar-nav"
 
 /** Plaza discover first; Library / Agent / Notes match recents sidebar order. */
-const tabs: { id: WebTabType; label: string; icon: LucideIcon }[] = [
-  { id: "plaza", label: "Square", icon: Compass },
+const tabs: { id: WebTabType; label: string; icon: LucideIcon; title?: string }[] = [
+  { id: "plaza", label: "Plaza", icon: Compass },
   { id: "library", label: "Library", icon: Layers },
-  { id: "agent", label: "Agent", icon: Sparkles },
+  { id: "agent", label: "Mindar", icon: Sparkles },
   { id: "memos", label: "Notes", icon: NotebookPen },
 ]
 
@@ -48,12 +48,12 @@ function WebIconRailItem({
     >
       <span
         className={cn(
-          "flex h-11 w-11 items-center justify-center rounded-2xl transition-[background-color,box-shadow] duration-200",
-          active && web.railTabActiveWell
+          "flex h-8 w-8 items-center justify-center rounded-lg transition-[background-color,box-shadow] duration-200",
+          active ? web.railTabActiveWell : web.sectionIconWell
         )}
       >
         <Icon
-          className={cn("h-5 w-5", active ? web.navItemActiveIcon : "text-zinc-500")}
+          className={cn("h-[18px] w-[18px]", active ? web.navItemActiveIcon : "text-zinc-500")}
           strokeWidth={active ? 2.25 : iconStroke}
         />
       </span>
@@ -102,7 +102,7 @@ export function WebIconRail({
               key={item.id}
               active={active}
               onClick={() => onTabChange(item.id)}
-              title={item.label}
+              title={item.title ?? item.label}
               icon={item.icon}
               label={item.label}
             />
@@ -110,7 +110,7 @@ export function WebIconRail({
         })}
       </nav>
 
-      <div className="mt-2 shrink-0 space-y-1.5 border-t border-sky-100/40 pt-2.5">
+      <div className="mt-2 shrink-0 space-y-1.5 pt-1">
         <WebIconRailItem
           active={settingsActive}
           onClick={onOpenSettings}
@@ -134,7 +134,7 @@ export function WebIconRail({
           <span
             className={cn(
               "flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-sm transition-[background-color,box-shadow] duration-200",
-              "bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-500 shadow-sky-300/40",
+              "bg-mind shadow-[0_4px_14px_-4px_color-mix(in_oklch,var(--mind-blue)_35%,transparent)]",
               activeTab === "me" && web.railTabActiveWell
             )}
           >
@@ -161,7 +161,7 @@ export function WebIconRail({
           title="Mindar"
           aria-label="Go to Mindar home"
         >
-          <MindarLogoMark size={32} className="mx-auto max-w-[5.25rem] opacity-95" />
+          <MindarLogoMark size={44} className="mx-auto max-w-[6.75rem] opacity-95" />
         </Link>
       </div>
     </aside>

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { web } from "@/components/mind-v2/web-design"
 import { Zap } from "lucide-react"
 
 /** Top bar for shell views — credits live top-right per product IA. */
@@ -23,7 +24,8 @@ export function WebShellHeader({
   return (
     <header
       className={cn(
-        "flex shrink-0 items-center justify-between gap-3 border-b border-black/[0.04] bg-white/60 px-5 py-2.5 backdrop-blur-sm",
+        "flex shrink-0 items-center justify-between gap-3 px-6 py-3",
+        web.shellHeader,
         className
       )}
     >
@@ -38,12 +40,12 @@ export function WebShellHeader({
         <button
           type="button"
           onClick={onOpenCredits}
-          className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1.5 text-[12px] font-semibold text-amber-900 ring-1 ring-amber-200/80 hover:from-amber-100 hover:to-yellow-100"
+          className={web.creditsPill}
           aria-label="Open credits"
         >
-          <Zap className="h-3.5 w-3.5 text-amber-600" strokeWidth={2.25} aria-hidden />
+          <Zap className="h-3.5 w-3.5 text-mind" strokeWidth={2.25} aria-hidden />
           <span className="tabular-nums">{creditsRemaining.toLocaleString("en-US")}</span>
-          <span className="font-medium text-amber-700/80">credits</span>
+          <span className="font-medium text-zinc-500">credits</span>
         </button>
       </div>
     </header>

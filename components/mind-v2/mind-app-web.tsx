@@ -3,28 +3,48 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import type { MindAccountId } from "@/lib/mind-accounts"
-import { KnowledgeDetail, type LibraryChatLaunchContext } from "./knowledge-detail"
+import { KnowledgeDetail } from "./knowledge-detail"
 import { MINDAR_COPILOT_AGENT, MINDAR_DEMO_MY_AGENTS, type Agent } from "./agent-tab"
-import type { FactoryModalKind } from "./content-factory-modals"
 import {
   MOCK_KNOWLEDGE_BASES,
-  type KBCategory,
   type KnowledgeBase,
-  type TeamLibrarySettings,
 } from "@/lib/mock-knowledge-bases"
-import { MindAuthWeb } from "./mind-auth-web"
+import { MindAuthWeb, type MindAuthResult } from "./mind-auth-web"
+import { WebLibraryOnboarding } from "./web-library-onboarding"
+import {
+  readOnboardingComplete,
+  PENDING_ONBOARDING_SESSION_KEY,
+  writeOnboardingComplete,
+} from "@/lib/web-library-onboarding"
 import type { WebTabType } from "./web-sidebar-nav"
-import { WebIconRail } from "./web-icon-rail"
 import { WebAgentSidebar } from "./web-agent-sidebar"
 import { WebPlazaDiscoverPage } from "./web-plaza-discover-page"
-import { plazaRowToKnowledgeBase, type PlazaLibraryRow } from "@/lib/mock-plaza-libraries"
+import {
+  MOCK_PLAZA_LIBRARIES,
+  knowledgeBaseToPlazaRow,
+  plazaRowToKnowledgeBase,
+  type PlazaLibraryRow,
+} from "@/lib/mock-plaza-libraries"
 import { WebKnowledgeBrowser } from "./web-knowledge-browser"
 import { WebMeTab } from "./web-me-tab"
+import { WebMeTimelineDayPage, WebMeTimelinePage } from "./web-me-timeline-pages"
+import { getMindAccount } from "@/lib/mind-accounts"
+import {
+  buildDayShareCardText,
+  formatHeatmapDayLabel,
+  getDayUploads,
+  getDayViralSlogan,
+} from "@/lib/me-capture-diary-helpers"
+import { buildTimelineSharePayload, type MindSharePayload } from "@/lib/mind-share-payload"
+import { MindShareSheet } from "@/components/mind-v2/mind-share-sheet"
+import type { ActivityTimelineDay } from "@/lib/mock-activity-timeline"
 import { WebCreditsUpgradeModal } from "./web-credits-upgrade-modal"
 import { WebRailSettingsPanel } from "./web-rail-settings-panel"
 import { WebAgentCopilotPage } from "./web-agent-copilot-page"
 import { WebAgentWorkspace } from "./web-agent-workspace"
 import { WebDocumentEditorPage } from "./web-document-editor-page"
+import { WebKbDocumentReaderPage } from "./web-kb-document-reader-page"
+import { WebKbRichTextEditorPage } from "./web-kb-rich-text-editor-page"
 import { WebNotesWorkspace } from "./web-notes-workspace"
 import { webNavMotion } from "./web-nav-motion"
 import { web } from "./web-design"
@@ -39,8 +59,8 @@ import {
   subscribePlazaLibrary,
   unsubscribePlazaLibrary,
 } from "@/lib/plaza-subscription-store"
-import { agentFromPublicKbSettings, libraryAssistantChatMeta } from "@/lib/plaza-agent-runtime"
-import { getKbAgentSuggestions } from "@/lib/kb-agent-suggestions"
+import type { AgentChatScope } from "@/lib/web-agent-scope"
+import { webMindarChatHref } from "@/lib/web-app-routes"
 import { mockNotes } from "@/lib/mock-notes"
 import type { Note } from "@/lib/note-types"
 import {
@@ -57,7 +77,19 @@ import {
   touchRecentNote,
 } from "@/lib/web-recent-usage"
 import { WebRecentsNavPanel } from "@/components/mind-v2/web-recents-nav-panel"
-import { WebShellHeader } from "@/components/mind-v2/web-shell-header"
+import { WebWorkspaceChromeProvider } from "@/components/mind-v2/web-workspace-chrome"
+import { WebCreditsChip } from "@/components/mind-v2/web-credits-chip"
+import {
+  kbToDetailPayload,
+  useWebAppRouter,
+  type KbDetailPayload,
+  type WebView,
+} from "@/components/mind-v2/use-web-app-router"
+import { webKbHref } from "@/lib/web-app-routes"
+import { cacheKbDocument, hubItemToLibraryDocument } from "@/lib/web-kb-document-cache"
+
+export type { KbDetailPayload, WebView }
+export { kbToDetailPayload }
 
 const DEMO_AUTH_SESSION_KEY = "mind-v2-demo-auth"
 
@@ -66,98 +98,29 @@ const DEMO_CREDITS = {
   creditsMonthlyAllowance: 50_000,
 }
 
-const SHELL_TAB_LABELS: Record<WebTabType, { title: string; subtitle?: string }> = {
-  plaza: { title: "Square", subtitle: "Discover and follow public libraries" },
-  library: { title: "Library", subtitle: "Personal, following, shared — full browser" },
-  agent: { title: "Agent", subtitle: "Chat and generate from your libraries" },
-  memos: { title: "Notes", subtitle: "Memos, drafts, and rich text" },
-  me: { title: "Me", subtitle: "Profile, timeline, and billing" },
-}
+/** Tabs that already show credits in-page — no floating chip. */
+const TABS_WITHOUT_FLOATING_CREDITS: WebTabType[] = ["plaza", "me", "memos"]
 
 const WEB_AGENT_ROSTER: Agent[] = [MINDAR_COPILOT_AGENT, ...MINDAR_DEMO_MY_AGENTS]
 
-type KbDetailPayload = {
-  id?: number
-  name: string
-  color: string
-  description?: string
-  coverVariant?: import("@/lib/product-media").LibraryCoverVariant
-  isPublicKb?: boolean
-  contentCount?: number
-  subscriberCount?: number
-  viewCount?: number
-  publicTagline?: string
-  publisherName?: string
-  initialLikeCount?: number
-  initialCommentCount?: number
-  category?: KBCategory
-  teamSettings?: TeamLibrarySettings
-  isPublicPublished?: boolean
-  publicSettings?: import("@/lib/public-kb-settings").PublicKbSettings
-}
-
-type WebView =
-  | { type: "shell" }
-  | {
-      type: "notebook"
-      kb: KbDetailPayload
-      initialFactoryModal?: FactoryModalKind
-      initialOpenTeamInfo?: boolean
-      initialOpenContentId?: number
-      /** From plaza discover — highlight Studio / content factory column */
-      initialFocusStudio?: boolean
-    }
-  | {
-      type: "agent-chat"
-      agent: Agent
-      initialPrompt?: string
-    }
-  | {
-      type: "kb-agent-chat"
-      context: LibraryChatLaunchContext
-      kb: KbDetailPayload
-    }
-  | { type: "editor"; docTitle?: string }
-
-function kbToDetailPayload(kb: KnowledgeBase): KbDetailPayload {
-  return {
-    id: kb.id,
-    name: kb.name,
-    color: kb.color,
-    description: kb.description,
-    coverVariant: kb.coverVariant,
-    isPublicKb: kb.category === "subscribed" || Boolean(kb.isPublicPublished),
-    contentCount: kb.count,
-    subscriberCount: kb.subscribers,
-    viewCount: kb.viewCount,
-    publicTagline: kb.publicTagline,
-    publisherName: kb.publisherName,
-    initialLikeCount: kb.category === "subscribed" ? 56 : undefined,
-    initialCommentCount: kb.category === "subscribed" ? 1 : undefined,
-    category: kb.category,
-    teamSettings: kb.teamSettings,
-    isPublicPublished: kb.isPublicPublished,
-    publicSettings: kb.publicSettings,
-  }
-}
+const DEMO_ME_STREAK_DAYS = 7
 
 export function MindAppWeb() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authOverlayOpen, setAuthOverlayOpen] = useState(false)
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
   const pendingAfterAuth = useRef<(() => void) | null>(null)
-  const [activeTab, setActiveTab] = useState<WebTabType>("agent")
-  const [currentView, setCurrentView] = useState<WebView>({ type: "shell" })
   const [activeAccountId] = useState<MindAccountId>("work")
   const [fontZoomPercent, setFontZoomPercent] = useState(MIND_FONT_ZOOM_DEFAULT)
   const [selectedKbId, setSelectedKbId] = useState<number | null>(null)
-  const [editorReturn, setEditorReturn] = useState<WebView | null>(null)
   const [agentHistoryDraft, setAgentHistoryDraft] = useState<string | null>(null)
   const [selectedAgentId, setSelectedAgentId] = useState(MINDAR_COPILOT_AGENT.id)
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [agentSidebarCollapsed, setAgentSidebarCollapsed] = useState(false)
   const [creditsModalOpen, setCreditsModalOpen] = useState(false)
   const [creditsOpenSignal, setCreditsOpenSignal] = useState(0)
   const [plazaSubscribedKbs, setPlazaSubscribedKbs] = useState<KnowledgeBase[]>(() => readPlazaSubscriptions())
+  const [userPublishedPlazaRows, setUserPublishedPlazaRows] = useState<PlazaLibraryRow[]>([])
   const [recentPublicKbIds, setRecentPublicKbIds] = useState<number[]>(() =>
     resolveRecentPublicKbIds(readRecentPublicKbIds())
   )
@@ -171,6 +134,7 @@ export function MindAppWeb() {
     resolveRecentNoteIds(readRecentNoteIds())
   )
   const [focusNoteId, setFocusNoteId] = useState<number | null>(null)
+  const [timelineShareSheet, setTimelineShareSheet] = useState<MindSharePayload | null>(null)
 
   const recentKbIds = useMemo(
     () => [...recentPublicKbIds, ...recentPrivateKbIds],
@@ -186,11 +150,50 @@ export function MindAppWeb() {
 
   const allKbsById = useMemo(() => {
     const map = new Map<number, KnowledgeBase>()
-    for (const kb of [...MOCK_KNOWLEDGE_BASES, ...plazaSubscribedKbs]) {
+    for (const kb of MOCK_KNOWLEDGE_BASES) {
+      map.set(kb.id, kb)
+    }
+    for (const row of [...MOCK_PLAZA_LIBRARIES, ...userPublishedPlazaRows]) {
+      if (!map.has(row.kbId)) {
+        map.set(row.kbId, plazaRowToKnowledgeBase(row))
+      }
+    }
+    for (const kb of plazaSubscribedKbs) {
       map.set(kb.id, kb)
     }
     return map
-  }, [plazaSubscribedKbs])
+  }, [plazaSubscribedKbs, userPublishedPlazaRows])
+
+  const {
+    location,
+    currentView,
+    activeTab,
+    settingsOpen,
+    shellMain,
+    navigate,
+    goToParent,
+    switchTab,
+    openNotebook,
+    closeNotebook,
+    openAgentChat,
+    openKbChat,
+    openMeTimeline,
+    openMeTimelineDay,
+    openSettings,
+    closeSettings,
+    selectLibraryKb,
+    selectNote,
+  } = useWebAppRouter(allKbsById)
+
+  useEffect(() => {
+    if (location.mode === "tab") {
+      if (location.tab === "library") setSelectedKbId(location.kbId ?? null)
+      if (location.tab === "memos") setFocusNoteId(location.noteId ?? null)
+    } else if (location.mode === "kb") {
+      setSelectedKbId(location.kbId)
+    }
+    if (location.mode === "agent-chat") setSelectedAgentId(location.agentId)
+  }, [location])
 
   const recentPublicKbs = useMemo(
     () =>
@@ -284,24 +287,41 @@ export function MindAppWeb() {
       if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "k") return
       if (currentView.type !== "shell") return
       e.preventDefault()
-      setSettingsOpen(false)
-      setActiveTab("agent")
+      switchTab("agent")
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [currentView.type])
+  }, [currentView.type, switchTab])
 
   useEffect(() => {
     try {
       if (typeof window !== "undefined" && sessionStorage.getItem(DEMO_AUTH_SESSION_KEY) === "1") {
         setIsLoggedIn(true)
+        if (
+          sessionStorage.getItem(PENDING_ONBOARDING_SESSION_KEY) === "1" &&
+          !readOnboardingComplete()
+        ) {
+          sessionStorage.removeItem(PENDING_ONBOARDING_SESSION_KEY)
+          setOnboardingOpen(true)
+        }
       }
     } catch {
       /* ignore */
     }
   }, [])
 
-  function handleAuthenticated() {
+  function runPendingAfterAuth() {
+    pendingAfterAuth.current?.()
+    pendingAfterAuth.current = null
+  }
+
+  function maybeStartOnboarding(result?: MindAuthResult) {
+    if (!result?.isNewSignup || readOnboardingComplete()) return false
+    setOnboardingOpen(true)
+    return true
+  }
+
+  function handleAuthenticated(result?: MindAuthResult) {
     try {
       sessionStorage.setItem(DEMO_AUTH_SESSION_KEY, "1")
     } catch {
@@ -309,8 +329,31 @@ export function MindAppWeb() {
     }
     setIsLoggedIn(true)
     setAuthOverlayOpen(false)
-    pendingAfterAuth.current?.()
-    pendingAfterAuth.current = null
+    if (maybeStartOnboarding(result)) return
+    runPendingAfterAuth()
+  }
+
+  function completeLibraryOnboarding(rows: PlazaLibraryRow[]) {
+    for (const row of rows) {
+      subscribePlazaLibrary(plazaRowToKnowledgeBase(row))
+    }
+    refreshPlazaSubscriptions()
+    writeOnboardingComplete()
+    setOnboardingOpen(false)
+    switchTab("plaza")
+    toast.success("Libraries added", {
+      description:
+        rows.length === 1
+          ? `"${rows[0].title}" is ready in your library.`
+          : `${rows.length} libraries are ready to explore.`,
+    })
+    runPendingAfterAuth()
+  }
+
+  function skipLibraryOnboarding() {
+    writeOnboardingComplete()
+    setOnboardingOpen(false)
+    runPendingAfterAuth()
   }
 
   function handleDismissAuthOverlay() {
@@ -327,63 +370,90 @@ export function MindAppWeb() {
     setAuthOverlayOpen(true)
   }
 
-  function switchTab(tab: WebTabType) {
-    setActiveTab(tab)
-    setSettingsOpen(false)
-    if (currentView.type === "notebook" || currentView.type === "kb-agent-chat") {
-      setCurrentView({ type: "shell" })
-    }
+  function shareTimelineDay(day: ActivityTimelineDay) {
+    const account = getMindAccount(activeAccountId)
+    const title = formatHeatmapDayLabel(day.isoDate)
+    const sharePreview = buildDayShareCardText(
+      day.isoDate,
+      day.activity,
+      account.displayName,
+      DEMO_ME_STREAK_DAYS
+    )
+    const captures = getDayUploads(day.isoDate, day.activity).length
+    const activityLine =
+      day.activity > 0
+        ? `${captures} capture${captures === 1 ? "" : "s"} · level ${day.activity}`
+        : "A quiet day on my timeline"
+    setTimelineShareSheet(
+      buildTimelineSharePayload({
+        displayName: account.displayName,
+        dateLabel: title,
+        slogan: getDayViralSlogan(day.isoDate, day.activity),
+        activityLine,
+        streakDays: DEMO_ME_STREAK_DAYS,
+        body: sharePreview,
+      })
+    )
   }
 
-  function openNotebook(
+  function openNotebookWithRecents(
     kb: KnowledgeBase,
     options?: { openTeamInfo?: boolean; initialFocusStudio?: boolean }
   ) {
     touchRecentKbFromBase(kb)
     syncRecentsFromStorage()
     setSelectedKbId(kb.id)
-    setActiveTab("library")
-    setCurrentView({
-      type: "notebook",
-      kb: kbToDetailPayload(kb),
-      initialOpenTeamInfo: options?.openTeamInfo,
-      initialFocusStudio: options?.initialFocusStudio,
-    })
+    openNotebook(kb, options)
   }
 
-  function openPlazaLibraryFromDiscover(row: PlazaLibraryRow) {
+  function plazaDiscoverAccessForRow(row: PlazaLibraryRow) {
     const kb = plazaRowToKnowledgeBase(row)
     const access = plazaAccessForKb(kbToDetailPayload(kb))
+    const canChat = access.isSubscribed || access.isOwner
+    return {
+      access,
+      kb,
+      chatDisabled: !canChat,
+      chatDisabledReason: canChat ? undefined : "Subscribe to ask Mindar about this library",
+    }
+  }
+
+  function openPlazaNotebookFromDiscover(row: PlazaLibraryRow) {
+    const { kb } = plazaDiscoverAccessForRow(row)
+    requireAuthThen(() => openNotebookWithRecents(kb))
+  }
+
+  function openPlazaChatFromDiscover(row: PlazaLibraryRow, prompt?: string) {
+    const { kb, access } = plazaDiscoverAccessForRow(row)
     requireAuthThen(() => {
       if (!access.isSubscribed && !access.isOwner) {
         access.onSubscribe?.()
       }
-      openNotebook(kb, { initialFocusStudio: true })
+      touchRecentKbFromBase(kb)
+      syncRecentsFromStorage()
+      setSelectedKbId(kb.id)
+      openKbChat(kb.id, prompt)
     })
   }
 
-  function closeNotebook() {
-    setCurrentView({ type: "shell" })
-  }
-
-  const shellMain = currentView.type === "shell"
+  const agentSidebarScope: AgentChatScope =
+    currentView.type === "agent-chat"
+      ? currentView.chatScope
+      : { type: "global" }
 
   return (
     <div
       className={cn("min-h-screen font-sans antialiased", web.softType)}
       style={{ zoom: fontZoomPercent / 100 }}
     >
-      <div className={cn("flex h-screen min-h-0 w-full overflow-hidden", web.canvas)}>
-        <WebIconRail
-          activeTab={activeTab}
-          onTabChange={switchTab}
-          activeAccountId={activeAccountId}
-          onOpenSettings={() => setSettingsOpen((v) => !v)}
-          settingsActive={settingsOpen}
-        />
-
-        {shellMain && !settingsOpen ? (
+      <div className={cn("flex h-screen min-h-0 w-full overflow-hidden", web.shell)}>
+        {!settingsOpen ? (
           <WebRecentsNavPanel
+            activeTab={activeTab}
+            onTabChange={switchTab}
+            activeAccountId={activeAccountId}
+            onOpenSettings={() => (settingsOpen ? closeSettings() : openSettings())}
+            settingsActive={settingsOpen}
             recentPublicKbs={recentPublicKbs}
             recentPrivateKbs={recentPrivateKbs}
             recentAgents={recentAgents}
@@ -391,43 +461,42 @@ export function MindAppWeb() {
             selectedKbId={selectedKbId}
             selectedAgentId={selectedAgentId}
             selectedNoteId={focusNoteId}
-            onOpenPlaza={() => switchTab("plaza")}
-            onOpenPublicKb={(kb) => requireAuthThen(() => openNotebook(kb))}
-            onOpenPrivateKb={(kb) => requireAuthThen(() => openNotebook(kb))}
+            onOpenPublicKb={(kb) => requireAuthThen(() => openNotebookWithRecents(kb))}
+            onOpenPrivateKb={(kb) => requireAuthThen(() => openNotebookWithRecents(kb))}
             onOpenAgent={(agent) => {
               noteAgentUsed(agent)
-              if (agent.id === MINDAR_COPILOT_AGENT.id) {
-                switchTab("agent")
-              } else {
-                requireAuthThen(() => setCurrentView({ type: "agent-chat", agent }))
-              }
+              requireAuthThen(() => openAgentChat(MINDAR_COPILOT_AGENT))
             }}
             onOpenNote={(note) => {
               touchRecentNote(note.id)
               syncRecentsFromStorage()
               setFocusNoteId(note.id)
-              switchTab("memos")
+              selectNote(note.id)
             }}
-            onMorePublic={() => switchTab("library")}
+            onMorePlaza={() => switchTab("plaza")}
             onMorePrivate={() => switchTab("library")}
             onMoreAgents={() => switchTab("agent")}
             onMoreNotes={() => switchTab("memos")}
           />
         ) : null}
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {shellMain ? (
-            <WebShellHeader
-              title={settingsOpen ? "Settings" : SHELL_TAB_LABELS[activeTab].title}
-              subtitle={
-                settingsOpen ? "Preferences, display, and workspace" : SHELL_TAB_LABELS[activeTab].subtitle
-              }
-              creditsRemaining={DEMO_CREDITS.creditsRemaining}
-              onOpenCredits={() => setCreditsModalOpen(true)}
-            />
+        <WebWorkspaceChromeProvider
+          creditsRemaining={DEMO_CREDITS.creditsRemaining}
+          onOpenCredits={() => setCreditsModalOpen(true)}
+        >
+        <div className={cn("relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden", web.canvas)}>
+          {(shellMain || settingsOpen) && !TABS_WITHOUT_FLOATING_CREDITS.includes(activeTab) ? (
+            <div className="pointer-events-none absolute right-6 top-4 z-30">
+              <div className="pointer-events-auto">
+                <WebCreditsChip
+                  creditsRemaining={DEMO_CREDITS.creditsRemaining}
+                  onOpenCredits={() => setCreditsModalOpen(true)}
+                />
+              </div>
+            </div>
           ) : null}
 
-          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <div className={cn("flex min-h-0 min-w-0 flex-1 overflow-hidden", web.canvas)}>
         <WebCreditsUpgradeModal
           open={creditsModalOpen}
           onClose={() => setCreditsModalOpen(false)}
@@ -440,63 +509,51 @@ export function MindAppWeb() {
           }}
         />
 
-        {shellMain && !settingsOpen && activeTab === "agent" ? (
+        {!settingsOpen &&
+        (activeTab === "agent" && (shellMain || currentView.type === "agent-chat")) ? (
           <WebAgentSidebar
-            selectedAgentId={selectedAgentId}
-            recentAgentIds={recentAgentIds}
-            onScrollToAllAgents={() =>
-              document.getElementById("web-all-agents")?.scrollIntoView({ behavior: "smooth", block: "start" })
-            }
-            onSelectAgent={(agent) => {
-              noteAgentUsed(agent)
-              setSelectedThreadId(null)
-              setAgentHistoryDraft(null)
-              if (agent.id === MINDAR_COPILOT_AGENT.id) {
-                if (currentView.type !== "shell") setCurrentView({ type: "shell" })
-              } else {
-                requireAuthThen(() => setCurrentView({ type: "agent-chat", agent }))
-              }
-            }}
+            chatScope={agentSidebarScope}
+            selectedThreadId={selectedThreadId}
+            collapsed={agentSidebarCollapsed}
+            onToggleCollapsed={() => setAgentSidebarCollapsed((v) => !v)}
             onNewChat={() => {
               setSelectedThreadId(null)
               setAgentHistoryDraft("")
-              if (selectedAgentId === MINDAR_COPILOT_AGENT.id) {
-                if (currentView.type !== "shell") setCurrentView({ type: "shell" })
-                toast.message("New chat", { description: "Ready for a fresh thread with Mindar." })
-              } else {
-                const agent = [...MINDAR_DEMO_MY_AGENTS, MINDAR_COPILOT_AGENT].find(
-                  (a) => a.id === selectedAgentId
-                )
-                if (agent) requireAuthThen(() => setCurrentView({ type: "agent-chat", agent }))
-              }
+              requireAuthThen(() => {
+                if (agentSidebarScope.type === "kb") {
+                  navigate(webMindarChatHref({ kb: agentSidebarScope.kbId }))
+                } else if (agentSidebarScope.type === "note") {
+                  navigate(webMindarChatHref({ note: agentSidebarScope.noteId }))
+                } else {
+                  switchTab("agent")
+                }
+                toast.message("New chat", { description: "Fresh thread in this scope (demo)." })
+              })
             }}
-            selectedThreadId={selectedThreadId}
             onSelectThread={(thread) => {
               setSelectedThreadId(thread.id)
-              const agent =
-                thread.agentId === MINDAR_COPILOT_AGENT.id
-                  ? MINDAR_COPILOT_AGENT
-                  : MINDAR_DEMO_MY_AGENTS.find((a) => a.id === thread.agentId)
-              if (!agent) return
-              noteAgentUsed(agent)
-              if (thread.agentId === MINDAR_COPILOT_AGENT.id) {
-                setAgentHistoryDraft(thread.title)
-                if (currentView.type !== "shell") setCurrentView({ type: "shell" })
-              } else {
-                requireAuthThen(() =>
-                  setCurrentView({
-                    type: "agent-chat",
-                    agent,
-                    initialPrompt: thread.title,
-                  })
-                )
-              }
+              setAgentHistoryDraft(thread.title)
+              requireAuthThen(() => {
+                if (thread.scopeKey.startsWith("kb:")) {
+                  const kbId = parseInt(thread.scopeKey.slice(3), 10)
+                  if (!Number.isNaN(kbId)) openKbChat(kbId, thread.title)
+                } else if (thread.scopeKey.startsWith("note:")) {
+                  const noteId = parseInt(thread.scopeKey.slice(5), 10)
+                  if (!Number.isNaN(noteId)) navigate(webMindarChatHref({ note: noteId, q: thread.title }))
+                } else {
+                  openAgentChat(MINDAR_COPILOT_AGENT, thread.title)
+                }
+              })
             }}
-            onDiscoverAgents={() =>
-              toast.message("Agent plaza", { description: "Browse scenario agents (demo)." })
-            }
-            onSearchAgents={() =>
-              toast.message("Search agents", { description: "Find agents by name or topic (demo)." })
+            onOpenScopedChat={(scope) => {
+              requireAuthThen(() => {
+                if (scope.type === "kb") openKbChat(scope.kbId)
+                else if (scope.type === "note") navigate(webMindarChatHref({ note: scope.noteId }))
+                else switchTab("agent")
+              })
+            }}
+            onSearchThreads={() =>
+              toast.message("Search chats", { description: "Find threads by library, note, or title (demo)." })
             }
           />
         ) : null}
@@ -508,7 +565,7 @@ export function MindAppWeb() {
           {shellMain && settingsOpen ? (
             <WebRailSettingsPanel
               embedded
-              onClose={() => setSettingsOpen(false)}
+              onClose={closeSettings}
               fontZoomPercent={fontZoomPercent}
               onFontZoomPercentChange={setFontZoomPercent}
             />
@@ -516,19 +573,45 @@ export function MindAppWeb() {
 
           {shellMain && !settingsOpen && activeTab === "library" && (
             <WebKnowledgeBrowser
+              integratedNav
               selectedKbId={selectedKbId}
               recentKbIds={recentKbIds}
-              onSelectKb={(kb) => setSelectedKbId(kb.id)}
-              onDeselectKb={() => setSelectedKbId(null)}
-              onOpenWorkspace={(kb) => openNotebook(kb)}
+              onSelectKb={(kb) => {
+                if (kb.category === "mine") {
+                  requireAuthThen(() => openNotebookWithRecents(kb))
+                  return
+                }
+                selectLibraryKb(kb.id)
+              }}
+              onDeselectKb={() => selectLibraryKb(null)}
+              onOpenWorkspace={(kb) => requireAuthThen(() => openNotebookWithRecents(kb))}
+              onOpenDocument={(kb, item) =>
+                requireAuthThen(() => {
+                  const doc = hubItemToLibraryDocument(item)
+                  cacheKbDocument(kb.id, doc)
+                  touchRecentKbFromBase(kb)
+                  navigate(webKbHref(kb.id, "doc", { docId: doc.id }))
+                })
+              }
               onBrowsePlaza={() => switchTab("plaza")}
               requireAuthThen={requireAuthThen}
               extraSubscribedKbs={plazaSubscribedKbs}
+              onKbCreated={(kb) => touchRecentKbFromBase(kb)}
+              onLibraryPublished={(kb) =>
+                setUserPublishedPlazaRows((prev) => {
+                  const row = knowledgeBaseToPlazaRow(kb)
+                  return [row, ...prev.filter((r) => r.kbId !== kb.id)]
+                })
+              }
             />
           )}
 
           {shellMain && !settingsOpen && activeTab === "plaza" && (
-            <WebPlazaDiscoverPage onPickRow={openPlazaLibraryFromDiscover} />
+            <WebPlazaDiscoverPage
+              onBrowseLibrary={openPlazaNotebookFromDiscover}
+              onStartThread={openPlazaChatFromDiscover}
+              extraPlazaRows={userPublishedPlazaRows}
+            />
           )}
 
           {shellMain && !settingsOpen && activeTab === "memos" && (
@@ -551,11 +634,7 @@ export function MindAppWeb() {
               onAgentChat={(agent, options) =>
                 requireAuthThen(() => {
                   noteAgentUsed(agent)
-                  setCurrentView({
-                    type: "agent-chat",
-                    agent,
-                    initialPrompt: options?.initialPrompt,
-                  })
+                  openAgentChat(agent, options?.initialPrompt)
                 })
               }
             />
@@ -568,6 +647,30 @@ export function MindAppWeb() {
               fontZoomPercent={fontZoomPercent}
               onFontZoomPercentChange={setFontZoomPercent}
               creditsOpenSignal={creditsOpenSignal}
+              onOpenCreditsPlans={() => requireAuthThen(() => setCreditsModalOpen(true))}
+              onOpenTimeline={() => requireAuthThen(openMeTimeline)}
+              onOpenTimelineDay={(day) =>
+                requireAuthThen(() => openMeTimelineDay(day, "me"))
+              }
+            />
+          )}
+
+          {currentView.type === "me-timeline" && (
+            <WebMeTimelinePage
+              displayName={getMindAccount(activeAccountId).displayName}
+              onBack={goToParent}
+              onOpenDay={(day) => openMeTimelineDay(day, "me-timeline")}
+              onShare={shareTimelineDay}
+            />
+          )}
+
+          {currentView.type === "me-timeline-day" && (
+            <WebMeTimelineDayPage
+              isoDate={currentView.isoDate}
+              activity={currentView.activity}
+              displayName={getMindAccount(activeAccountId).displayName}
+              onBack={goToParent}
+              onShare={shareTimelineDay}
             />
           )}
 
@@ -583,61 +686,77 @@ export function MindAppWeb() {
               initialFactoryModal={currentView.initialFactoryModal}
               initialFocusStudio={currentView.initialFocusStudio}
               onAgentChat={(context) =>
-                requireAuthThen(() =>
-                  setCurrentView({
-                    type: "kb-agent-chat",
-                    context,
-                    kb: currentView.kb,
-                  })
-                )
+                requireAuthThen(() => {
+                  if (currentView.kb.id != null) {
+                    openKbChat(currentView.kb.id, context.initialPrompt)
+                  }
+                })
               }
               plazaAccess={
                 currentView.kb.isPublicKb ? plazaAccessForKb(currentView.kb) : undefined
               }
               onOpenDocumentEditor={(title) => {
-                setEditorReturn(currentView)
-                setCurrentView({ type: "editor", docTitle: title })
+                if (currentView.kb.id == null) return
+                navigate(webKbHref(currentView.kb.id, "content-editor", { docTitle: title }))
+              }}
+              onOpenDocumentReader={(doc) => {
+                if (currentView.kb.id == null) return
+                cacheKbDocument(currentView.kb.id, doc)
+                navigate(webKbHref(currentView.kb.id, "doc", { docId: doc.id }))
+              }}
+              onOpenRichTextEditor={() => {
+                if (currentView.kb.id == null) return
+                navigate(webKbHref(currentView.kb.id, "rich-editor"))
               }}
             />
           )}
 
-          {currentView.type === "agent-chat" && (
-            <WebAgentWorkspace
-              agent={currentView.agent}
-              initialPrompt={currentView.initialPrompt}
-              onBack={() => {
-                noteAgentUsed(currentView.agent)
-                setCurrentView({ type: "shell" })
-                setActiveTab("agent")
+          {currentView.type === "kb-rich-editor" && (
+            <WebKbRichTextEditorPage
+              kb={currentView.kb}
+              onBack={goToParent}
+              requireAuthThen={requireAuthThen}
+              onSave={() => {
+                toast.success("Note saved", { description: "Added to library sources (demo)." })
+              }}
+            />
+          )}
+
+          {currentView.type === "kb-document" && (
+            <WebKbDocumentReaderPage
+              kb={currentView.kb}
+              document={currentView.document}
+              onBack={goToParent}
+              onOpenLibrary={() => {
+                if (currentView.kb.id == null) return
+                navigate(
+                  webKbHref(currentView.kb.id, "detail", {
+                    initialOpenContentId: currentView.document.id,
+                  })
+                )
+              }}
+              onOpenAgentChat={() => {
+                if (currentView.kb.id == null) return
+                requireAuthThen(() =>
+                  openKbChat(
+                    currentView.kb.id!,
+                    `Help me understand “${currentView.document.title}”.`
+                  )
+                )
               }}
               requireAuthThen={requireAuthThen}
             />
           )}
 
-          {currentView.type === "kb-agent-chat" && (
+          {currentView.type === "agent-chat" && (
             <WebAgentWorkspace
-              agent={agentFromPublicKbSettings(currentView.kb.publicSettings, currentView.kb.name)}
-              libraryAssistant={libraryAssistantChatMeta(
-                currentView.kb.publicSettings,
-                currentView.kb.name
-              )}
-              librarySuggestions={getKbAgentSuggestions({
-                name: currentView.kb.name,
-                description: currentView.kb.description,
-                category: currentView.kb.category,
-                coverVariant: currentView.kb.coverVariant,
-                isPublicKb: currentView.kb.isPublicKb,
-                exampleQuestions: currentView.kb.publicSettings?.exampleQuestions,
-              })}
-              scopedLibraryName={currentView.kb.name}
-              initialPrompt={currentView.context.initialPrompt}
-              onBack={() =>
-                setCurrentView({
-                  type: "notebook",
-                  kb: currentView.kb,
-                  initialOpenContentId: currentView.context.contentDocId,
-                })
-              }
+              chatScope={currentView.chatScope}
+              kbContext={currentView.chatScope.type === "kb" ? currentView.kbContext : undefined}
+              initialPrompt={currentView.initialPrompt}
+              onBack={() => {
+                noteAgentUsed(MINDAR_COPILOT_AGENT)
+                goToParent()
+              }}
               requireAuthThen={requireAuthThen}
             />
           )}
@@ -645,12 +764,13 @@ export function MindAppWeb() {
           {currentView.type === "editor" && (
             <WebDocumentEditorPage
               title={currentView.docTitle}
-              onBack={() => setCurrentView(editorReturn ?? { type: "shell" })}
+              onBack={goToParent}
             />
           )}
         </main>
           </div>
         </div>
+        </WebWorkspaceChromeProvider>
 
         {authOverlayOpen ? (
           <div
@@ -662,6 +782,26 @@ export function MindAppWeb() {
               embedded
               onAuthenticated={handleAuthenticated}
               onDismiss={handleDismissAuthOverlay}
+            />
+          </div>
+        ) : null}
+
+        <MindShareSheet
+          open={timelineShareSheet != null}
+          payload={timelineShareSheet}
+          onClose={() => setTimelineShareSheet(null)}
+        />
+
+        {onboardingOpen ? (
+          <div
+            className="fixed inset-0 z-[210] flex min-h-0 flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Library recommendations"
+          >
+            <WebLibraryOnboarding
+              onComplete={completeLibraryOnboarding}
+              onSkip={skipLibraryOnboarding}
             />
           </div>
         ) : null}

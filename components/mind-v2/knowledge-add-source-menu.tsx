@@ -9,7 +9,7 @@ import {
   Lightbulb,
   Link2,
   Mic,
-  Upload,
+  FilePlus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -50,14 +50,14 @@ const LABELS = {
 
 type RowDef = {
   id: KnowledgeAddSourceAction | "notes"
-  icon: typeof Upload
+  icon: typeof FilePlus
   labelKey: keyof (typeof LABELS)["zh"]
   hasSubmenu?: boolean
   separatorBefore?: boolean
 }
 
 const ROWS: RowDef[] = [
-  { id: "local-file", icon: Upload, labelKey: "localFile" },
+  { id: "local-file", icon: FilePlus, labelKey: "localFile" },
   { id: "local-folder", icon: FolderInput, labelKey: "localFolder" },
   { id: "personal-kb", icon: Lightbulb, labelKey: "personalKb" },
   { id: "web-link", icon: Link2, labelKey: "webLink" },

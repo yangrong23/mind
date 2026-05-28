@@ -16,7 +16,7 @@ export function webNavListItem(active: boolean, opts?: NavItemOpts) {
   )
 }
 
-/** Left icon rail — Library / Square / Agent */
+/** Left icon rail — 广场 / Library / Mindar */
 export function webIconRailTab(active: boolean, className?: string) {
   return cn(
     web.railTabBase,

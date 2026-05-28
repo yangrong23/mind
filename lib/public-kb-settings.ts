@@ -20,6 +20,8 @@ export type PublicKbSettings = {
   displayName: string
   /** One-line scenario for plaza cards and detail */
   tagline: string
+  /** What belongs in this library — scope for the bound agent */
+  topicScope: string
   /** 3–4 short capability tags */
   capabilities: string[]
   skills: PublicKbAgentSkill[]
@@ -40,6 +42,7 @@ export const DEFAULT_PUBLIC_KB_SETTINGS: PublicKbSettings = {
   boundAgentName: "",
   displayName: "",
   tagline: "",
+  topicScope: "",
   capabilities: [],
   skills: [],
   exampleQuestions: [],
@@ -188,6 +191,7 @@ export function normalizePublicKbSettings(
     displayName,
     boundAgentName: partial.boundAgentName?.trim() || displayName,
     tagline: partial.tagline?.trim() ?? "",
+    topicScope: partial.topicScope?.trim() ?? "",
     capabilities: partial.capabilities ?? [],
     skills: partial.skills ?? [],
     exampleQuestions: (partial.exampleQuestions ?? []).map((q) => q.trim()).filter(Boolean),
@@ -196,16 +200,52 @@ export function normalizePublicKbSettings(
   }
 }
 
-export function validatePublicKbSettings(settings: PublicKbSettings): string | null {
-  if (!settings.isPublic) return null
-  if (settings.boundAgentId == null) return "Select an agent to bind."
-  if (!publicAgentDisplayName(settings)) return "Add a public assistant name."
-  if (!settings.tagline.trim()) return "Add a one-line tagline."
-  if (settings.capabilities.filter(Boolean).length < 1) return "Add at least one capability tag."
-  if (settings.skills.length < 1 && settings.capabilities.length < 2)
-    return "Add at least one skill or two capability tags."
-  if (settings.exampleQuestions.length < 2) return "Add at least two example questions."
+/** Required for every library — powers workspace Q&A even when not published. */
+export function validateLibraryAgentCore(settings: PublicKbSettings): string | null {
+  if (!publicAgentDisplayName(settings)) return "Add a library display name for plaza and chat context."
+  if (!settings.tagline.trim()) return "Add a one-line tagline for this library assistant."
+  if (!settings.topicScope.trim()) return "Describe what sources belong in this library."
+  if (settings.skills.length < 1) return "Add at least one agent skill."
+  if (settings.exampleQuestions.filter((q) => q.trim()).length < 2)
+    return "Add at least two conversation starters."
   if (settings.groundingMode === "library-only" && !settings.disclaimer.trim())
     return "Add a disclaimer for library-only grounding."
   return null
+}
+
+export function validatePublicKbSettings(settings: PublicKbSettings): string | null {
+  const core = validateLibraryAgentCore(settings)
+  if (core) return core
+  if (!settings.isPublic) return null
+  if (settings.capabilities.filter(Boolean).length < 1) return "Add at least one capability tag for the plaza."
+  if (settings.skills.length < 1 && settings.capabilities.length < 2)
+    return "Add at least one skill or two capability tags."
+  return null
+}
+
+export function defaultAgentSettingsForCreate(
+  _agents: { id: number; name: string }[] = []
+): PublicKbSettings {
+  return normalizePublicKbSettings({
+    isPublic: false,
+    boundAgentId: null,
+    boundAgentName: "",
+    displayName: "",
+    tagline: "",
+    topicScope: "",
+    capabilities: ["Cited answers"],
+    skills: [
+      {
+        id: newPublicKbSkillId(),
+        label: "Summarize sources",
+        instruction:
+          "Answer from uploaded sources only; lead with a tight summary and cite filenames.",
+      },
+    ],
+    exampleQuestions: ["", ""],
+    groundingMode: "library-only",
+    disclaimer: PUBLIC_KB_DISCLAIMER_PRESETS[0]?.text ?? "",
+    shareFactoryOutputsWithEveryone: true,
+    updateCadence: "weekly",
+  })
 }

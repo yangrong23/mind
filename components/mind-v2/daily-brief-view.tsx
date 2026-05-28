@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, CornerDownLeft, ExternalLink, Mail } from "lucide-react"
+import { Calendar, CornerDownLeft, ExternalLink, FileText, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { DailyBriefAction, DailyBriefContent } from "@/lib/daily-brief-content"
 
@@ -82,9 +82,9 @@ export function DailyBriefView({
                         type="button"
                         onClick={() => onAction?.(action.id, item.id)}
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-white px-3 py-1.5",
-                          "text-[12px] font-medium text-zinc-700 transition-colors hover:bg-stone-50",
-                          "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                          "inline-flex items-center gap-1.5 rounded-xl bg-mind/[0.06] px-3.5 py-2",
+                          "text-[13px] font-semibold text-mind transition-colors hover:bg-mind/10",
+                          "dark:bg-mind/12 dark:hover:bg-mind/16"
                         )}
                       >
                         <BriefActionIcon kind={action.kind} />
@@ -99,6 +99,38 @@ export function DailyBriefView({
         </section>
       ))}
 
+      {content.sourceFiles && content.sourceFiles.length > 0 ? (
+        <section
+          aria-label="Files for this period"
+          className="rounded-2xl border border-stone-200/90 bg-stone-50/60 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-900/40"
+        >
+          <h3 className="flex items-center gap-2 text-[14px] font-semibold text-zinc-800 dark:text-zinc-100">
+            <FileText className="h-4 w-4 text-zinc-500" strokeWidth={2} aria-hidden />
+            Files from this period
+          </h3>
+          <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
+            Sources you captured or edited — open from your library or device log.
+          </p>
+          <ul className="mt-3 divide-y divide-stone-200/80 dark:divide-zinc-800">
+            {content.sourceFiles.map((file) => (
+              <li key={file.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-black/[0.05] dark:bg-zinc-950 dark:ring-white/10">
+                  <FileText className="h-3.5 w-3.5 text-zinc-500" strokeWidth={2} aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-medium leading-snug text-zinc-800 dark:text-zinc-100">
+                    {file.title}
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">
+                    {[file.time, file.source].filter(Boolean).join(" · ") || "Capture"}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {content.suggestedPrompts.length > 0 ? (
         <section aria-label="Suggested follow-ups">
           <p className="mb-3 text-[13px] font-medium text-zinc-500 dark:text-zinc-400">
@@ -111,10 +143,11 @@ export function DailyBriefView({
                 type="button"
                 onClick={() => onSuggestedPrompt?.(prompt)}
                 className={cn(
-                  "flex min-h-[44px] flex-1 items-center justify-between gap-3 rounded-2xl border border-stone-200/90",
-                  "bg-stone-50/80 px-4 py-3 text-left text-[14px] font-medium leading-snug text-zinc-800",
-                  "transition-colors hover:border-stone-300 hover:bg-white",
-                  "dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-100 dark:hover:border-zinc-600"
+                  "flex min-h-[44px] flex-1 items-center justify-between gap-3 rounded-xl",
+                  "bg-white/80 px-4 py-3 text-left text-[14px] font-medium leading-snug text-zinc-800",
+                  "shadow-[0_2px_10px_-6px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.05]",
+                  "transition-[box-shadow,background-color] hover:bg-white hover:shadow-[0_4px_14px_-8px_rgba(15,23,42,0.1)]",
+                  "dark:bg-zinc-900/60 dark:text-zinc-100 dark:ring-white/10"
                 )}
               >
                 <span className="min-w-0 flex-1">{prompt}</span>

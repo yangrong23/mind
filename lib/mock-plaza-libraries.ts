@@ -6,6 +6,7 @@ import {
   plazaCapabilitySummary,
   publicAgentDisplayName,
 } from "@/lib/public-kb-settings"
+import { engagementMetricsForKb, formatEngagementCount } from "@/lib/plaza-kb-engagement"
 
 function plazaCoverVariant(categories: PlazaCategoryId[]): LibraryCoverVariant {
   if (categories.includes("education")) return "education"
@@ -61,6 +62,8 @@ export type PlazaLibraryRow = {
   lastUpdate?: string
   color: string
   viewCount?: number
+  likeCount?: number
+  commentCount?: number
   publicTagline?: string
   /** Capability tags for plaza card one-liner */
   assistantCapabilities?: string[]
@@ -285,8 +288,21 @@ export function formatPlazaContent(n: number): string {
   return `${n.toLocaleString("en-US")} items`
 }
 
+export function plazaRowEngagement(row: PlazaLibraryRow) {
+  return engagementMetricsForKb(row.kbId, row.subscriberCount, {
+    likeCount: row.likeCount,
+    commentCount: row.commentCount,
+  })
+}
+
+export function formatPlazaEngagementLine(row: PlazaLibraryRow): string {
+  const { likeCount, commentCount } = plazaRowEngagement(row)
+  return `${formatPlazaSubscriber(row.subscriberCount)} · ${formatEngagementCount(likeCount)} likes · ${formatEngagementCount(commentCount)} comments`
+}
+
 export function plazaRowToKnowledgeBase(row: PlazaLibraryRow): KnowledgeBase {
   const publicSettings = publicSettingsForPlazaRow(row)
+  const engagement = plazaRowEngagement(row)
   return {
     id: row.kbId,
     name: row.title,
@@ -296,6 +312,8 @@ export function plazaRowToKnowledgeBase(row: PlazaLibraryRow): KnowledgeBase {
     lastUpdate: row.lastUpdate ?? "Recently",
     color: row.color,
     subscribers: row.subscriberCount,
+    likeCount: engagement.likeCount,
+    commentCount: engagement.commentCount,
     viewCount: row.viewCount,
     publicTagline: publicSettings.tagline || row.publicTagline,
     publisherName: row.authorHandle.replace(/^@/, ""),
@@ -316,4 +334,36 @@ export function plazaRowCardSummary(row: PlazaLibraryRow): string {
 
 export function plazaRowAgentLabel(row: PlazaLibraryRow): string {
   return publicAgentDisplayName(publicSettingsForPlazaRow(row))
+}
+
+/** User-published library from create wizard → discover plaza row */
+export function knowledgeBaseToPlazaRow(kb: KnowledgeBase): PlazaLibraryRow {
+  const pub = kb.publicSettings
+  const caps = pub?.capabilities?.filter(Boolean) ?? []
+  const categories: PlazaCategoryId[] = ["recommended"]
+  const text = `${kb.name} ${kb.description}`.toLowerCase()
+  if (/patent|legal|law/.test(text)) categories.push("law")
+  else if (/health|clinical/.test(text)) categories.push("health")
+  else if (/study|exam|course/.test(text)) categories.push("education")
+  else if (/finance|invest/.test(text)) categories.push("finance")
+  else categories.push("tech")
+
+  return {
+    kbId: kb.id,
+    title: kb.name,
+    description: kb.description,
+    coverVariant: kb.coverVariant,
+    subscriberCount: kb.subscribers ?? 0,
+    contentCount: kb.count,
+    authorHandle: `@${(kb.publisherName ?? "You").replace(/\s+/g, "")}`,
+    verified: false,
+    plazaCategories: categories,
+    featured: false,
+    lastUpdate: "Just now",
+    color: kb.color,
+    viewCount: kb.viewCount ?? 0,
+    publicTagline: kb.publicTagline ?? pub?.tagline,
+    assistantCapabilities: caps.length > 0 ? caps : undefined,
+    freshnessLabel: "Published just now",
+  }
 }

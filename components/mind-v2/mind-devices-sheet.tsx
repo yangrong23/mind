@@ -137,7 +137,7 @@ export function MindDevicesSheet({
                     description: "Recordings and metadata upload to this library (demo).",
                   })
                 }}
-                className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")}
+                className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white", "mind-btn rounded-lg")}
               >
                 <RefreshCw className="h-5 w-5" />
                 Sync now
@@ -154,7 +154,7 @@ export function MindDevicesSheet({
             <button
               type="button"
               onClick={() => onSetDeviceConnected(true)}
-              className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")}
+              className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white", "mind-btn rounded-lg")}
             >
               <Bluetooth className="h-5 w-5" />
               Search & connect

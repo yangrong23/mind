@@ -6,13 +6,12 @@ import { ChevronLeft, RefreshCw, User, Check } from "lucide-react"
 import { toast } from "sonner"
 import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import type { KnowledgeBase } from "@/lib/mock-knowledge-bases"
-import { PlazaLibraryCover } from "@/components/mind-v2/plaza-library-cover"
+import { PlazaDiscoverThumbnail } from "@/components/mind-v2/plaza-discover-thumbnail"
 import {
   MOCK_PLAZA_LIBRARIES,
   PLAZA_CATEGORY_TABS,
   formatPlazaContent,
   formatPlazaSubscriber,
-  plazaRowAgentLabel,
   plazaRowToKnowledgeBase,
   type PlazaCategoryId,
   type PlazaLibraryRow,
@@ -52,32 +51,34 @@ function PlazaCard({
   row: PlazaLibraryRow
   onPick: () => void
 }) {
-  const leftMeta = `${formatPlazaSubscriber(row.subscriberCount)} | ${formatPlazaContent(row.contentCount)} | `
   return (
     <button
       type="button"
       onClick={onPick}
-      className="w-full py-3 text-left transition-colors hover:bg-black/[0.025] active:scale-[0.99] dark:hover:bg-white/[0.04]"
+      className="w-full py-2.5 text-left transition-colors hover:bg-black/[0.025] active:scale-[0.99] dark:hover:bg-white/[0.04]"
     >
       <div className="flex gap-3">
-        <div
-          className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl shadow-sm ring-1 ring-black/[0.05]"
-        >
-          <PlazaLibraryCover title={row.title} kbId={row.kbId} size="md" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">{row.title}</h3>
-          <p className="mt-0.5 text-[11px] font-medium text-teal-700 dark:text-teal-400">
-            With {plazaRowAgentLabel(row)}
+        <PlazaDiscoverThumbnail row={row} size="list" />
+        <div className="min-w-0 flex-1 py-0.5">
+          <h3 className="line-clamp-1 text-[15px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+            {row.title}
+          </h3>
+          <p className="mt-1 line-clamp-2 text-[13px] leading-[1.45] text-zinc-500 dark:text-zinc-400">
+            {row.description}
           </p>
-          <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">{row.description}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-1 text-[11px] leading-tight text-zinc-400 dark:text-zinc-500">
-            <span className="shrink-0">{leftMeta}</span>
-            <span className="inline-flex min-w-0 items-center gap-0.5 break-all">
-              {row.authorHandle}
-              {row.verified && row.verifyTone ? <VerifiedDot tone={row.verifyTone} /> : null}
+          <p className="mt-2 min-w-0 text-[12px] text-zinc-400 dark:text-zinc-500">
+            <span className="flex min-w-0 items-center gap-x-1.5 overflow-hidden whitespace-nowrap">
+              <span className="inline-flex min-w-0 items-center gap-0.5 truncate font-medium text-zinc-500 dark:text-zinc-400">
+                {row.authorHandle}
+                {row.verified ? <VerifiedDot tone={row.verifyTone ?? "gold"} /> : null}
+              </span>
+              <span className="shrink-0 text-zinc-300 dark:text-zinc-600" aria-hidden>
+                ·
+              </span>
+              <span className="shrink-0 tabular-nums">{formatPlazaSubscriber(row.subscriberCount)}</span>
             </span>
-          </div>
+            <span className="mt-0.5 block truncate">{formatPlazaContent(row.contentCount)}</span>
+          </p>
         </div>
       </div>
     </button>

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { cn } from "@/lib/utils"
 import { web } from "@/components/mind-v2/web-design"
-import { AtSign, AudioLines, CirclePlus, Crop } from "lucide-react"
+import { AtSign, AudioLines, CirclePlus, Crop, Send } from "lucide-react"
+import { KbUploadFileIcon } from "@/components/mind-v2/kb-upload-file-icon"
 
 export type MindChatComposerProps = {
   value: string
@@ -27,7 +28,11 @@ export type MindChatComposerProps = {
   onScreenshotClick?: () => void
   showAtButton?: boolean
   showVoiceButton?: boolean
+  /** Circular send control (defaults on when voice is off). */
+  showSendButton?: boolean
   showUploadButton?: boolean
+  /** `kb-file` = document + plus (library upload); default = circle plus. */
+  uploadIconStyle?: "default" | "kb-file"
   showScreenshotButton?: boolean
   /** Optional leading toolbar slot (e.g. library-grounded Ask). */
   toolbarLead?: ReactNode
@@ -63,7 +68,9 @@ export function MindChatComposer({
   onScreenshotClick,
   showAtButton = true,
   showVoiceButton = true,
+  showSendButton,
   showUploadButton = true,
+  uploadIconStyle = "default",
   showScreenshotButton = false,
   toolbarLead,
   factoryToolbar,
@@ -71,6 +78,8 @@ export function MindChatComposer({
   showToolbar = true,
   ariaLabel = "Message",
 }: MindChatComposerProps) {
+  const sendEnabled = showSendButton ?? !showVoiceButton
+  const canSend = value.trim().length > 0
   const embeddedFactory = Boolean(factoryToolbar)
   const internalRef = useRef<HTMLDivElement>(null)
   const shellRef = shellRefProp ?? internalRef
@@ -96,20 +105,6 @@ export function MindChatComposer({
 
   const attachControls = (
     <>
-      {showUploadButton ? (
-        <button
-          type="button"
-          className={web.composerToolBtn}
-          aria-label="Upload file"
-          onClick={() => {
-            closeMenus()
-            onUploadClick?.()
-          }}
-        >
-          <CirclePlus className="h-4 w-4" strokeWidth={2} aria-hidden />
-        </button>
-      ) : null}
-
       {showAtButton ? (
         <span className="relative inline-flex">
           {atMenuOpen && atMenu ? (
@@ -132,6 +127,24 @@ export function MindChatComposer({
             <AtSign className="h-4 w-4" strokeWidth={2} aria-hidden />
           </button>
         </span>
+      ) : null}
+
+      {showUploadButton ? (
+        <button
+          type="button"
+          className={web.composerToolBtn}
+          aria-label="Upload file"
+          onClick={() => {
+            closeMenus()
+            onUploadClick?.()
+          }}
+        >
+          {uploadIconStyle === "kb-file" ? (
+            <KbUploadFileIcon className="h-4 w-4" strokeWidth={2} />
+          ) : (
+            <CirclePlus className="h-4 w-4" strokeWidth={2} aria-hidden />
+          )}
+        </button>
       ) : null}
 
       {showScreenshotButton ? (
@@ -158,6 +171,7 @@ export function MindChatComposer({
       showUploadButton ||
       showScreenshotButton ||
       showVoiceButton ||
+      sendEnabled ||
       toolbarLead) ? (
       <div
         className={cn(
@@ -181,31 +195,52 @@ export function MindChatComposer({
           </>
         ) : null}
 
-        {showVoiceButton ? (
-          <div className="ml-auto flex shrink-0 items-center">
-            <button
-              type="button"
-              aria-pressed={voiceOn}
-              aria-label={voiceOn ? "Stop voice input" : "Voice input"}
-              onClick={() => {
-                closeMenus()
-                onVoiceToggle?.()
-              }}
-              className={cn(web.composerToolBtn, voiceOn && web.composerToolBtnActive)}
-            >
-              <AudioLines
+        {sendEnabled || showVoiceButton ? (
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {sendEnabled ? (
+              <button
+                type="button"
+                aria-label="Send message"
+                disabled={!canSend}
+                onClick={() => {
+                  closeMenus()
+                  if (canSend) onSubmit()
+                }}
                 className={cn(
-                  "h-4 w-4 transition-[fill,color] duration-200",
-                  voiceOn ? "text-mind" : "text-zinc-500 dark:text-zinc-400"
+                  "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200",
+                  canSend
+                    ? "bg-zinc-900 text-white shadow-sm hover:bg-zinc-800"
+                    : "bg-zinc-100 text-zinc-400"
                 )}
-                fill={voiceOn ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeWidth={voiceOn ? 0 : 2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              />
-            </button>
+              >
+                <Send className="h-4 w-4" strokeWidth={2} aria-hidden />
+              </button>
+            ) : null}
+            {showVoiceButton ? (
+              <button
+                type="button"
+                aria-pressed={voiceOn}
+                aria-label={voiceOn ? "Stop voice input" : "Voice input"}
+                onClick={() => {
+                  closeMenus()
+                  onVoiceToggle?.()
+                }}
+                className={cn(web.composerToolBtn, voiceOn && web.composerToolBtnActive)}
+              >
+                <AudioLines
+                  className={cn(
+                    "h-4 w-4 transition-[fill,color] duration-200",
+                    voiceOn ? "text-mind" : "text-zinc-500 dark:text-zinc-400"
+                  )}
+                  fill={voiceOn ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth={voiceOn ? 0 : 2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                />
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>

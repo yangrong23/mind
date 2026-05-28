@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { web } from "@/components/mind-v2/web-design"
 import { webNavMotion } from "@/components/mind-v2/web-nav-motion"
 import { AgentExamplePromptRail } from "@/components/mind-v2/agent-example-prompt-rail"
 import { AgentHomeComposerStack } from "@/components/mind-v2/agent-home-composer-stack"
@@ -58,15 +59,15 @@ export function WebAgentCopilotPage({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-gradient-to-b from-sky-50/35 via-[#fafafa] to-[#fafafa]",
+        "flex h-full min-h-0 flex-col overflow-y-auto overscroll-y-contain bg-transparent",
         webNavMotion.contentEnter
       )}
     >
-      <section aria-label="Agent home" className="shrink-0 px-6 pb-8 pt-6 sm:pt-8">
+      <section aria-label="Agent home" className="shrink-0 px-6 pb-8 pt-14 sm:pt-16 lg:pt-[4.5rem]">
         <div className="mx-auto flex w-full max-w-2xl flex-col items-center text-center">
-          <div className="flex flex-col items-center px-2 pb-8 pt-2">
-            <MindarLogo height={40} priority className="max-w-[7.5rem]" />
-            <h2 className="mt-4 text-center text-[22px] font-semibold tracking-tight text-zinc-800 sm:text-[26px]">
+          <div className="flex flex-col items-center px-2 pb-10 pt-6 sm:pt-8">
+            <MindarLogo height={52} priority className="max-w-[9.5rem]" />
+            <h2 className="mt-5 text-center text-[22px] font-semibold tracking-tight text-zinc-800 sm:text-[26px]">
               What can I help you with?
             </h2>
             <AgentExamplePromptRail
@@ -77,7 +78,7 @@ export function WebAgentCopilotPage({
             />
           </div>
 
-          <div className="w-full shrink-0 text-left">
+          <div className="mt-2 w-full shrink-0 text-left sm:mt-4">
             <AgentHomeComposerStack
               factoryPlacement="inside"
               selectedFactoryId={selectedFactory}
@@ -108,6 +109,15 @@ export function WebAgentCopilotPage({
                         })
                       }
                     />
+                  }
+                  showVoiceButton={false}
+                  showScreenshotButton
+                  onScreenshotClick={() =>
+                    runWithAuth(() =>
+                      toast.message("Screenshot", {
+                        description: "Capture a region and attach to the chat (demo).",
+                      })
+                    )
                   }
                   onUploadClick={() =>
                     runWithAuth(() =>

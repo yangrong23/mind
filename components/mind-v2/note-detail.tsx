@@ -1560,7 +1560,7 @@ export function NoteDetail({
               className={cn(
                 "w-full rounded-xl py-4 text-base font-medium transition-colors",
                 selectedTemplate
-                  ? cn("text-white", "rounded-lg bg-mind text-white hover:bg-[#4534b3] active:bg-[#3a2a99] shadow-sm shadow-[rgba(86,69,212,0.25)]")
+                  ? cn("text-white", "mind-btn rounded-lg")
                   : "bg-stone-200 text-zinc-400"
               )}
             >

@@ -81,7 +81,7 @@ export function WebGradientButton({
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[14px] font-semibold transition-all",
         variant === "primary" &&
-          "bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md shadow-teal-500/25 hover:shadow-lg hover:brightness-105",
+          "bg-gradient-to-r from-mind via-[color-mix(in_oklch,var(--mind-blue)_88%,#2dd4bf)] to-[color-mix(in_oklch,var(--mind-blue)_75%,#38bdf8)] text-white shadow-[0_8px_24px_-8px_color-mix(in_oklch,var(--mind-blue)_40%,transparent)] hover:brightness-[1.03]",
         variant === "outline" &&
           "border border-stone-200 bg-white text-zinc-700 hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
         className

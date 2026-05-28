@@ -29,148 +29,99 @@ export type FactoryToneClasses = {
   filledOptionBg: string
   filledShadow: string
   filledShadowHover: string
+  filledBorder: string
 }
 
 const FACTORY_FIELD_FOCUS =
   "focus:border-mind/30 focus:outline-none focus:ring-1 focus:ring-mind/20" as const
 
-const FACTORY_TONE_REPORT: FactoryToneClasses = {
-  well: "bg-sky-500/12 dark:bg-sky-500/18",
-  icon: "text-sky-600 dark:text-sky-400",
-  sparkle: "text-sky-500 dark:text-sky-400",
-  pillOn:
-    "border-stone-200/40 bg-sky-500/10 text-sky-800 dark:border-zinc-700/35 dark:bg-sky-500/15 dark:text-sky-300",
-  cardOn: "bg-sky-500/12 dark:bg-sky-500/18",
-  check: "text-sky-600 dark:text-sky-400",
-  styleCardOn: "bg-sky-500/12 dark:bg-sky-500/18",
-  fieldFocus: FACTORY_FIELD_FOCUS,
-  softHover:
-    "hover:border-stone-200/40 hover:bg-sky-500/8 dark:hover:border-stone-200/55 dark:hover:bg-sky-500/12",
-  filledShell: "bg-sky-100/40 dark:bg-sky-950/88",
-  filledShellHover: "group-hover:bg-sky-100/48 dark:group-hover:bg-sky-950/92",
-  filledOverlay: "",
-  filledOverlayHover: "",
-  filledCornerGlow: "",
-  filledIconRing: "ring-sky-200/50 dark:ring-sky-800/45",
-  filledOptionBg: "bg-sky-100/40 dark:bg-sky-950/88",
-  filledShadow: "shadow-[0_2px_10px_-6px_rgba(56,189,248,0.08)]",
-  filledShadowHover: "hover:shadow-[0_4px_16px_-6px_rgba(56,189,248,0.11)]",
+const STUDIO_NEUTRAL_SHADOW =
+  "shadow-[0_2px_10px_-6px_rgba(15,23,42,0.06)]" as const
+const STUDIO_NEUTRAL_SHADOW_HOVER =
+  "hover:shadow-[0_4px_14px_-6px_rgba(15,23,42,0.09)]" as const
+
+/** KB Studio — near canvas bg, same cool-gray family, slightly deeper per tile. */
+function studioKbTone({
+  shell,
+  shellHover,
+  well,
+  border = "border-stone-200/60 dark:border-zinc-600/38",
+  ring = "ring-stone-200/55 dark:ring-zinc-600/35",
+}: {
+  shell: string
+  shellHover: string
+  well: string
+  border?: string
+  ring?: string
+}): FactoryToneClasses {
+  return {
+    well,
+    icon: "text-zinc-600 dark:text-zinc-300",
+    sparkle: "text-zinc-500 dark:text-zinc-400",
+    pillOn:
+      "border-stone-200/55 bg-stone-100/85 text-zinc-700 dark:border-zinc-600/45 dark:bg-zinc-800/55 dark:text-zinc-200",
+    cardOn: "bg-stone-100/80 dark:bg-zinc-800/50",
+    check: "text-zinc-600 dark:text-zinc-300",
+    styleCardOn: "bg-stone-100/80 dark:bg-zinc-800/50",
+    fieldFocus: FACTORY_FIELD_FOCUS,
+    softHover:
+      "hover:border-stone-200/55 hover:bg-stone-100/90 dark:hover:border-zinc-600/40 dark:hover:bg-zinc-800/58",
+    filledShell: shell,
+    filledShellHover: shellHover,
+    filledOverlay: "",
+    filledOverlayHover: "",
+    filledCornerGlow: "",
+    filledIconRing: ring,
+    filledOptionBg: shell,
+    filledShadow: STUDIO_NEUTRAL_SHADOW,
+    filledShadowHover: STUDIO_NEUTRAL_SHADOW_HOVER,
+    filledBorder: border,
+  }
 }
 
-const FACTORY_TONE_AUDIO: FactoryToneClasses = {
-  well: "bg-cyan-500/12 dark:bg-cyan-500/18",
-  icon: "text-cyan-600 dark:text-cyan-400",
-  sparkle: "text-cyan-500 dark:text-cyan-400",
-  pillOn:
-    "border-stone-200/40 bg-cyan-500/10 text-cyan-800 dark:border-zinc-700/35 dark:bg-cyan-500/15 dark:text-cyan-300",
-  cardOn: "bg-cyan-500/12 dark:bg-cyan-500/18",
-  check: "text-cyan-600 dark:text-cyan-400",
-  styleCardOn: "bg-cyan-500/12 dark:bg-cyan-500/18",
-  fieldFocus: FACTORY_FIELD_FOCUS,
-  softHover:
-    "hover:border-stone-200/40 hover:bg-cyan-500/8 dark:hover:border-stone-200/55 dark:hover:bg-cyan-500/12",
-  filledShell: "bg-cyan-100/40 dark:bg-cyan-950/88",
-  filledShellHover: "group-hover:bg-cyan-100/48 dark:group-hover:bg-cyan-950/92",
-  filledOverlay: "",
-  filledOverlayHover: "",
-  filledCornerGlow: "",
-  filledIconRing: "ring-cyan-200/50 dark:ring-cyan-800/45",
-  filledOptionBg: "bg-cyan-100/40 dark:bg-cyan-950/88",
-  filledShadow: "shadow-[0_2px_10px_-6px_rgba(34,211,238,0.08)]",
-  filledShadowHover: "hover:shadow-[0_4px_16px_-6px_rgba(34,211,238,0.11)]",
-}
+const FACTORY_TONE_REPORT = studioKbTone({
+  shell: "bg-stone-100/95 dark:bg-zinc-800/52",
+  shellHover: "group-hover:bg-stone-200/50 dark:group-hover:bg-zinc-800/60",
+  well: "bg-stone-200/40 dark:bg-zinc-700/42",
+})
 
-const FACTORY_TONE_FLASHCARDS: FactoryToneClasses = {
-  well: "bg-blue-500/12 dark:bg-blue-500/18",
-  icon: "text-blue-600 dark:text-blue-400",
-  sparkle: "text-blue-500 dark:text-blue-400",
-  pillOn:
-    "border-stone-200/40 bg-blue-500/10 text-blue-800 dark:border-zinc-700/35 dark:bg-blue-500/15 dark:text-blue-300",
-  cardOn: "bg-blue-500/12 dark:bg-blue-500/18",
-  check: "text-blue-600 dark:text-blue-400",
-  styleCardOn: "bg-blue-500/12 dark:bg-blue-500/18",
-  fieldFocus: FACTORY_FIELD_FOCUS,
-  softHover:
-    "hover:border-stone-200/40 hover:bg-blue-500/8 dark:hover:border-stone-200/55 dark:hover:bg-blue-500/12",
-  filledShell: "bg-blue-100/40 dark:bg-blue-950/88",
-  filledShellHover: "group-hover:bg-blue-100/48 dark:group-hover:bg-blue-950/92",
-  filledOverlay: "",
-  filledOverlayHover: "",
-  filledCornerGlow: "",
-  filledIconRing: "ring-blue-200/50 dark:ring-blue-800/45",
-  filledOptionBg: "bg-blue-100/40 dark:bg-blue-950/88",
-  filledShadow: "shadow-[0_2px_10px_-6px_rgba(59,130,246,0.08)]",
-  filledShadowHover: "hover:shadow-[0_4px_16px_-6px_rgba(59,130,246,0.11)]",
-}
+const FACTORY_TONE_AUDIO = studioKbTone({
+  shell: "bg-slate-100/95 dark:bg-zinc-800/52",
+  shellHover: "group-hover:bg-slate-200/48 dark:group-hover:bg-zinc-800/60",
+  well: "bg-slate-200/38 dark:bg-zinc-700/42",
+  border: "border-slate-200/55 dark:border-zinc-600/38",
+  ring: "ring-slate-200/50 dark:ring-zinc-600/35",
+})
 
-const FACTORY_TONE_QUIZ: FactoryToneClasses = {
-  well: "bg-teal-500/12 dark:bg-teal-500/18",
-  icon: "text-teal-600 dark:text-teal-400",
-  sparkle: "text-teal-500 dark:text-teal-400",
-  pillOn:
-    "border-stone-200/40 bg-teal-500/10 text-teal-800 dark:border-zinc-700/35 dark:bg-teal-500/15 dark:text-teal-300",
-  cardOn: "bg-teal-500/12 dark:bg-teal-500/18",
-  check: "text-teal-600 dark:text-teal-400",
-  styleCardOn: "bg-teal-500/12 dark:bg-teal-500/18",
-  fieldFocus: FACTORY_FIELD_FOCUS,
-  softHover:
-    "hover:border-stone-200/40 hover:bg-teal-500/8 dark:hover:border-stone-200/55 dark:hover:bg-teal-500/12",
-  filledShell: "bg-teal-100/40 dark:bg-teal-950/88",
-  filledShellHover: "group-hover:bg-teal-100/48 dark:group-hover:bg-teal-950/92",
-  filledOverlay: "",
-  filledOverlayHover: "",
-  filledCornerGlow: "",
-  filledIconRing: "ring-teal-200/50 dark:ring-teal-800/45",
-  filledOptionBg: "bg-teal-100/40 dark:bg-teal-950/88",
-  filledShadow: "shadow-[0_2px_10px_-6px_rgba(20,184,166,0.08)]",
-  filledShadowHover: "hover:shadow-[0_4px_16px_-6px_rgba(20,184,166,0.11)]",
-}
+const FACTORY_TONE_FLASHCARDS = studioKbTone({
+  shell: "bg-zinc-100/95 dark:bg-zinc-800/52",
+  shellHover: "group-hover:bg-zinc-200/45 dark:group-hover:bg-zinc-800/60",
+  well: "bg-zinc-200/36 dark:bg-zinc-700/42",
+  border: "border-zinc-200/55 dark:border-zinc-600/38",
+  ring: "ring-zinc-200/50 dark:ring-zinc-600/35",
+})
 
-const FACTORY_TONE_SLIDES: FactoryToneClasses = {
-  well: "bg-sky-600/12 dark:bg-sky-600/18",
-  icon: "text-sky-700 dark:text-sky-300",
-  sparkle: "text-sky-600 dark:text-sky-400",
-  pillOn:
-    "border-stone-200/40 bg-sky-600/10 text-sky-900 dark:border-sky-500/50 dark:bg-sky-600/15 dark:text-sky-200",
-  cardOn: "bg-sky-600/12 dark:bg-sky-600/18",
-  check: "text-sky-700 dark:text-sky-300",
-  styleCardOn: "bg-sky-600/12 dark:bg-sky-600/18",
-  fieldFocus: FACTORY_FIELD_FOCUS,
-  softHover:
-    "hover:border-stone-200/40 hover:bg-sky-600/8 dark:hover:border-sky-500/40 dark:hover:bg-sky-600/12",
-  filledShell: "bg-sky-100/40 dark:bg-sky-950/88",
-  filledShellHover: "group-hover:bg-sky-100/48 dark:group-hover:bg-sky-950/92",
-  filledOverlay: "",
-  filledOverlayHover: "",
-  filledCornerGlow: "",
-  filledIconRing: "ring-sky-200/50 dark:ring-sky-800/45",
-  filledOptionBg: "bg-sky-100/40 dark:bg-sky-950/88",
-  filledShadow: "shadow-[0_2px_10px_-6px_rgba(2,132,199,0.08)]",
-  filledShadowHover: "hover:shadow-[0_4px_16px_-6px_rgba(2,132,199,0.11)]",
-}
+const FACTORY_TONE_QUIZ = studioKbTone({
+  shell: "bg-neutral-100/95 dark:bg-zinc-800/52",
+  shellHover: "group-hover:bg-neutral-200/45 dark:group-hover:bg-zinc-800/60",
+  well: "bg-neutral-200/36 dark:bg-zinc-700/42",
+  border: "border-neutral-200/55 dark:border-zinc-600/38",
+  ring: "ring-neutral-200/50 dark:ring-zinc-600/35",
+})
 
-const FACTORY_TONE_INFOGRAPHIC: FactoryToneClasses = {
-  well: "bg-cyan-600/12 dark:bg-cyan-600/18",
-  icon: "text-cyan-700 dark:text-cyan-300",
-  sparkle: "text-cyan-600 dark:text-cyan-400",
-  pillOn:
-    "border-stone-200/40 bg-cyan-600/10 text-cyan-900 dark:border-cyan-500/50 dark:bg-cyan-600/15 dark:text-cyan-200",
-  cardOn: "bg-cyan-600/12 dark:bg-cyan-600/18",
-  check: "text-cyan-700 dark:text-cyan-300",
-  styleCardOn: "bg-cyan-600/12 dark:bg-cyan-600/18",
-  fieldFocus: FACTORY_FIELD_FOCUS,
-  softHover:
-    "hover:border-stone-200/40 hover:bg-cyan-600/8 dark:hover:border-cyan-500/40 dark:hover:bg-cyan-600/12",
-  filledShell: "bg-cyan-100/40 dark:bg-cyan-950/88",
-  filledShellHover: "group-hover:bg-cyan-100/48 dark:group-hover:bg-cyan-950/92",
-  filledOverlay: "",
-  filledOverlayHover: "",
-  filledCornerGlow: "",
-  filledIconRing: "ring-cyan-200/50 dark:ring-cyan-800/45",
-  filledOptionBg: "bg-cyan-100/40 dark:bg-cyan-950/88",
-  filledShadow: "shadow-[0_2px_10px_-6px_rgba(8,145,178,0.08)]",
-  filledShadowHover: "hover:shadow-[0_4px_16px_-6px_rgba(8,145,178,0.11)]",
-}
+const FACTORY_TONE_SLIDES = studioKbTone({
+  shell: "bg-stone-200/32 dark:bg-zinc-800/52",
+  shellHover: "group-hover:bg-stone-200/48 dark:group-hover:bg-zinc-800/60",
+  well: "bg-stone-200/42 dark:bg-zinc-700/42",
+})
+
+const FACTORY_TONE_INFOGRAPHIC = studioKbTone({
+  shell: "bg-slate-100/95 dark:bg-zinc-800/52",
+  shellHover: "group-hover:bg-slate-200/52 dark:group-hover:bg-zinc-800/60",
+  well: "bg-slate-200/40 dark:bg-zinc-700/42",
+  border: "border-slate-200/58 dark:border-zinc-600/38",
+  ring: "ring-slate-200/52 dark:ring-zinc-600/35",
+})
 
 const AGENT_FACTORY_TONE: FactoryToneClasses = {
   well: "bg-mind/10",
@@ -191,6 +142,7 @@ const AGENT_FACTORY_TONE: FactoryToneClasses = {
   filledOptionBg: FACTORY_TONE_REPORT.filledOptionBg,
   filledShadow: FACTORY_TONE_REPORT.filledShadow,
   filledShadowHover: FACTORY_TONE_REPORT.filledShadowHover,
+  filledBorder: FACTORY_TONE_REPORT.filledBorder,
 }
 
 const KB_FACTORY_TONES: Record<FactoryToneKind, FactoryToneClasses> = {
@@ -213,7 +165,7 @@ export function kbFactoryTone(kind: FactoryToneKind): FactoryToneClasses {
 }
 
 export const STUDIO_JOB_SHELL_CLASSES = [
-  "bg-mind/8 shadow-sm shadow-mind/5 dark:bg-mind/15 dark:shadow-black/20",
-  "bg-mind/8 shadow-sm shadow-mind/5 dark:bg-mind/15 dark:shadow-black/20",
-  "bg-mind/8 shadow-sm shadow-mind/5 dark:bg-mind/15 dark:shadow-black/20",
+  "bg-stone-100/90 shadow-sm shadow-stone-900/5 dark:bg-zinc-800/55 dark:shadow-black/20",
+  "bg-stone-100/90 shadow-sm shadow-stone-900/5 dark:bg-zinc-800/55 dark:shadow-black/20",
+  "bg-stone-100/90 shadow-sm shadow-stone-900/5 dark:bg-zinc-800/55 dark:shadow-black/20",
 ] as const
