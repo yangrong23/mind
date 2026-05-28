@@ -878,10 +878,6 @@ export function AgentChat({
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
   const [selectedFactoryKind, setSelectedFactoryKind] = useState<FactoryModalKind | null>(null)
   const examplePrompts = getAgentExamplePrompts(agent.id)
-  const followUpPrompts =
-    isNoteChat && noteWritingPrompts && noteWritingPrompts.length > 0
-      ? noteWritingPrompts.slice(0, 3)
-      : getAgentFollowUpPrompts(agent.id)
   const lastAiMessageId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === "ai") return messages[i].id
@@ -1173,6 +1169,10 @@ export function AgentChat({
 
   const noteWritingPrompts =
     noteWritingPromptsProp ?? (isNoteChat ? NOTE_WRITING_PROMPTS : [])
+  const followUpPrompts =
+    isNoteChat && noteWritingPrompts.length > 0
+      ? noteWritingPrompts.slice(0, 3)
+      : getAgentFollowUpPrompts(agent.id)
   const showNoteWritingPrompts =
     messages.length === 0 && isNoteChat && noteWritingPrompts.length > 0
   const showHeroExamplePrompts =
@@ -1338,47 +1338,49 @@ export function AgentChat({
                       <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
                     </div>
                     {msg.role === "ai" && msg.content ? (
-                      <MindChatMessageActions
-                        locale={locale}
-                        variant={isLibraryChat || isNoteChat ? "library" : "default"}
-                        feedback={messageFeedback[msg.id] ?? null}
-                        onRegenerate={() => runWithAuth(() => regenerateMessage(msg.id))}
-                        onSaveToLibrary={() => openSaveToLibrarySheet(msg.content)}
-                        onThumbsUp={() =>
-                          runWithAuth(() => {
-                            toggleMessageFeedback(msg.id, "up")
-                            toast.success("Thanks", { description: "Marked as helpful." })
-                          })
-                        }
-                        onThumbsDown={() =>
-                          runWithAuth(() => {
-                            toggleMessageFeedback(msg.id, "down")
-                            toast.message("Noted", { description: "We will improve replies (demo)." })
-                          })
-                        }
-                        onShare={() => runWithAuth(() => shareAiReply(msg.content))}
-                        onCopy={() =>
-                          runWithAuth(() => {
-                            void navigator.clipboard?.writeText(msg.content).then(
-                              () => toast.message("Copied"),
-                              () => toast.message("Copy", { description: msg.content.slice(0, 120) })
-                            )
-                          })
-                        }
-                        onEdit={() =>
-                          runWithAuth(() =>
-                            toast.message("Edit", {
-                              description: "Demo: continue editing this reply in a note.",
+                      <>
+                        <MindChatMessageActions
+                          locale={locale}
+                          variant={isLibraryChat || isNoteChat ? "library" : "default"}
+                          feedback={messageFeedback[msg.id] ?? null}
+                          onRegenerate={() => runWithAuth(() => regenerateMessage(msg.id))}
+                          onSaveToLibrary={() => openSaveToLibrarySheet(msg.content)}
+                          onThumbsUp={() =>
+                            runWithAuth(() => {
+                              toggleMessageFeedback(msg.id, "up")
+                              toast.success("Thanks", { description: "Marked as helpful." })
                             })
-                          )
-                        }
-                      />
-                      {msg.id === lastAiMessageId && followUpPrompts.length > 0 ? (
-                        <AgentFollowUpPromptRail
-                          prompts={followUpPrompts}
-                          onSelect={(prompt) => runWithAuth(() => sendUserQuery(prompt))}
+                          }
+                          onThumbsDown={() =>
+                            runWithAuth(() => {
+                              toggleMessageFeedback(msg.id, "down")
+                              toast.message("Noted", { description: "We will improve replies (demo)." })
+                            })
+                          }
+                          onShare={() => runWithAuth(() => shareAiReply(msg.content))}
+                          onCopy={() =>
+                            runWithAuth(() => {
+                              void navigator.clipboard?.writeText(msg.content).then(
+                                () => toast.message("Copied"),
+                                () => toast.message("Copy", { description: msg.content.slice(0, 120) })
+                              )
+                            })
+                          }
+                          onEdit={() =>
+                            runWithAuth(() =>
+                              toast.message("Edit", {
+                                description: "Demo: continue editing this reply in a note.",
+                              })
+                            )
+                          }
                         />
-                      ) : null}
+                        {msg.id === lastAiMessageId && followUpPrompts.length > 0 ? (
+                          <AgentFollowUpPromptRail
+                            prompts={followUpPrompts}
+                            onSelect={(prompt) => runWithAuth(() => sendUserQuery(prompt))}
+                          />
+                        ) : null}
+                      </>
                     ) : null}
                   </div>
                 </div>

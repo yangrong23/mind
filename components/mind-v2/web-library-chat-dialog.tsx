@@ -5,7 +5,6 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WebAgentWorkspace } from "@/components/mind-v2/web-agent-workspace"
 import { agentFromPublicKbSettings, libraryAssistantChatMeta } from "@/lib/plaza-agent-runtime"
-import { getKbAgentSuggestions } from "@/lib/kb-agent-suggestions"
 import type { LibraryChatLaunchContext } from "@/components/mind-v2/knowledge-detail"
 import type { PublicKbSettings } from "@/lib/public-kb-settings"
 import type { KBCategory } from "@/lib/mock-knowledge-bases"
@@ -48,14 +47,7 @@ export function WebLibraryChatDialog({
 
   const agent = agentFromPublicKbSettings(kb.publicSettings, kb.name)
   const assistant = libraryAssistantChatMeta(kb.publicSettings, kb.name)
-  const suggestions = getKbAgentSuggestions({
-    name: kb.name,
-    description: kb.description,
-    category: kb.category,
-    coverVariant: kb.coverVariant,
-    isPublicKb: kb.isPublicKb,
-    exampleQuestions: kb.publicSettings?.exampleQuestions,
-  })
+  const kbId = kb.id ?? context.kbId ?? 0
 
   return (
     <div className="fixed inset-0 z-[140] flex items-stretch justify-center p-0 sm:p-4 md:p-6">
@@ -94,12 +86,26 @@ export function WebLibraryChatDialog({
         <div className="min-h-0 flex-1">
           <WebAgentWorkspace
             agent={agent}
+            chatScope={{
+              type: "kb",
+              kbId,
+              kbName: kb.name,
+              isPublicKb: kb.isPublicKb,
+            }}
+            kbContext={{
+              id: kbId || undefined,
+              name: kb.name,
+              color: "from-mind/30 to-mind",
+              description: kb.description,
+              coverVariant: kb.coverVariant,
+              isPublicKb: kb.isPublicKb,
+              category: kb.category,
+              publicSettings: kb.publicSettings,
+              publisherName: kb.publisherName,
+            }}
             initialPrompt={context.initialPrompt}
             onBack={onClose}
             requireAuthThen={requireAuthThen}
-            libraryAssistant={assistant}
-            librarySuggestions={suggestions}
-            scopedLibraryName={kb.name}
           />
         </div>
       </div>

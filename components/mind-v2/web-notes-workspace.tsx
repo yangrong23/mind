@@ -28,6 +28,7 @@ import {
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightClose,
   Pin,
   Redo2,
   Search,
