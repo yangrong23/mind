@@ -1583,6 +1583,12 @@ export function KnowledgeDetail({
                 onRegenerate={(id) =>
                   runWithAuth(() => regenerateWebNotebookReply(id, webSelectedCount))
                 }
+                followUpPrompts={kbAgentSuggestions.slice(0, 3).map((s) => ({
+                  id: s.id,
+                  label: s.label,
+                  prompt: s.prompt,
+                }))}
+                onFollowUpSelect={(prompt) => runWithAuth(() => askPlazaAgentInDialogue(prompt))}
                 className={cn(
                   webNotebookMessages.length === 0 && "hidden",
                   webNotebookMessages.length > 0 &&

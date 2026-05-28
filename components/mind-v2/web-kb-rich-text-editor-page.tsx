@@ -302,6 +302,12 @@ export function WebKbRichTextEditorPage({
                 feedbackById={feedbackById}
                 onFeedback={setFeedback}
                 onRegenerate={() => toast.message("Regenerated", { description: "Demo." })}
+                followUpPrompts={suggestions.slice(0, 3).map((s) => ({
+                  id: s.id,
+                  label: s.label,
+                  prompt: s.prompt,
+                }))}
+                onFollowUpSelect={(prompt) => runWithAuth(() => submitChat(prompt))}
               />
             )}
           </div>

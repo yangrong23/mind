@@ -107,7 +107,7 @@ export function MindarFactoryCard({
         FACTORY_CARD_SHAPE,
         FACTORY_CARD_RADIUS,
         FACTORY_CARD_SHAPE_HOVER,
-        filled && "bg-transparent dark:bg-transparent",
+        filled && "border-transparent bg-transparent dark:bg-transparent",
         filled && tone.filledBorder,
         filled && tone.filledShadow,
         filled && tone.filledShadowHover,
@@ -191,15 +191,7 @@ export function MindarFactoryCard({
                   kbCompact ? "h-6 w-6" : isKbGrid ? "h-11 w-11" : "h-10 w-10"
                 ),
             filled
-              ? cn(
-                  tone.well,
-                  kbCompact
-                    ? cn("ring-1", tone.filledIconRing)
-                    : cn(
-                        "bg-white/75 ring-1 ring-stone-200/65 dark:bg-zinc-800/55 dark:ring-zinc-600/40",
-                        tone.filledIconRing
-                      )
-                )
+              ? cn(tone.well, "ring-1", tone.filledIconRing)
               : tone.icon
           )}
         >
@@ -228,7 +220,8 @@ export function MindarFactoryCard({
       )}
       <span
         className={cn(
-          "relative z-[1] max-w-full px-1 font-semibold leading-snug tracking-tight text-zinc-700 dark:text-zinc-200",
+          "relative z-[1] max-w-full px-1 font-semibold leading-snug tracking-tight",
+          filled && !isRail ? tone.icon : "text-zinc-700 dark:text-zinc-200",
           isRail
             ? railPill
               ? "whitespace-nowrap px-0 text-[12px]"

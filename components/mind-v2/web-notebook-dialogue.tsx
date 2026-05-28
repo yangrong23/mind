@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils"
 import { WebThreadComposer } from "@/components/mind-v2/web-thread-composer"
 import type { FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import type { KbAgentSuggestion } from "@/lib/kb-agent-suggestions"
+import { AgentFollowUpPromptRail } from "@/components/mind-v2/agent-follow-up-prompt-rail"
+import type { AgentExamplePrompt } from "@/lib/agent-chat-example-prompts"
 import {
   MindChatMessageActions,
   type MessageFeedback,
@@ -99,6 +101,8 @@ export function WebNotebookDialogueBlock({
   onFeedback,
   onSaveReply,
   onRegenerate,
+  followUpPrompts,
+  onFollowUpSelect,
   variant = "notebook",
   className,
 }: {
@@ -108,11 +112,16 @@ export function WebNotebookDialogueBlock({
   onFeedback: (id: string, value: MessageFeedback) => void
   onSaveReply?: (content: string) => void
   onRegenerate: (assistantId: string) => void
+  /** Shown under the latest assistant reply only. */
+  followUpPrompts?: AgentExamplePrompt[]
+  onFollowUpSelect?: (prompt: string) => void
   /** Notebook embed uses a titled section; agent thread is borderless. */
   variant?: "notebook" | "thread"
   className?: string
 }) {
   if (messages.length === 0) return null
+
+  const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id
 
   return (
     <section
@@ -157,6 +166,15 @@ export function WebNotebookDialogueBlock({
                 }
                 className="mt-3 border-t-0 pt-0"
               />
+              {msg.id === lastAssistantId &&
+              followUpPrompts &&
+              followUpPrompts.length > 0 &&
+              onFollowUpSelect ? (
+                <AgentFollowUpPromptRail
+                  prompts={followUpPrompts}
+                  onSelect={onFollowUpSelect}
+                />
+              ) : null}
               <p className="mt-3 text-center text-[11px] text-zinc-400">{msg.timeLabel}</p>
             </div>
           )

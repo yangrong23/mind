@@ -325,6 +325,12 @@ export function WebKbDocumentReaderPage({
                     )
                   )
                 }}
+                followUpPrompts={suggestions.slice(0, 3).map((s) => ({
+                  id: s.id,
+                  label: s.label,
+                  prompt: s.prompt,
+                }))}
+                onFollowUpSelect={(prompt) => runWithAuth(() => submit(prompt))}
               />
             )}
           </div>

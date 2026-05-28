@@ -30,45 +30,45 @@ export function studioOutputVisual(kind: FactoryModalKind): StudioOutputVisual {
     case "report":
       return {
         Icon: Network,
-        well: "bg-stone-200/55 ring-1 ring-stone-200/70 dark:bg-zinc-700/45 dark:ring-zinc-600/35",
-        icon: "text-zinc-600 dark:text-zinc-300",
+        well: "bg-indigo-100 ring-1 ring-indigo-200/70 dark:bg-indigo-900/55 dark:ring-indigo-700/40",
+        icon: "text-indigo-900 dark:text-indigo-100",
       }
     case "slides":
       return {
         Icon: Monitor,
-        well: "bg-stone-200/60 ring-1 ring-stone-200/75 dark:bg-zinc-700/48 dark:ring-zinc-600/35",
-        icon: "text-zinc-600 dark:text-zinc-300",
+        well: "bg-amber-100 ring-1 ring-amber-200/70 dark:bg-amber-900/50 dark:ring-amber-700/40",
+        icon: "text-amber-950 dark:text-amber-50",
       }
     case "infographic":
       return {
         Icon: BarChart3,
-        well: "bg-slate-200/55 ring-1 ring-slate-200/70 dark:bg-zinc-700/45 dark:ring-zinc-600/35",
-        icon: "text-zinc-600 dark:text-zinc-300",
+        well: "bg-rose-100 ring-1 ring-rose-200/70 dark:bg-rose-900/55 dark:ring-rose-700/40",
+        icon: "text-rose-900 dark:text-rose-100",
       }
     case "audio":
       return {
         Icon: Volume2,
-        well: "bg-slate-200/50 ring-1 ring-slate-200/65 dark:bg-zinc-700/45 dark:ring-zinc-600/35",
-        icon: "text-zinc-600 dark:text-zinc-300",
+        well: "bg-emerald-100 ring-1 ring-emerald-200/70 dark:bg-emerald-900/55 dark:ring-emerald-700/40",
+        icon: "text-emerald-900 dark:text-emerald-100",
         showPlay: true,
       }
     case "flashcards":
       return {
         Icon: Layers,
-        well: "bg-zinc-200/50 ring-1 ring-zinc-200/65 dark:bg-zinc-700/45 dark:ring-zinc-600/35",
-        icon: "text-zinc-600 dark:text-zinc-300",
+        well: "bg-purple-100 ring-1 ring-purple-200/70 dark:bg-purple-900/55 dark:ring-purple-700/40",
+        icon: "text-purple-900 dark:text-purple-100",
       }
     case "quiz":
       return {
         Icon: HelpCircle,
-        well: "bg-neutral-200/50 ring-1 ring-neutral-200/65 dark:bg-zinc-700/45 dark:ring-zinc-600/35",
-        icon: "text-zinc-600 dark:text-zinc-300",
+        well: "bg-violet-100 ring-1 ring-violet-200/70 dark:bg-violet-900/55 dark:ring-violet-700/40",
+        icon: "text-violet-900 dark:text-violet-100",
       }
     default:
       return {
         Icon: Network,
-        well: "bg-stone-200/55 ring-1 ring-stone-200/70 dark:bg-zinc-700/45 dark:ring-zinc-600/35",
-        icon: "text-zinc-600 dark:text-zinc-300",
+        well: "bg-indigo-100 ring-1 ring-indigo-200/70 dark:bg-indigo-900/55 dark:ring-indigo-700/40",
+        icon: "text-indigo-900 dark:text-indigo-100",
       }
   }
 }

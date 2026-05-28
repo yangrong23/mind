@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { MOCK_KNOWLEDGE_BASES, type KnowledgeBase } from "@/lib/mock-knowledge-bases"
@@ -48,7 +48,12 @@ import {
   type AgentScenarioTabId,
   type MindAgent,
 } from "@/lib/mind-agent-catalog"
-import { getAgentExamplePrompts, type AgentExamplePrompt } from "@/lib/agent-chat-example-prompts"
+import {
+  getAgentExamplePrompts,
+  getAgentFollowUpPrompts,
+  type AgentExamplePrompt,
+} from "@/lib/agent-chat-example-prompts"
+import { AgentFollowUpPromptRail } from "@/components/mind-v2/agent-follow-up-prompt-rail"
 import { NOTE_WRITING_PROMPTS } from "@/lib/note-writing-prompts"
 import { AgentMultiRoleBlurb, AgentMultiRoleFlow } from "@/components/mind-v2/agent-profile-ui"
 import {
@@ -873,6 +878,16 @@ export function AgentChat({
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
   const [selectedFactoryKind, setSelectedFactoryKind] = useState<FactoryModalKind | null>(null)
   const examplePrompts = getAgentExamplePrompts(agent.id)
+  const followUpPrompts =
+    isNoteChat && noteWritingPrompts && noteWritingPrompts.length > 0
+      ? noteWritingPrompts.slice(0, 3)
+      : getAgentFollowUpPrompts(agent.id)
+  const lastAiMessageId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "ai") return messages[i].id
+    }
+    return null
+  }, [messages])
   const [messageFeedback, setMessageFeedback] = useState<Record<string, "up" | "down">>({})
   const [saveToLibrarySheet, setSaveToLibrarySheet] = useState<{ text: string } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -922,20 +937,37 @@ export function AgentChat({
     startGeneration(modeAtSend, kbGround, q)
   }, [initialPrompt, isLibraryChat, isNoteChat, kbLabel, noteTitle, pickedKbName, pickedNoteTitle, startGeneration])
 
+  const sendUserQuery = useCallback(
+    (raw: string) => {
+      const content = raw.trim()
+      if (!content) return
+      const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content }
+      const modeAtSend: AgentComposerMode = "dialog"
+      const kbGround = (
+        pickedNoteTitle ||
+        pickedKbName ||
+        (isLibraryChat ? kbLabel : isNoteChat ? noteTitle : "")
+      ).trim()
+      setMessages((prev) => [...prev, userMsg])
+      setQaHistoryItems((prev) => [{ id: `qa-${Date.now()}`, at: Date.now(), query: content }, ...prev])
+      setInput("")
+      setKbMenuOpen(false)
+      startGeneration(modeAtSend, kbGround, content)
+    },
+    [
+      isLibraryChat,
+      isNoteChat,
+      kbLabel,
+      noteTitle,
+      pickedKbName,
+      pickedNoteTitle,
+      startGeneration,
+    ]
+  )
+
   const handleSend = () => {
     if (!input.trim()) return
-    const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content: input.trim() }
-    const modeAtSend: AgentComposerMode = "dialog"
-    const kbGround = (
-      pickedNoteTitle ||
-      pickedKbName ||
-      (isLibraryChat ? kbLabel : isNoteChat ? noteTitle : "")
-    ).trim()
-    setMessages((prev) => [...prev, userMsg])
-    setQaHistoryItems((prev) => [{ id: `qa-${Date.now()}`, at: Date.now(), query: userMsg.content }, ...prev])
-    setInput("")
-    setKbMenuOpen(false)
-    startGeneration(modeAtSend, kbGround, userMsg.content)
+    sendUserQuery(input)
   }
 
   const trySend = () => runWithAuth(handleSend)
@@ -1341,6 +1373,12 @@ export function AgentChat({
                           )
                         }
                       />
+                      {msg.id === lastAiMessageId && followUpPrompts.length > 0 ? (
+                        <AgentFollowUpPromptRail
+                          prompts={followUpPrompts}
+                          onSelect={(prompt) => runWithAuth(() => sendUserQuery(prompt))}
+                        />
+                      ) : null}
                     ) : null}
                   </div>
                 </div>

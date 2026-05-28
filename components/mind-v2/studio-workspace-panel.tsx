@@ -95,7 +95,7 @@ export function StudioWorkspacePanel({
         archivedJobIds={archivedJobIds}
       />
       <div className="mt-5 flex flex-col items-center px-2 text-center">
-        <Sparkles className="mb-2 h-6 w-6 text-zinc-400" strokeWidth={1.75} aria-hidden />
+        <Sparkles className="mb-2 h-6 w-6 text-violet-400/80" strokeWidth={1.75} aria-hidden />
         <p className="max-w-[240px] text-[11px] leading-relaxed text-zinc-500">{emptyHint}</p>
       </div>
     </div>

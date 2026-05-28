@@ -348,6 +348,8 @@ export function WebAgentWorkspace({
                     })
                   }
                   onRegenerate={regenerateReply}
+                  followUpPrompts={examplePrompts.slice(0, 3)}
+                  onFollowUpSelect={(prompt) => runWithAuth(() => submit(prompt))}
                 />
               </div>
             )}
