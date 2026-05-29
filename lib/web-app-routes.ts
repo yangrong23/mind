@@ -6,7 +6,7 @@ export type WebShellTab = WebTabType
 
 /** Parsed location for MindAppWeb — pathname is source of truth. */
 export type ParsedWebLocation =
-  | { mode: "tab"; tab: WebShellTab; kbId?: number; noteId?: number }
+  | { mode: "tab"; tab: WebShellTab; kbId?: number; noteId?: number; settingsOpen?: boolean }
   | { mode: "settings" }
   | {
       mode: "kb"
@@ -31,7 +31,10 @@ export type ParsedWebLocation =
   | { mode: "me-timeline-day"; isoDate: string; activity: number; returnTo: "me" | "me-timeline" }
   | { mode: "legacy-editor"; docTitle?: string }
 
-export function webTabHref(tab: WebShellTab, query?: { kb?: number; note?: number }): string {
+export function webTabHref(
+  tab: WebShellTab,
+  query?: { kb?: number; note?: number; settings?: boolean }
+): string {
   const base =
     tab === "agent"
       ? `${WEB_APP_ROOT}/agent`
@@ -41,6 +44,7 @@ export function webTabHref(tab: WebShellTab, query?: { kb?: number; note?: numbe
   const params = new URLSearchParams()
   if (query?.kb != null) params.set("kb", String(query.kb))
   if (query?.note != null) params.set("note", String(query.note))
+  if (query?.settings) params.set("settings", "1")
   const q = params.toString()
   return q ? `${base}?${q}` : base
 }
@@ -119,8 +123,9 @@ export function webMeTimelineDayHref(
   return `${WEB_APP_ROOT}/me/timeline/${encodeURIComponent(isoDate)}?${params}`
 }
 
+/** Settings live under Me — opens `/web/me?settings=1`. */
 export function webSettingsHref(): string {
-  return `${WEB_APP_ROOT}/settings`
+  return webTabHref("me", { settings: true })
 }
 
 /** Parent href for explicit back when history is empty. */
@@ -129,7 +134,7 @@ export function webParentHref(loc: ParsedWebLocation): string {
     case "tab":
       return webTabHref(loc.tab)
     case "settings":
-      return webTabHref("agent")
+      return webTabHref("me")
     case "kb":
       if (loc.screen === "detail") return webTabHref("library", { kb: loc.kbId })
       if (loc.screen === "chat") return webKbHref(loc.kbId, "detail")
@@ -159,7 +164,7 @@ export function parseWebPath(pathname: string, search = ""): ParsedWebLocation {
   }
 
   if (segments[0] === "settings") {
-    return { mode: "settings" }
+    return { mode: "tab", tab: "me", settingsOpen: true }
   }
 
   if (segments[0] === "plaza") {
@@ -215,7 +220,8 @@ export function parseWebPath(pathname: string, search = ""): ParsedWebLocation {
       }
       return { mode: "me-timeline" }
     }
-    return { mode: "tab", tab: "me" }
+    const settingsOpen = params.get("settings") === "1"
+    return { mode: "tab", tab: "me", ...(settingsOpen ? { settingsOpen: true } : {}) }
   }
 
   if (segments[0] === "kb" && segments.length >= 2) {

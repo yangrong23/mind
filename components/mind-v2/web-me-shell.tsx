@@ -10,6 +10,7 @@ import {
   Crown,
   FileText,
   Flame,
+  Settings,
   Sparkles,
 } from "lucide-react"
 import type { MindAccount } from "@/lib/mind-accounts"
@@ -109,6 +110,7 @@ export function WebMeProfileHeader({
   planName,
   onOpenAccountSwitcher,
   onOpenCredits,
+  onOpenSettings,
 }: {
   account: MindAccount
   stats: WebMeStat[]
@@ -117,6 +119,7 @@ export function WebMeProfileHeader({
   planName?: string
   onOpenAccountSwitcher: () => void
   onOpenCredits: () => void
+  onOpenSettings?: () => void
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -147,7 +150,21 @@ export function WebMeProfileHeader({
           </div>
         </button>
 
-        <div className="flex flex-wrap gap-5 sm:gap-6">
+        <div className="flex flex-wrap items-start gap-3 sm:gap-4">
+          {onOpenSettings ? (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-xl border border-white/80 bg-white/60 px-3.5 py-2.5 text-[13px] font-semibold text-zinc-700 shadow-sm",
+                "transition-colors hover:bg-white hover:text-zinc-900",
+                webNavMotion.pressable
+              )}
+            >
+              <Settings className="h-4 w-4 text-zinc-500" strokeWidth={2} aria-hidden />
+              Settings
+            </button>
+          ) : null}
           {stats.map((s) => {
             const Icon = s.icon
             return (

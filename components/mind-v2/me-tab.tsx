@@ -27,6 +27,7 @@ import {
   SettingsToggleRow,
 } from "@/components/mind-v2/me-settings-ui"
 import { MeTabWebLayout } from "@/components/mind-v2/me-tab-web-layout"
+import { WebRailSettingsPanel } from "@/components/mind-v2/web-rail-settings-panel"
 import {
   MeActivityDiaryPreview,
   MeActivityTimeline,
@@ -38,6 +39,7 @@ import {
   WebMeUpgradeBanner,
   type WebMeStat,
 } from "@/components/mind-v2/web-me-shell"
+import { WebMeSettingsEntry } from "@/components/mind-v2/web-me-settings-entry"
 import { MeDailyReview } from "@/components/mind-v2/me-daily-review"
 import { WebMeSettingsDetail } from "@/components/mind-v2/web-me-settings-detail"
 import { buildTimelineSharePayload, type MindSharePayload } from "@/lib/mind-share-payload"
@@ -191,6 +193,10 @@ export interface MeTabProps {
   onOpenTimelineDay?: (day: { isoDate: string; activity: number }) => void
   /** Web: open membership comparison (table layout in shell modal) */
   onOpenCreditsPlans?: () => void
+  /** Web: full settings panel (under Me) */
+  settingsOpen?: boolean
+  onOpenSettings?: () => void
+  onCloseSettings?: () => void
 }
 
 export function MeTab({
@@ -204,6 +210,9 @@ export function MeTab({
   onOpenTimeline,
   onOpenTimelineDay,
   onOpenCreditsPlans,
+  settingsOpen = false,
+  onOpenSettings,
+  onCloseSettings,
 }: MeTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
   const [activityDiary, setActivityDiary] = useState<{
@@ -402,15 +411,18 @@ export function MeTab({
   )
 
   const webProfileHero = (
-    <WebMeProfileHeader
-      account={activeAccount}
-      stats={webMeStats}
-      creditsRemaining={stats.creditsRemaining}
-      creditsMonthlyAllowance={stats.creditsMonthlyAllowance}
-      planName="Standard"
-      onOpenAccountSwitcher={() => setShowAccountSwitcher(true)}
-      onOpenCredits={openCreditsPlans}
-    />
+    <div className="flex flex-col gap-5">
+      <WebMeProfileHeader
+        account={activeAccount}
+        stats={webMeStats}
+        creditsRemaining={stats.creditsRemaining}
+        creditsMonthlyAllowance={stats.creditsMonthlyAllowance}
+        planName="Standard"
+        onOpenAccountSwitcher={() => setShowAccountSwitcher(true)}
+        onOpenCredits={openCreditsPlans}
+      />
+      {onOpenSettings ? <WebMeSettingsEntry onOpenSettings={onOpenSettings} /> : null}
+    </div>
   )
 
   const accountAndOverlays = (
@@ -1254,6 +1266,21 @@ export function MeTab({
   )
 
   if (webLayout) {
+    if (settingsOpen && onCloseSettings) {
+      return (
+        <div className="relative h-full min-h-0">
+          <WebRailSettingsPanel
+            embedded
+            open
+            onClose={onCloseSettings}
+            fontZoomPercent={fontZoomPercent}
+            onFontZoomPercentChange={onFontZoomPercentChange ?? (() => {})}
+          />
+          {accountAndOverlays}
+        </div>
+      )
+    }
+
     return (
       <div className="relative h-full min-h-0">
         <MeTabWebLayout

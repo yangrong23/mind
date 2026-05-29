@@ -24,3 +24,8 @@ export function threadsForScope(scope: AgentChatScope): WebAgentThread[] {
 export function threadsForScopeKey(scopeKey: string): WebAgentThread[] {
   return WEB_AGENT_DEMO_THREADS.filter((t) => t.scopeKey === scopeKey)
 }
+
+/** Most recent global Mindar thread — used when opening Agent from the shell. */
+export function latestGlobalAgentThread(): WebAgentThread | undefined {
+  return WEB_AGENT_DEMO_THREADS.find((t) => t.scopeKey === "global")
+}

@@ -174,6 +174,7 @@ export function UseCaseCard({ guide, onOpenGuide, className, compact = false }: 
   return (
     <button
       type="button"
+      id={`use-case-${guide.id}`}
       onClick={() => onOpenGuide(guide.id)}
       className={cn(
         web.surfaceCard,

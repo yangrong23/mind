@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import type { MindAccountId } from "@/lib/mind-accounts"
 import { KnowledgeDetail } from "./knowledge-detail"
-import { MINDAR_COPILOT_AGENT, MINDAR_DEMO_MY_AGENTS, type Agent } from "./agent-tab"
+import { MINDAR_COPILOT_AGENT, type Agent } from "./agent-tab"
 import {
   MOCK_KNOWLEDGE_BASES,
   type KnowledgeBase,
@@ -39,8 +39,6 @@ import { buildTimelineSharePayload, type MindSharePayload } from "@/lib/mind-sha
 import { MindShareSheet } from "@/components/mind-v2/mind-share-sheet"
 import type { ActivityTimelineDay } from "@/lib/mock-activity-timeline"
 import { WebCreditsUpgradeModal } from "./web-credits-upgrade-modal"
-import { WebRailSettingsPanel } from "./web-rail-settings-panel"
-import { WebAgentCopilotPage } from "./web-agent-copilot-page"
 import { WebAgentWorkspace } from "./web-agent-workspace"
 import { WebDocumentEditorPage } from "./web-document-editor-page"
 import { WebKbDocumentReaderPage } from "./web-kb-document-reader-page"
@@ -61,22 +59,18 @@ import {
 } from "@/lib/plaza-subscription-store"
 import type { AgentChatScope } from "@/lib/web-agent-scope"
 import { webMindarChatHref } from "@/lib/web-app-routes"
-import { mockNotes } from "@/lib/mock-notes"
-import type { Note } from "@/lib/note-types"
 import {
-  readRecentAgentIds,
-  readRecentNoteIds,
   readRecentPrivateKbIds,
   readRecentPublicKbIds,
-  resolveRecentAgentIds,
-  resolveRecentNoteIds,
   resolveRecentPrivateKbIds,
   resolveRecentPublicKbIds,
   touchRecentAgent,
   touchRecentKbFromBase,
   touchRecentNote,
 } from "@/lib/web-recent-usage"
-import { WebRecentsNavPanel } from "@/components/mind-v2/web-recents-nav-panel"
+import { latestGlobalAgentThread } from "@/lib/web-agent-threads"
+import { recentKbIdsForNav } from "@/lib/web-recent-kb-nav"
+import { WebShellNavPanel } from "@/components/mind-v2/web-shell-nav-panel"
 import { WebWorkspaceChromeProvider } from "@/components/mind-v2/web-workspace-chrome"
 import { WebCreditsChip } from "@/components/mind-v2/web-credits-chip"
 import {
@@ -100,8 +94,6 @@ const DEMO_CREDITS = {
 
 /** Tabs that already show credits in-page — no floating chip. */
 const TABS_WITHOUT_FLOATING_CREDITS: WebTabType[] = ["plaza", "me", "memos"]
-
-const WEB_AGENT_ROSTER: Agent[] = [MINDAR_COPILOT_AGENT, ...MINDAR_DEMO_MY_AGENTS]
 
 const DEMO_ME_STREAK_DAYS = 7
 
@@ -127,13 +119,8 @@ export function MindAppWeb() {
   const [recentPrivateKbIds, setRecentPrivateKbIds] = useState<number[]>(() =>
     resolveRecentPrivateKbIds(readRecentPrivateKbIds())
   )
-  const [recentAgentIds, setRecentAgentIds] = useState<number[]>(() =>
-    resolveRecentAgentIds(readRecentAgentIds())
-  )
-  const [recentNoteIds, setRecentNoteIds] = useState<number[]>(() =>
-    resolveRecentNoteIds(readRecentNoteIds())
-  )
   const [focusNoteId, setFocusNoteId] = useState<number | null>(null)
+  const [libraryNavSlot, setLibraryNavSlot] = useState<ReactNode>(null)
   const [timelineShareSheet, setTimelineShareSheet] = useState<MindSharePayload | null>(null)
 
   const recentKbIds = useMemo(
@@ -144,8 +131,6 @@ export function MindAppWeb() {
   function syncRecentsFromStorage() {
     setRecentPublicKbIds(resolveRecentPublicKbIds(readRecentPublicKbIds()))
     setRecentPrivateKbIds(resolveRecentPrivateKbIds(readRecentPrivateKbIds()))
-    setRecentAgentIds(resolveRecentAgentIds(readRecentAgentIds()))
-    setRecentNoteIds(resolveRecentNoteIds(readRecentNoteIds()))
   }
 
   const allKbsById = useMemo(() => {
@@ -163,6 +148,14 @@ export function MindAppWeb() {
     }
     return map
   }, [plazaSubscribedKbs, userPublishedPlazaRows])
+
+  const recentLibrariesForNav = useMemo(
+    () =>
+      recentKbIdsForNav()
+        .map((id) => allKbsById.get(id))
+        .filter((kb): kb is KnowledgeBase => Boolean(kb)),
+    [allKbsById, recentPublicKbIds, recentPrivateKbIds]
+  )
 
   const {
     location,
@@ -195,37 +188,36 @@ export function MindAppWeb() {
     if (location.mode === "agent-chat") setSelectedAgentId(location.agentId)
   }, [location])
 
-  const recentPublicKbs = useMemo(
-    () =>
-      recentPublicKbIds
-        .map((id) => allKbsById.get(id))
-        .filter((kb): kb is KnowledgeBase => Boolean(kb)),
-    [recentPublicKbIds, allKbsById]
-  )
+  const onLibraryNavMount = useCallback((node: ReactNode) => {
+    setLibraryNavSlot(node)
+  }, [])
 
-  const recentPrivateKbs = useMemo(
-    () =>
-      recentPrivateKbIds
-        .map((id) => allKbsById.get(id))
-        .filter((kb): kb is KnowledgeBase => Boolean(kb)),
-    [recentPrivateKbIds, allKbsById]
-  )
+  useEffect(() => {
+    if (activeTab !== "library") setLibraryNavSlot(null)
+  }, [activeTab])
 
-  const recentAgents = useMemo(
-    () =>
-      recentAgentIds
-        .map((id) => WEB_AGENT_ROSTER.find((a) => a.id === id))
-        .filter((a): a is Agent => Boolean(a)),
-    [recentAgentIds]
-  )
+  function openMindarAgent() {
+    const latest = latestGlobalAgentThread()
+    noteAgentUsed(MINDAR_COPILOT_AGENT)
+    setSelectedThreadId(latest?.id ?? null)
+    setAgentHistoryDraft(latest?.title ?? null)
+    requireAuthThen(() => {
+      if (latest?.title) {
+        openAgentChat(MINDAR_COPILOT_AGENT, latest.title)
+      } else {
+        switchTab("agent")
+      }
+    })
+  }
 
-  const recentNotes = useMemo(
-    () =>
-      recentNoteIds
-        .map((id) => mockNotes.find((n) => n.id === id))
-        .filter((n): n is Note => Boolean(n)),
-    [recentNoteIds]
-  )
+  useEffect(() => {
+    if (!shellMain || activeTab !== "agent") return
+    if (location.mode !== "tab" || location.tab !== "agent") return
+    const latest = latestGlobalAgentThread()
+    if (!latest) return
+    setSelectedThreadId(latest.id)
+    openAgentChat(MINDAR_COPILOT_AGENT, latest.title)
+  }, [shellMain, activeTab, location])
 
   function noteAgentUsed(agent: Agent) {
     touchRecentAgent(agent.id)
@@ -447,45 +439,32 @@ export function MindAppWeb() {
       style={{ zoom: fontZoomPercent / 100 }}
     >
       <div className={cn("flex h-screen min-h-0 w-full overflow-hidden", web.shell)}>
-        {!settingsOpen ? (
-          <WebRecentsNavPanel
+        <WebShellNavPanel
             activeTab={activeTab}
             onTabChange={switchTab}
+            onOpenAgent={openMindarAgent}
             activeAccountId={activeAccountId}
-            onOpenSettings={() => (settingsOpen ? closeSettings() : openSettings())}
-            settingsActive={settingsOpen}
-            recentPublicKbs={recentPublicKbs}
-            recentPrivateKbs={recentPrivateKbs}
-            recentAgents={recentAgents}
-            recentNotes={recentNotes}
+            libraryNav={libraryNavSlot}
+            recentLibraries={recentLibrariesForNav}
             selectedKbId={selectedKbId}
-            selectedAgentId={selectedAgentId}
-            selectedNoteId={focusNoteId}
-            onOpenPublicKb={(kb) => requireAuthThen(() => openNotebookWithRecents(kb))}
-            onOpenPrivateKb={(kb) => requireAuthThen(() => openNotebookWithRecents(kb))}
-            onOpenAgent={(agent) => {
-              noteAgentUsed(agent)
-              requireAuthThen(() => openAgentChat(MINDAR_COPILOT_AGENT))
-            }}
-            onOpenNote={(note) => {
-              touchRecentNote(note.id)
-              syncRecentsFromStorage()
-              setFocusNoteId(note.id)
-              selectNote(note.id)
-            }}
-            onMorePlaza={() => switchTab("plaza")}
-            onMorePrivate={() => switchTab("library")}
-            onMoreAgents={() => switchTab("agent")}
-            onMoreNotes={() => switchTab("memos")}
+            onOpenLibraryKb={(kb) =>
+              requireAuthThen(() => {
+                if (kb.category === "mine" || kb.category === "team") {
+                  openNotebookWithRecents(kb)
+                  return
+                }
+                selectLibraryKb(kb.id)
+              })
+            }
+            onMoreLibraries={() => switchTab("library")}
           />
-        ) : null}
 
         <WebWorkspaceChromeProvider
           creditsRemaining={DEMO_CREDITS.creditsRemaining}
           onOpenCredits={() => setCreditsModalOpen(true)}
         >
         <div className={cn("relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden", web.canvas)}>
-          {(shellMain || settingsOpen) && !TABS_WITHOUT_FLOATING_CREDITS.includes(activeTab) ? (
+          {shellMain && !TABS_WITHOUT_FLOATING_CREDITS.includes(activeTab) ? (
             <div className="pointer-events-none absolute right-6 top-4 z-30">
               <div className="pointer-events-auto">
                 <WebCreditsChip
@@ -509,8 +488,7 @@ export function MindAppWeb() {
           }}
         />
 
-        {!settingsOpen &&
-        (activeTab === "agent" && (shellMain || currentView.type === "agent-chat")) ? (
+        {activeTab === "agent" && (shellMain || currentView.type === "agent-chat") ? (
           <WebAgentSidebar
             chatScope={agentSidebarScope}
             selectedThreadId={selectedThreadId}
@@ -559,21 +537,13 @@ export function MindAppWeb() {
         ) : null}
 
         <main
-          key={shellMain ? (settingsOpen ? "settings" : activeTab) : currentView.type}
+          key={shellMain ? activeTab : currentView.type}
           className={cn("relative min-h-0 min-w-0 flex-1 overflow-hidden", webNavMotion.contentEnter)}
         >
-          {shellMain && settingsOpen ? (
-            <WebRailSettingsPanel
-              embedded
-              onClose={closeSettings}
-              fontZoomPercent={fontZoomPercent}
-              onFontZoomPercentChange={setFontZoomPercent}
-            />
-          ) : null}
-
-          {shellMain && !settingsOpen && activeTab === "library" && (
+          {shellMain && activeTab === "library" && (
             <WebKnowledgeBrowser
-              integratedNav
+              integratedNav="shell"
+              onLibraryNavMount={onLibraryNavMount}
               selectedKbId={selectedKbId}
               recentKbIds={recentKbIds}
               onSelectKb={(kb) => {
@@ -606,7 +576,7 @@ export function MindAppWeb() {
             />
           )}
 
-          {shellMain && !settingsOpen && activeTab === "plaza" && (
+          {shellMain && activeTab === "plaza" && (
             <WebPlazaDiscoverPage
               onBrowseLibrary={openPlazaNotebookFromDiscover}
               onStartThread={openPlazaChatFromDiscover}
@@ -614,7 +584,7 @@ export function MindAppWeb() {
             />
           )}
 
-          {shellMain && !settingsOpen && activeTab === "memos" && (
+          {shellMain && activeTab === "memos" && (
             <WebNotesWorkspace
               requireAuthThen={requireAuthThen}
               initialSelectedNoteId={focusNoteId ?? undefined}
@@ -626,26 +596,15 @@ export function MindAppWeb() {
             />
           )}
 
-          {shellMain && !settingsOpen && activeTab === "agent" && (
-            <WebAgentCopilotPage
-              draftSeed={agentHistoryDraft}
-              onDraftSeedConsumed={() => setAgentHistoryDraft(null)}
-              requireAuthThen={requireAuthThen}
-              onAgentChat={(agent, options) =>
-                requireAuthThen(() => {
-                  noteAgentUsed(agent)
-                  openAgentChat(agent, options?.initialPrompt)
-                })
-              }
-            />
-          )}
-
-          {shellMain && !settingsOpen && activeTab === "me" && (
+          {shellMain && activeTab === "me" && (
             <WebMeTab
               activeAccountId={activeAccountId}
               onActiveAccountChange={() => {}}
               fontZoomPercent={fontZoomPercent}
               onFontZoomPercentChange={setFontZoomPercent}
+              settingsOpen={settingsOpen}
+              onOpenSettings={() => requireAuthThen(openSettings)}
+              onCloseSettings={closeSettings}
               creditsOpenSignal={creditsOpenSignal}
               onOpenCreditsPlans={() => requireAuthThen(() => setCreditsModalOpen(true))}
               onOpenTimeline={() => requireAuthThen(openMeTimeline)}
@@ -698,11 +657,6 @@ export function MindAppWeb() {
               onOpenDocumentEditor={(title) => {
                 if (currentView.kb.id == null) return
                 navigate(webKbHref(currentView.kb.id, "content-editor", { docTitle: title }))
-              }}
-              onOpenDocumentReader={(doc) => {
-                if (currentView.kb.id == null) return
-                cacheKbDocument(currentView.kb.id, doc)
-                navigate(webKbHref(currentView.kb.id, "doc", { docId: doc.id }))
               }}
               onOpenRichTextEditor={() => {
                 if (currentView.kb.id == null) return

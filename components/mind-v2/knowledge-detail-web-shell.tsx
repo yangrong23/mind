@@ -11,23 +11,32 @@ export type KnowledgeDetailWebShellProps = {
   description?: string
   embedded?: boolean
   onBack: () => void
-  /** When false, search stays in Sources panel only */
   showHeaderSearch?: boolean
   onSearch?: () => void
   headerActions?: ReactNode
-  sources: ReactNode
-  center: ReactNode
-  studio?: ReactNode
+  /** Left — files (sources & outputs) */
+  left: ReactNode
+  /** Center — document reader or AI view */
+  middle: ReactNode
+  /** Right — persistent Mindar chat */
+  right: ReactNode
   overlays?: ReactNode
-  /** Subscribed library: content | agent chat | studio outputs (3 columns). */
-  layout?: "notebook" | "subscribed"
+  /** @deprecated Use left/middle/right */
+  sources?: ReactNode
+  center?: ReactNode
+  studio?: ReactNode
+  layout?: "notebook" | "subscribed" | "workspace"
   studioRef?: RefObject<HTMLDivElement | null>
   studioHighlight?: boolean
 }
 
 const panelClass = cn(web.kbPanel, "flex flex-col overflow-hidden")
 
-/** NotebookLM 工作区 — 淡化边框 */
+const colLeft = "w-[min(280px,26vw)] min-w-[220px] shrink-0"
+const colMiddle = "min-w-0 flex-1"
+const colRight = "w-[min(380px,34vw)] min-w-[300px] shrink-0"
+
+/** KB workspace — files | reader / AI view | chat (same grid for public & private). */
 export function KnowledgeDetailWebShell({
   title,
   description,
@@ -36,96 +45,58 @@ export function KnowledgeDetailWebShell({
   showHeaderSearch = false,
   onSearch,
   headerActions,
+  left,
+  middle,
+  right,
+  overlays,
   sources,
   center,
   studio,
-  overlays,
-  layout = "notebook",
-  studioRef,
-  studioHighlight = false,
 }: KnowledgeDetailWebShellProps) {
-  const subscribed = layout === "subscribed"
+  const leftPanel = left ?? sources
+  const middlePanel = middle ?? center
+  const rightPanel = right ?? (studio != null ? center : null) ?? center
 
   return (
     <div className={cn("relative flex h-full min-h-0 flex-col", web.canvas)}>
-      {!subscribed ? (
-        <div className="relative z-10 flex shrink-0 items-center gap-2 px-4 py-3">
-          {!embedded ? (
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex h-8 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-zinc-600 hover:bg-white/80"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </button>
-          ) : null}
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[15px] font-semibold text-zinc-700">{title}</h1>
-            {description ? <p className="truncate text-[12px] text-zinc-500">{description}</p> : null}
-          </div>
-          {showHeaderSearch && onSearch ? (
-            <button
-              type="button"
-              onClick={onSearch}
-              className="rounded-lg p-2 text-zinc-500 hover:bg-white/80"
-              aria-label="Search"
-            >
-              <SmartSearchIcon className="h-4 w-4" />
-            </button>
-          ) : null}
-          {headerActions}
-        </div>
-      ) : (
-        <div className="relative z-10 flex shrink-0 items-center px-3 py-2">
-          {!embedded ? (
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex h-8 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-zinc-600 hover:bg-white/80"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </button>
-          ) : null}
-        </div>
-      )}
-
-      <div
-        className={cn(
-          "relative z-10 flex min-h-0 flex-1 gap-2.5 overflow-x-auto px-3 pb-0",
-          subscribed && "px-2"
-        )}
-      >
-        <aside
-          className={cn(
-            panelClass,
-            subscribed
-              ? "w-[min(320px,32%)] min-w-[260px] shrink-0"
-              : "w-[min(260px,24vw)] min-w-[200px] shrink-0"
-          )}
-          aria-label={subscribed ? "Library content" : "Sources"}
-        >
-          {sources}
-        </aside>
-        <section className={cn(panelClass, "min-w-0 flex-1")} aria-label="Agent chat">
-          {center}
-        </section>
-        {studio != null ? (
-          <aside
-            ref={studioRef}
-            className={cn(
-              panelClass,
-              subscribed
-                ? "w-[min(300px,28vw)] min-w-[240px] shrink-0"
-                : "w-[min(340px,30vw)] min-w-[280px] shrink-0 scroll-mt-3 transition-shadow duration-500",
-              !subscribed && studioHighlight && "ring-2 ring-mind/30 shadow-md shadow-[0_12px_40px_-12px_rgba(15,23,42,0.12)]"
-            )}
-            aria-label="Studio"
+      <div className="relative z-10 flex shrink-0 items-center gap-2 border-b border-black/[0.04] px-4 py-3">
+        {!embedded ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-zinc-600 hover:bg-white/80"
           >
-            {studio}
-          </aside>
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
         ) : null}
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-[15px] font-semibold text-zinc-800">{title}</h1>
+          {description ? <p className="truncate text-[12px] text-zinc-500">{description}</p> : null}
+        </div>
+        {showHeaderSearch && onSearch ? (
+          <button
+            type="button"
+            onClick={onSearch}
+            className="rounded-lg p-2 text-zinc-500 hover:bg-white/80"
+            aria-label="Search"
+          >
+            <SmartSearchIcon className="h-4 w-4" />
+          </button>
+        ) : null}
+        {headerActions}
+      </div>
+
+      <div className="relative z-10 flex min-h-0 flex-1 gap-2.5 overflow-x-auto px-3 pb-0">
+        <aside className={cn(panelClass, colLeft)} aria-label="Files">
+          {leftPanel}
+        </aside>
+        <section className={cn(panelClass, colMiddle)} aria-label="Content">
+          {middlePanel}
+        </section>
+        <aside className={cn(panelClass, colRight)} aria-label="Mindar chat">
+          {rightPanel}
+        </aside>
       </div>
       {overlays}
     </div>

@@ -10,13 +10,11 @@ export function WebMeDailyReviewPage({
   onBack,
   onOpenTodayActivity,
   onShare,
-  onSuggestedPrompt,
 }: {
   displayName: string
   onBack: () => void
   onOpenTodayActivity: () => void
   onShare: (payload: MindSharePayload) => void
-  onSuggestedPrompt?: (prompt: string) => void
 }) {
   const today = getTodayTimelineDay(DEMO_CAPTURE_DIARY)
 
@@ -30,7 +28,6 @@ export function WebMeDailyReviewPage({
         onBack()
         onOpenTodayActivity()
       }}
-      onSuggestedPrompt={onSuggestedPrompt}
       streakDays={7}
       captureCountToday={today.activity > 0 ? 3 : 0}
       days={DEMO_CAPTURE_DIARY}

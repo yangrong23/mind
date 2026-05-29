@@ -21,6 +21,8 @@ import {
   ChevronRight,
   Clock,
   Download,
+  FileText,
+  Mic,
   Eraser,
   Highlighter,
   Italic,
@@ -42,16 +44,12 @@ import {
   X,
 } from "lucide-react"
 import { KbUploadFileIcon } from "@/components/mind-v2/kb-upload-file-icon"
+import {
+  WebNotesImportDialog,
+  type NotesImportSourceId,
+} from "@/components/mind-v2/web-notes-import-dialog"
 
 type NoteGroupId = "today" | "week" | "month" | "older"
-type NoteFilter = "all" | "pinned" | "drafts"
-
-const NOTE_FILTERS: { id: NoteFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "pinned", label: "Pinned" },
-  { id: "drafts", label: "Drafts" },
-]
-
 const NOTE_GROUPS: { id: NoteGroupId; label: string }[] = [
   { id: "today", label: "Today" },
   { id: "week", label: "Past 7 days" },
@@ -143,7 +141,7 @@ function noteGroupFor(note: Note): NoteGroupId {
 
 function seedWebNotes(): Note[] {
   const fromMock = mockNotes
-    .filter((n) => !n.archived && n.status !== "recording")
+    .filter((n) => !n.archived)
     .map(toWebRichTextNote)
   const hasDemo = fromMock.some((n) => n.id === WEB_DEMO_NOTE.id)
   return hasDemo ? fromMock : [WEB_DEMO_NOTE, ...fromMock]
@@ -274,19 +272,30 @@ export function WebNotesWorkspace({
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
-  const [createOpen, setCreateOpen] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [listCollapsed, setListCollapsed] = useState(false)
   const [listSearchOpen, setListSearchOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [listQuery, setListQuery] = useState("")
-  const [noteFilter, setNoteFilter] = useState<NoteFilter>("all")
   const [pinnedIds, setPinnedIds] = useState<Set<number>>(() => new Set([WEB_DEMO_NOTE.id]))
   const editorRef = useRef<HTMLDivElement>(null)
   const moreRef = useRef<HTMLDivElement>(null)
   const insertRef = useRef<HTMLDivElement>(null)
-  const createRef = useRef<HTMLDivElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
+
+  const SOURCE_LABELS: Record<NotesImportSourceId, string> = {
+    markdown: "Markdown files",
+    notion: "Notion",
+    evernote: "Evernote",
+    obsidian: "Obsidian",
+    "apple-notes": "Apple Notes",
+    "google-keep": "Google Keep",
+    onenote: "OneNote",
+    roam: "Roam / Logseq",
+    bear: "Bear",
+    simplenote: "Simplenote",
+  }
 
   const selected = notes.find((n) => n.id === selectedId) ?? notes[0]
 
@@ -311,32 +320,22 @@ export function WebNotesWorkspace({
   }, [selected?.id, selected?.bodyHtml, selected?.preview, selected?.title])
 
   useEffect(() => {
-    if (!moreOpen && !insertOpen && !createOpen) return
+    if (!moreOpen && !insertOpen) return
     function onDoc(e: MouseEvent) {
       const t = e.target as Node
       if (moreOpen && !moreRef.current?.contains(t)) setMoreOpen(false)
       if (insertOpen && !insertRef.current?.contains(t)) setInsertOpen(false)
-      if (createOpen && !createRef.current?.contains(t)) setCreateOpen(false)
     }
     document.addEventListener("mousedown", onDoc)
     return () => document.removeEventListener("mousedown", onDoc)
-  }, [moreOpen, insertOpen, createOpen])
+  }, [moreOpen, insertOpen])
 
-  const listTitle = NOTE_FILTERS.find((f) => f.id === noteFilter)?.label ?? "All"
   const selectedPinned = selected ? pinnedIds.has(selected.id) : false
 
   const focusEditor = () => editorRef.current?.focus()
 
   const filteredNotes = useMemo(() => {
     let list = notes
-    if (noteFilter === "pinned") {
-      list = list.filter((n) => pinnedIds.has(n.id))
-    } else if (noteFilter === "drafts") {
-      list = list.filter(
-        (n) => !n.preview.trim() || n.title.toLowerCase().startsWith("untitled")
-      )
-    }
-
     const q = listQuery.trim().toLowerCase()
     if (!q) return list
     return list.filter(
@@ -345,7 +344,7 @@ export function WebNotesWorkspace({
         n.preview.toLowerCase().includes(q) ||
         (n.bodyHtml?.toLowerCase().includes(q) ?? false)
     )
-  }, [listQuery, noteFilter, notes, pinnedIds])
+  }, [listQuery, notes])
 
   const grouped = useMemo(() => {
     const map = new Map<NoteGroupId, Note[]>()
@@ -380,8 +379,46 @@ export function WebNotesWorkspace({
     setBodyEmpty(htmlBodyIsEmpty(readHtml()))
   }, [])
 
+  function handleStartRecording() {
+    runWithAuth(() => {
+      const id = Date.now()
+      const note: Note = {
+        id,
+        title: "New recording",
+        type: "hardware",
+        date: "Today",
+        preview: "Recording in progress…",
+        status: "recording",
+        source: "Notes",
+      }
+      setNotes((prev) => [note, ...prev])
+      selectNote(note)
+      setListCollapsed(false)
+      toast.message("Recording", { description: "Voice capture started (demo)." })
+    })
+  }
+
+  function handleImportFiles(files: FileList) {
+    const list = Array.from(files)
+    if (list.length === 0) return
+    list.forEach((file) => handleImportNote(file))
+    if (list.length > 1) {
+      toast.success(`Imported ${list.length} notes`)
+    }
+  }
+
+  function handleImportFromSource(sourceId: NotesImportSourceId) {
+    const label = SOURCE_LABELS[sourceId] ?? sourceId
+    toast.message(`Import from ${label}`, {
+      description:
+        "Export from your app, then upload Markdown or .enex here. Full OAuth connectors coming soon (demo).",
+    })
+    if (sourceId === "markdown") {
+      runWithAuth(() => importInputRef.current?.click())
+    }
+  }
+
   function handleNewNote() {
-    setCreateOpen(false)
     runWithAuth(() => {
       const id = Date.now()
       const note: Note = {
@@ -403,7 +440,6 @@ export function WebNotesWorkspace({
   }
 
   function handleImportNote(file: File) {
-    setCreateOpen(false)
     const reader = new FileReader()
     reader.onload = () => {
       const raw = String(reader.result ?? "").trim()
@@ -500,57 +536,7 @@ export function WebNotesWorkspace({
           >
             <PanelLeftClose className="h-4 w-4" strokeWidth={2} />
           </button>
-
-          <div className="relative min-w-0 flex-1" ref={createRef}>
-            <div className="flex overflow-hidden rounded-lg border border-stone-200/90 bg-white shadow-sm">
-              <button
-                type="button"
-                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2.5 py-2 text-zinc-700 hover:bg-stone-50"
-                aria-label="New note"
-                onClick={handleNewNote}
-              >
-                <KbUploadFileIcon className="h-4 w-4 text-zinc-600" strokeWidth={2} />
-              </button>
-              <button
-                type="button"
-                className="border-l border-stone-200/90 px-2 py-2 text-zinc-500 hover:bg-stone-50"
-                aria-label="New or import menu"
-                aria-expanded={createOpen}
-                onClick={() => setCreateOpen((v) => !v)}
-              >
-                <ChevronDown className="h-3.5 w-3.5" strokeWidth={2.5} />
-              </button>
-            </div>
-            {createOpen ? (
-              <div
-                role="menu"
-                className="absolute left-0 top-full z-40 mt-1 min-w-[11.5rem] rounded-xl border border-stone-200/90 bg-white py-1 shadow-lg"
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] text-zinc-700 hover:bg-stone-50"
-                  onClick={handleNewNote}
-                >
-                  <KbUploadFileIcon className="h-4 w-4 text-zinc-500" strokeWidth={2} />
-                  New note
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] text-zinc-700 hover:bg-stone-50"
-                  onClick={() => {
-                    setCreateOpen(false)
-                    runWithAuth(() => importInputRef.current?.click())
-                  }}
-                >
-                  <Download className="h-4 w-4 text-zinc-500" strokeWidth={2} />
-                  Import
-                </button>
-              </div>
-            ) : null}
-          </div>
-
+          <h1 className="min-w-0 flex-1 text-[15px] font-semibold text-zinc-800">Notes</h1>
           <button
             type="button"
             className={cn(
@@ -567,24 +553,35 @@ export function WebNotesWorkspace({
         </div>
 
         <div className="px-3 pb-2">
-          <h1 className="text-[15px] font-semibold text-zinc-800">{listTitle}</h1>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5 px-3 pb-2" role="group" aria-label="Filter notes">
-          {NOTE_FILTERS.map((chip) => (
+          <div className="flex gap-2">
             <button
-              key={chip.id}
               type="button"
-              onClick={() => setNoteFilter(chip.id)}
-              className={cn(
-                web.kbPill,
-                "min-w-0 flex-1 justify-center px-2.5 py-1.5 text-[12px]",
-                noteFilter === chip.id && web.kbPillActive
-              )}
+              onClick={handleStartRecording}
+              className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200/90 bg-stone-50/60 text-[13px] font-medium text-zinc-700 hover:bg-stone-100/80"
+              aria-label="Start recording"
             >
-              {chip.label}
+              <Mic className="h-4 w-4 shrink-0 text-zinc-500" strokeWidth={1.85} aria-hidden />
+              Record
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={handleNewNote}
+              className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200/90 bg-stone-50/60 text-[13px] font-medium text-zinc-700 hover:bg-stone-100/80"
+              aria-label="New note"
+            >
+              <FileText className="h-4 w-4 shrink-0 text-zinc-500" strokeWidth={1.85} aria-hidden />
+              New note
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => runWithAuth(() => setImportDialogOpen(true))}
+            className="mt-2 flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-stone-300/90 bg-white text-[13px] font-semibold text-zinc-700 hover:border-mind/35 hover:bg-mind/[0.04] hover:text-mind"
+            aria-label="Import notes"
+          >
+            <Download className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+            Import notes
+          </button>
         </div>
 
         {listSearchOpen ? (
@@ -1025,6 +1022,13 @@ export function WebNotesWorkspace({
           </div>
         </aside>
       ) : null}
+
+      <WebNotesImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImportFiles={(files) => runWithAuth(() => handleImportFiles(files))}
+        onImportFromSource={(id) => runWithAuth(() => handleImportFromSource(id))}
+      />
 
       <WebNoteShareDialog
         open={shareOpen}

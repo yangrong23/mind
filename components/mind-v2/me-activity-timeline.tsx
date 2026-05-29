@@ -13,12 +13,29 @@ import { HubItemThumb } from "@/components/mind-v2/mind-media-art"
 import { hubItemKindFromLabel } from "@/lib/product-media"
 import {
   buildActivityTimelineDay,
+  getTodayTimelineDay,
   groupTimelineByMonth,
   type ActivityTimelineDay,
 } from "@/lib/mock-activity-timeline"
+import {
+  daysInMonth,
+  daysInYear,
+  monthGroupsFromDays,
+  type DiaryPeriod,
+  uniqueYearsFromDays,
+} from "@/lib/me-diary-period"
+import {
+  MeDiaryDayTimeline,
+  MeDiaryMonthTimeline,
+  MeDiaryPeriodTabs,
+  MeDiaryYearTimeline,
+} from "@/components/mind-v2/me-diary-period-nav"
 import { buildDayTimelineBrief } from "@/lib/daily-brief-content"
 import { DailyBriefView } from "@/components/mind-v2/daily-brief-view"
 import { DAILY_REVIEW_HEADLINE } from "@/components/mind-v2/me-daily-review"
+
+const DIARY_DAY_SCROLLER_MAX = 14
+const DIARY_MONTH_DAY_PREVIEW = 5
 
 export type MeActivityTimelineProps = {
   days: ActivityTimelineDay[]
@@ -26,7 +43,6 @@ export type MeActivityTimelineProps = {
   initialActivity: number
   onClose: () => void
   onShare?: (day: ActivityTimelineDay) => void
-  onSuggestedPrompt?: (prompt: string) => void
   displayName?: string
   webLayout?: boolean
   /** `overlay` — mobile sheet; `page` — web full main column */
@@ -674,13 +690,12 @@ export function MeDiaryTimelineEmbed({
   )
 }
 
-/** Web Me — left column: linear diary timeline */
+/** Web Me — diary with day / month / year scope (compact preview, not full expand) */
 export function MeDiaryTimelinePanel({
   days,
   onOpenDiary,
   onOpenDay,
   onOpenDailyReview,
-  previewCount,
   className,
 }: {
   days: ActivityTimelineDay[]
@@ -689,25 +704,83 @@ export function MeDiaryTimelinePanel({
   onOpenDailyReview?: () => void
   /** @deprecated Grid removed */
   gridCells?: number
-  /** Defaults to all days */
+  /** @deprecated Use period tabs instead of full list */
   previewCount?: number
   className?: string
 }) {
-  const listDays = previewCount != null ? days.slice(0, previewCount) : days
+  const todayDay = useMemo(() => getTodayTimelineDay(days), [days])
+  const monthGroups = useMemo(() => monthGroupsFromDays(days), [days])
+  const years = useMemo(() => uniqueYearsFromDays(days), [days])
+
+  const [period, setPeriod] = useState<DiaryPeriod>("day")
+  const [selectedDay, setSelectedDay] = useState<ActivityTimelineDay>(todayDay)
+  const [selectedMonthKey, setSelectedMonthKey] = useState(
+    monthGroups[0]?.monthKey ?? todayDay.monthKey
+  )
+  const [selectedYear, setSelectedYear] = useState(
+    () => new Date(todayDay.isoDate + "T12:00:00").getFullYear()
+  )
+
+  const monthOptions = useMemo(
+    () =>
+      monthGroups.map((g) => ({
+        monthKey: g.monthKey,
+        monthLabel: g.monthLabel,
+        count: g.days.filter((d) => d.activity > 0).length,
+      })),
+    [monthGroups]
+  )
+
+  const dayScrollerDays = useMemo(() => days.slice(0, DIARY_DAY_SCROLLER_MAX), [days])
+
+  const monthDays = useMemo(
+    () => daysInMonth(days, selectedMonthKey),
+    [days, selectedMonthKey]
+  )
+  const monthPreviewDays = monthDays.slice(0, DIARY_MONTH_DAY_PREVIEW)
+  const monthActiveCount = monthDays.filter((d) => d.activity > 0).length
+
+  const yearDays = useMemo(() => daysInYear(days, selectedYear), [days, selectedYear])
+  const yearActiveCount = yearDays.filter((d) => d.activity > 0).length
+  const yearMonthSummaries = useMemo(() => {
+    const byMonth = new Map<string, { monthKey: string; monthLabel: string; active: number }>()
+    for (const d of yearDays) {
+      const existing = byMonth.get(d.monthKey)
+      if (existing) {
+        if (d.activity > 0) existing.active += 1
+      } else {
+        byMonth.set(d.monthKey, {
+          monthKey: d.monthKey,
+          monthLabel:
+            monthGroups.find((g) => g.monthKey === d.monthKey)?.monthLabel ?? d.monthKey,
+          active: d.activity > 0 ? 1 : 0,
+        })
+      }
+    }
+    return Array.from(byMonth.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey))
+  }, [yearDays, monthGroups])
+
+  function handlePeriodChange(next: DiaryPeriod) {
+    setPeriod(next)
+    if (next === "day") setSelectedDay(todayDay)
+    if (next === "month") setSelectedMonthKey(todayDay.monthKey)
+    if (next === "year") {
+      setSelectedYear(new Date(todayDay.isoDate + "T12:00:00").getFullYear())
+    }
+  }
+
+  function openMonthFromYear(monthKey: string) {
+    setSelectedMonthKey(monthKey)
+    setPeriod("month")
+  }
 
   return (
-    <section
-      className={cn(
-        web.surfaceCard,
-        "flex min-h-[min(720px,calc(100vh-200px))] flex-col p-5",
-        className
-      )}
-    >
+    <section className={cn(web.surfaceCard, "flex flex-col p-5", className)}>
       <div className="flex shrink-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-[16px] font-semibold text-zinc-900">Daily diary</h2>
           <p className="mt-1 text-[13px] leading-snug text-zinc-500">
-            Recent days — tap a title to open captures & summary
+            Browse by day, month, or year — open a day for the full log
           </p>
         </div>
         <button
@@ -738,8 +811,121 @@ export function MeDiaryTimelinePanel({
         </button>
       ) : null}
 
-      <div className="scrollbar-hide mt-4 min-h-0 flex-1 overflow-y-auto pr-0.5">
-        <MeTimelineLinearDayList days={listDays} onSelectDay={onOpenDay} />
+      <div className="mt-4 flex flex-col gap-4">
+        <MeDiaryPeriodTabs period={period} onChange={handlePeriodChange} />
+
+        {period === "day" ? (
+          <MeDiaryDayTimeline
+            days={dayScrollerDays}
+            selectedIso={selectedDay.isoDate}
+            onSelect={setSelectedDay}
+          />
+        ) : period === "month" ? (
+          <MeDiaryMonthTimeline
+            months={monthOptions}
+            selectedMonthKey={selectedMonthKey}
+            onSelect={setSelectedMonthKey}
+          />
+        ) : (
+          <MeDiaryYearTimeline years={years} selectedYear={selectedYear} onSelect={setSelectedYear} />
+        )}
+
+        <div className="rounded-xl border border-stone-100/90 bg-stone-50/50 p-1 dark:border-zinc-800 dark:bg-zinc-900/30">
+          {period === "day" ? (
+            <button
+              type="button"
+              onClick={() => onOpenDay(selectedDay)}
+              className="flex w-full gap-3 rounded-lg p-3.5 text-left transition-colors hover:bg-white/80 dark:hover:bg-zinc-900/60"
+            >
+              <span
+                className={cn(
+                  "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
+                  activityTimelineDotClass(selectedDay.activity)
+                )}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1">
+                <span className="text-[11px] font-medium tabular-nums text-zinc-400">
+                  {selectedDay.homeDateLabel} · {selectedDay.weekdayLabel}
+                </span>
+                <p className="mt-0.5 text-[15px] font-semibold leading-snug text-zinc-900">
+                  {selectedDay.title}
+                </p>
+                {selectedDay.previewLine ? (
+                  <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
+                    {selectedDay.previewLine}
+                  </p>
+                ) : selectedDay.summary ? (
+                  <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
+                    {selectedDay.summary}
+                  </p>
+                ) : null}
+              </span>
+              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-zinc-300" strokeWidth={2} aria-hidden />
+            </button>
+          ) : null}
+
+          {period === "month" ? (
+            <div className="p-3">
+              <p className="text-[13px] text-zinc-600">
+                <span className="font-semibold text-zinc-800">{monthActiveCount}</span> active day
+                {monthActiveCount === 1 ? "" : "s"} in{" "}
+                <span className="font-semibold text-zinc-800">
+                  {monthOptions.find((m) => m.monthKey === selectedMonthKey)?.monthLabel ??
+                    selectedMonthKey}
+                </span>
+              </p>
+              {monthPreviewDays.length > 0 ? (
+                <div className="mt-3 max-h-[220px] overflow-y-auto scrollbar-hide">
+                  <MeTimelineLinearDayList days={monthPreviewDays} onSelectDay={onOpenDay} />
+                </div>
+              ) : (
+                <p className="mt-3 text-[13px] text-zinc-500">No captures this month yet.</p>
+              )}
+              {monthDays.length > DIARY_MONTH_DAY_PREVIEW ? (
+                <button
+                  type="button"
+                  onClick={onOpenDiary}
+                  className="mt-3 text-[13px] font-semibold text-mind hover:text-mind/85"
+                >
+                  View all {monthDays.length} days in timeline →
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {period === "year" ? (
+            <div className="p-3">
+              <p className="text-[13px] text-zinc-600">
+                <span className="font-semibold text-zinc-800">{yearActiveCount}</span> active day
+                {yearActiveCount === 1 ? "" : "s"} in{" "}
+                <span className="font-semibold text-zinc-800">{selectedYear}</span>
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {yearMonthSummaries.map((m) => (
+                  <button
+                    key={m.monthKey}
+                    type="button"
+                    onClick={() => openMonthFromYear(m.monthKey)}
+                    className="rounded-xl border border-stone-200/80 bg-white/80 px-3 py-2.5 text-left transition-colors hover:border-mind/25 hover:bg-mind/[0.04] dark:border-zinc-700 dark:bg-zinc-900/50"
+                  >
+                    <span className="block text-[13px] font-semibold text-zinc-800">{m.monthLabel}</span>
+                    <span className="mt-0.5 text-[11px] text-zinc-500">
+                      {m.active} active day{m.active === 1 ? "" : "s"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={onOpenDiary}
+                className="mt-3 text-[13px] font-semibold text-mind hover:text-mind/85"
+              >
+                Open full timeline →
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </section>
   )
@@ -851,14 +1037,12 @@ function DayDetailPanel({
   uploads,
   displayName = "You",
   onShare,
-  onSuggestedPrompt,
   webLayout = false,
 }: {
   day: ActivityTimelineDay
   uploads: { id: string; title: string; time: string; source: string }[]
   displayName?: string
   onShare?: () => void
-  onSuggestedPrompt?: (prompt: string) => void
   webLayout?: boolean
 }) {
   const brief = useMemo(
@@ -904,7 +1088,7 @@ function DayDetailPanel({
           </div>
         ) : null}
 
-        <DailyBriefView content={brief} onSuggestedPrompt={onSuggestedPrompt} />
+        <DailyBriefView content={brief} />
 
         {onShare ? (
           <button
@@ -932,7 +1116,6 @@ export function MeActivityTimeline({
   initialActivity,
   onClose,
   onShare,
-  onSuggestedPrompt,
   displayName = "You",
   webLayout = false,
   presentation = "overlay",
@@ -1080,7 +1263,6 @@ export function MeActivityTimeline({
               uploads={uploads}
               displayName={displayName}
               onShare={onShare ? () => onShare(selected) : undefined}
-              onSuggestedPrompt={onSuggestedPrompt}
               webLayout={webLayout}
             />
           </div>

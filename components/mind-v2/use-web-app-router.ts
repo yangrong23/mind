@@ -217,10 +217,15 @@ function activeTabFromLocation(location: ParsedWebLocation): WebTabType {
     case "me-timeline-day":
       return "me"
     case "settings":
-      return "agent"
+      return "me"
     default:
       return "agent"
   }
+}
+
+function settingsOpenFromLocation(location: ParsedWebLocation): boolean {
+  if (location.mode === "settings") return true
+  return location.mode === "tab" && location.tab === "me" && Boolean(location.settingsOpen)
 }
 
 export function useWebAppRouter(allKbsById: Map<number, KnowledgeBase>) {
@@ -235,7 +240,7 @@ export function useWebAppRouter(allKbsById: Map<number, KnowledgeBase>) {
 
   const currentView = useMemo(() => locationToView(location, allKbsById), [location, allKbsById])
   const activeTab = useMemo(() => activeTabFromLocation(location), [location])
-  const settingsOpen = location.mode === "settings"
+  const settingsOpen = settingsOpenFromLocation(location)
   const shellMain = currentView.type === "shell"
 
   const navigate = useCallback(
@@ -290,7 +295,7 @@ export function useWebAppRouter(allKbsById: Map<number, KnowledgeBase>) {
       returnTo: "me" | "me-timeline"
     ) => navigate(webMeTimelineDayHref(day.isoDate, day.activity, returnTo)),
     openSettings: () => navigate(webSettingsHref()),
-    closeSettings: () => goToParent(),
+    closeSettings: () => navigate(webTabHref("me")),
     selectLibraryKb: (kbId: number | null) =>
       navigate(webTabHref("library", kbId != null ? { kb: kbId } : undefined), true),
     selectNote: (noteId: number) => navigate(webTabHref("memos", { note: noteId })),

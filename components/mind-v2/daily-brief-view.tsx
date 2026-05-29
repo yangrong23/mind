@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, CornerDownLeft, ExternalLink, FileText, Mail } from "lucide-react"
+import { Calendar, ExternalLink, FileText, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { DailyBriefAction, DailyBriefContent } from "@/lib/daily-brief-content"
 
@@ -25,12 +25,10 @@ function renderLeadText(text: string) {
 
 export function DailyBriefView({
   content,
-  onSuggestedPrompt,
   onAction,
   className,
 }: {
   content: DailyBriefContent
-  onSuggestedPrompt?: (prompt: string) => void
   onAction?: (actionId: string, itemId: string) => void
   className?: string
 }) {
@@ -128,33 +126,6 @@ export function DailyBriefView({
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
-
-      {content.suggestedPrompts.length > 0 ? (
-        <section aria-label="Suggested follow-ups">
-          <p className="mb-3 text-[13px] font-medium text-zinc-500 dark:text-zinc-400">
-            Continue the conversation
-          </p>
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-            {content.suggestedPrompts.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => onSuggestedPrompt?.(prompt)}
-                className={cn(
-                  "flex min-h-[44px] flex-1 items-center justify-between gap-3 rounded-xl",
-                  "bg-white/80 px-4 py-3 text-left text-[14px] font-medium leading-snug text-zinc-800",
-                  "shadow-[0_2px_10px_-6px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.05]",
-                  "transition-[box-shadow,background-color] hover:bg-white hover:shadow-[0_4px_14px_-8px_rgba(15,23,42,0.1)]",
-                  "dark:bg-zinc-900/60 dark:text-zinc-100 dark:ring-white/10"
-                )}
-              >
-                <span className="min-w-0 flex-1">{prompt}</span>
-                <CornerDownLeft className="h-4 w-4 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
-              </button>
-            ))}
-          </div>
         </section>
       ) : null}
     </div>

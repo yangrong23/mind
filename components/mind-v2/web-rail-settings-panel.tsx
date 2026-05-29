@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
-import { X } from "lucide-react"
+import { ChevronLeft, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   WebSettingsFontSlider,
@@ -249,18 +249,43 @@ export function WebRailSettingsPanel({
 
   if (embedded) {
     return (
-      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white">
-        {!view ? (
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-transparent">
+        <header className="flex shrink-0 items-center gap-2 border-b border-black/[0.05] bg-white/50 px-4 py-3 backdrop-blur-md">
           <button
             type="button"
-            onClick={onClose}
-            className="absolute right-6 top-6 z-10 rounded-lg p-2 text-zinc-400 hover:bg-stone-100 hover:text-zinc-600"
-            aria-label="Close settings"
+            onClick={view ? () => setView(null) : onClose}
+            className="inline-flex items-center gap-1 rounded-lg px-1 py-1 text-[14px] font-semibold text-zinc-700 hover:bg-stone-100"
+            aria-label={view ? "Back to settings" : "Back to Me"}
           >
-            <X className="h-5 w-5" />
+            <ChevronLeft className="h-5 w-5" strokeWidth={2} aria-hidden />
+            {view ? "Settings" : "Me"}
           </button>
-        ) : null}
-        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto">{body}</div>
+          <h1 className="min-w-0 flex-1 text-center text-[15px] font-semibold text-zinc-900">
+            {view === "storage"
+              ? "Storage"
+              : view === "cloud-sync"
+                ? "Cloud sync"
+                : view === "privacy-guide"
+                  ? "Protection guide"
+                  : view === "privacy-settings"
+                    ? "Privacy"
+                    : view === "data-collected"
+                      ? "Data collected"
+                      : view === "third-party"
+                        ? "Third-party"
+                        : view === "personalization"
+                          ? "Personalization"
+                          : view === "user-guide"
+                            ? "User guide"
+                            : view === "contact"
+                              ? "Contact"
+                              : view === "rate"
+                                ? "Rate Mindar"
+                                : "Settings"}
+          </h1>
+          <span className="w-[4.5rem]" aria-hidden />
+        </header>
+        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto bg-white/40">{body}</div>
       </div>
     )
   }

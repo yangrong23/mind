@@ -42,7 +42,6 @@ export type MeDailyReviewProps = {
   onClose: () => void
   onShare: (payload: MindSharePayload) => void
   onOpenTodayActivity?: () => void
-  onSuggestedPrompt?: (prompt: string) => void
   displayName?: string
   body?: string
   headline?: string
@@ -64,7 +63,6 @@ export function MeDailyReview({
   onClose,
   onShare,
   onOpenTodayActivity,
-  onSuggestedPrompt,
   displayName = "You",
   body,
   headline = DAILY_REVIEW_HEADLINE,
@@ -238,7 +236,7 @@ export function MeDailyReview({
           className="mb-5"
         />
 
-        <DailyBriefView content={brief} onSuggestedPrompt={onSuggestedPrompt} />
+        <DailyBriefView content={brief} />
 
         {onOpenTodayActivity ? (
           <button

@@ -1,9 +1,7 @@
 import Link from "next/link"
-import { Check, ChevronDown } from "lucide-react"
+import { Check } from "lucide-react"
 import { MindarLogo } from "@/components/mind-v2/mindar-logo"
-import { LANDING_COPY, LANDING_SIGN_IN_HREF, LANDING_WEB_APP_HREF } from "@/lib/mind-landing-copy"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 /** Glass card — design mock glassmorphism */
 export const landingCard = cn(
   "rounded-3xl border border-white/50",
@@ -90,43 +88,7 @@ export function MindLogoMark({ className }: { className?: string }) {
   )
 }
 
-export function LandingHeaderNav() {
-  const { header } = LANDING_COPY
-  return (
-    <header className="sticky top-0 z-50 border-b border-white/40 bg-white/50 backdrop-blur-2xl backdrop-saturate-150">
-      <LandingContainer className="flex h-[72px] items-center gap-6">
-        <MindLogoMark />
-        <nav className="hidden flex-1 items-center justify-center gap-8 md:flex" aria-label="Main">
-          {header.nav.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 transition hover:text-slate-900"
-            >
-              {item.label}
-              <ChevronDown className="size-3.5 opacity-50" strokeWidth={2.5} aria-hidden />
-            </a>
-          ))}
-        </nav>
-        <div className="ml-auto flex items-center gap-4 sm:gap-6">
-          <Link
-            href={LANDING_SIGN_IN_HREF}
-            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-          >
-            {header.signIn}
-          </Link>
-          <Button
-            asChild
-            variant="landing"
-            className="h-10 rounded-full px-5 text-sm font-semibold"
-          >
-            <Link href={LANDING_WEB_APP_HREF}>{header.cta}</Link>
-          </Button>
-        </div>
-      </LandingContainer>
-    </header>
-  )
-}
+export { LandingHeaderNav } from "@/components/mind-landing/landing-header-nav"
 
 export function CheckRow({ items }: { items: readonly string[] }) {
   return (

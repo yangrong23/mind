@@ -123,6 +123,8 @@ export function WebLibraryNavPanel({
   onSearchQueryChange,
   onSelectKb,
   onCreateInSection,
+  recentKbs = [],
+  embeddedInShell = false,
   className,
 }: {
   grouped: GroupedKbs
@@ -131,6 +133,10 @@ export function WebLibraryNavPanel({
   onSearchQueryChange: (q: string) => void
   onSelectKb: (kb: KnowledgeBase) => void
   onCreateInSection: (sectionId: LibraryHubSectionId) => void
+  /** Recently opened libraries — shown above category sections */
+  recentKbs?: KnowledgeBase[]
+  /** Rendered inside primary nav — flatter chrome, no outer border */
+  embeddedInShell?: boolean
   className?: string
 }) {
   const [expanded, setExpanded] = useState<Record<LibraryHubSectionId, boolean>>({
@@ -164,14 +170,20 @@ export function WebLibraryNavPanel({
   return (
     <aside
       className={cn(
-        "flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-white/50 bg-white/40 backdrop-blur-md",
-        web.libraryNavWidth,
+        "flex h-full min-h-0 flex-1 flex-col overflow-hidden",
+        !embeddedInShell && [
+          "shrink-0 border-r border-white/50 bg-white/40 backdrop-blur-md",
+          web.libraryNavWidth,
+        ],
+        embeddedInShell && "bg-transparent",
         className
       )}
       aria-label="Library browser"
     >
       <div className="shrink-0 space-y-2 border-b border-black/[0.05] px-3 py-3.5">
-        <h2 className={cn("px-0.5", web.typeNavPanelTitle)}>My Library</h2>
+        {!embeddedInShell ? (
+          <h2 className={cn("px-0.5", web.typeNavPanelTitle)}>My Library</h2>
+        ) : null}
         <div className="relative">
           <Search
             className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
@@ -190,6 +202,37 @@ export function WebLibraryNavPanel({
       </div>
 
       <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-2 py-2">
+        {recentKbs.length > 0 ? (
+          <div className="mb-2">
+            <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+              Recent
+            </p>
+            <ul className="space-y-0.5">
+              {recentKbs.map((kb) => {
+                const active = selectedKbId === kb.id
+                return (
+                  <li key={`recent-${kb.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectKb(kb)}
+                      className={webNavListItem(active, {
+                        className: cn(
+                          "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left",
+                          web.typeNavItem
+                        ),
+                      })}
+                    >
+                      <LibraryListThumbnail kb={kb} size="sm" />
+                      <span className={cn("min-w-0 flex-1 break-words", web.typeNavItemTitle)}>
+                        {kb.name}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ) : null}
         {topSections.map((section) => (
           <LibraryNavSection
             key={section.id}

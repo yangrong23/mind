@@ -1,6 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { web } from "@/components/mind-v2/web-design"
@@ -284,9 +291,12 @@ function mergeKbWithMeta(kb: KnowledgeBase, meta?: KbDisplayMeta): KnowledgeBase
   }
 }
 
+export type WebKnowledgeIntegratedNav = boolean | "shell"
+
 /** 知识库浏览 — 分类树 + 可搜索/排序/添加的内容列表 */
 export function WebKnowledgeBrowser({
   integratedNav = false,
+  onLibraryNavMount,
   selectedKbId,
   onSelectKb,
   onOpenWorkspace,
@@ -306,8 +316,9 @@ export function WebKnowledgeBrowser({
   onKbCreated,
   onLibraryPublished,
 }: {
-  /** Hide inner library sidebar — shell nav already lists recents + More opens this view */
-  integratedNav?: boolean
+  /** `true` = middle column; `shell` = mount library tree in primary nav via callback */
+  integratedNav?: WebKnowledgeIntegratedNav
+  onLibraryNavMount?: (node: ReactNode) => void
   selectedKbId: number | null
   onSelectKb: (kb: KnowledgeBase) => void
   onOpenWorkspace: (kb: KnowledgeBase) => void
@@ -620,6 +631,45 @@ export function WebKnowledgeBrowser({
     ) as Record<SidebarSectionId, KnowledgeBase[]>
   }, [allKBs, kbQuery, kbSort])
 
+  const integratedLayout = integratedNav === true || integratedNav === "shell"
+
+  const libraryNavPanel = useMemo(
+    () => (
+      <WebLibraryNavPanel
+        grouped={grouped}
+        selectedKbId={selectedKbId}
+        searchQuery={kbSearch}
+        onSearchQueryChange={setKbSearch}
+        onSelectKb={onSelectKb}
+        onCreateInSection={(sectionId) =>
+          runAuth(() =>
+            setCreateDialogMode({
+              kind: "create",
+              category: sectionId === "team" ? "team" : "mine",
+            })
+          )
+        }
+        recentKbs={recentKbs}
+        embeddedInShell={integratedNav === "shell"}
+      />
+    ),
+    [
+      grouped,
+      selectedKbId,
+      kbSearch,
+      onSelectKb,
+      recentKbs,
+      integratedNav,
+      runAuth,
+    ]
+  )
+
+  useEffect(() => {
+    if (integratedNav !== "shell" || !onLibraryNavMount) return
+    onLibraryNavMount(libraryNavPanel)
+    return () => onLibraryNavMount(null)
+  }, [integratedNav, onLibraryNavMount, libraryNavPanel])
+
   useEffect(() => {
     if (!kbQuery) return
     setExpanded({ mine: true, followed: true, team: true, published: true })
@@ -907,7 +957,7 @@ export function WebKnowledgeBrowser({
           </p>
         </div>
       ) : selected ? (
-        integratedNav ? (
+        integratedLayout ? (
           materialsView === "grid" ? (
             <WebKbMaterialsGrid items={visibleHubItems} onOpenItem={openHubItem} />
           ) : (
@@ -928,24 +978,8 @@ export function WebKnowledgeBrowser({
 
   return (
     <div className={cn("flex h-full min-h-0", web.canvas)}>
-      {integratedNav ? (
-        <WebLibraryNavPanel
-          grouped={grouped}
-          selectedKbId={selectedKbId}
-          searchQuery={kbSearch}
-          onSearchQueryChange={setKbSearch}
-          onSelectKb={onSelectKb}
-          onCreateInSection={(sectionId) =>
-            runAuth(() =>
-              setCreateDialogMode({
-                kind: "create",
-                category: sectionId === "team" ? "team" : "mine",
-              })
-            )
-          }
-        />
-      ) : null}
-      {!integratedNav ? (
+      {integratedNav === true ? libraryNavPanel : null}
+      {!integratedLayout ? (
       <aside
         className={cn(
           "flex h-full shrink-0 flex-col overflow-hidden",
@@ -1192,10 +1226,10 @@ export function WebKnowledgeBrowser({
           <div
             className={cn(
               "flex min-h-0 flex-1 flex-col overflow-hidden",
-              integratedNav ? "mx-0" : cn("mx-6 my-6", web.surfaceCard)
+              integratedLayout ? "mx-0" : cn("mx-6 my-6", web.surfaceCard)
             )}
           >
-            {integratedNav && isSharedKb ? (
+            {integratedLayout && isSharedKb ? (
               <>
                 <WebSharedKbHeader
                   size="detail"
@@ -1292,7 +1326,7 @@ export function WebKnowledgeBrowser({
                   </button>
                 </div>
               </>
-            ) : integratedNav ? (
+            ) : integratedLayout ? (
               <>
                 {isPersonalKb ? (
                   <WebPersonalKbHeader
@@ -1363,7 +1397,7 @@ export function WebKnowledgeBrowser({
                 )}
               </>
             ) : null}
-            {!integratedNav ? (
+            {!integratedLayout ? (
             <WebKbDetailHero
               title={selected.name}
               description={
@@ -1543,7 +1577,7 @@ export function WebKnowledgeBrowser({
               }
             />
             ) : null}
-            {!(integratedNav && isSharedKb) ? (
+            {!(integratedLayout && isSharedKb) ? (
               <WebKbDetailToolbar
                 searchValue={contentSearch}
                 onSearchChange={setContentSearch}
@@ -1625,7 +1659,7 @@ export function WebKnowledgeBrowser({
               onSubmit={handleCreateOrEditKb}
             />
           </div>
-        ) : integratedNav ? (
+        ) : integratedLayout ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-8">
             <WebLibraryHubWelcome
               variant="panel"

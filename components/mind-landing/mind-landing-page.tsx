@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { Check, Play } from "lucide-react"
 import { LANDING_COPY as t, LANDING_WEB_APP_HREF } from "@/lib/mind-landing-copy"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   CaptureFeaturePreview,
@@ -13,10 +12,13 @@ import {
   NotesFeatureStrip,
   PermissionPreview,
   PlatformDevice,
-  ResourceLibraryShot,
   TeamCollabShot,
   WorkbenchShot,
 } from "@/components/mind-landing/landing-product-shots"
+import { LandingFeaturedShowcase } from "@/components/mind-landing/landing-featured-showcase"
+import { LandingHelpSection } from "@/components/mind-landing/landing-help-section"
+import { LandingPlazaCarouselSection } from "@/components/mind-landing/landing-plaza-carousel"
+import { LandingSolutionsSection } from "@/components/mind-landing/landing-solutions-section"
 import { MindUseCasesSection } from "@/components/mind-v2/mind-use-case-guide-panel"
 import {
   LandingContainer,
@@ -26,6 +28,7 @@ import {
   SectionTitle,
   landingCard,
 } from "@/components/mind-landing/landing-primitives"
+
 export function MindLandingPage() {
   return (
     <LandingShell>
@@ -59,7 +62,7 @@ export function MindLandingPage() {
                   variant="outline"
                   className="h-12 rounded-full border-slate-200/90 bg-white/70 px-7 text-[15px] font-medium text-slate-700 shadow-sm backdrop-blur-md hover:bg-white"
                 >
-                  <a href="#capture" className="inline-flex items-center gap-2">
+                  <a href="#plaza" className="inline-flex items-center gap-2">
                     <Play className="size-4 fill-slate-600 text-slate-600" aria-hidden />
                     {t.hero.ctaSecondary}
                   </a>
@@ -72,8 +75,22 @@ export function MindLandingPage() {
         </LandingContainer>
       </SectionBlock>
 
-      {/* Knowledge capture */}
-      <SectionBlock id="capture">
+      {/* Public libraries — carousel (primary) */}
+      <LandingPlazaCarouselSection />
+
+      {/* Google-style feature tiles */}
+      <LandingFeaturedShowcase />
+
+      {/* Product anchor + capture */}
+      <SectionBlock id="product" className="!pt-10 sm:!pt-14">
+        <LandingContainer>
+          <span id="capture" className="sr-only">
+            Capture
+          </span>
+        </LandingContainer>
+      </SectionBlock>
+
+      <SectionBlock className="!pt-0">
         <LandingContainer>
           <SectionTitle title={t.capture.title} subtitle={t.capture.subtitle} />
           <div className="mt-16 grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_1.05fr] lg:items-center">
@@ -114,7 +131,7 @@ export function MindLandingPage() {
       </SectionBlock>
 
       {/* AI Notes */}
-      <SectionBlock>
+      <SectionBlock id="notes">
         <LandingContainer>
           <SectionTitle title={t.notes.title} subtitle={t.notes.subtitle} />
           <div className="mt-16 grid gap-10 lg:grid-cols-2 lg:items-center">
@@ -136,15 +153,18 @@ export function MindLandingPage() {
         </LandingContainer>
       </SectionBlock>
 
-      {/* Use cases */}
-      <SectionBlock id="use-cases">
+      {/* Solutions — research / learning / management */}
+      <LandingSolutionsSection />
+
+      {/* Resources — flat use case list */}
+      <SectionBlock id="resources">
         <LandingContainer>
           <MindUseCasesSection />
         </LandingContainer>
       </SectionBlock>
 
       {/* Collaboration */}
-      <SectionBlock>
+      <SectionBlock id="collab">
         <LandingContainer>
           <div className="grid gap-16 lg:grid-cols-2 lg:items-start">
             <div>
@@ -187,8 +207,8 @@ export function MindLandingPage() {
         </LandingContainer>
       </SectionBlock>
 
-      {/* Platforms + resources */}
-      <SectionBlock id="plaza">
+      {/* Platforms */}
+      <SectionBlock>
         <LandingContainer>
           <SectionTitle title={t.flow.title} subtitle={t.flow.subtitle} />
           <div className="mt-12 flex flex-wrap items-end justify-center gap-6 sm:gap-10">
@@ -196,23 +216,11 @@ export function MindLandingPage() {
               <PlatformDevice key={label} label={label} platformIndex={i} />
             ))}
           </div>
-
-          <div className="mt-24">
-            <SectionTitle title={t.resources.title} subtitle={t.resources.subtitle} />
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {t.resources.cards.map((card, i) => (
-                <ResourceLibraryShot
-                  key={card.label}
-                  label={card.label}
-                  stat={card.stat}
-                  tint={resourceTint(i)}
-                  coverIndex={i}
-                />
-              ))}
-            </div>
-          </div>
         </LandingContainer>
       </SectionBlock>
+
+      {/* Help — FAQ + guides side by side */}
+      <LandingHelpSection />
 
       {/* Footer CTA */}
       <SectionBlock className="border-t border-white/30 pb-0 pt-20">
@@ -237,7 +245,7 @@ export function MindLandingPage() {
             <p className="text-xs text-slate-400">{t.footer.copyright}</p>
             <div className="flex flex-wrap gap-6 text-xs text-slate-500">
               {t.footer.links.map((link) => (
-                <a key={link} href="#" className="hover:text-slate-800">
+                <a key={link} href={link === "Help" ? "#help" : "#"} className="hover:text-slate-800">
                   {link}
                 </a>
               ))}
@@ -247,16 +255,4 @@ export function MindLandingPage() {
       </SectionBlock>
     </LandingShell>
   )
-}
-
-function resourceTint(i: number) {
-  const tints = [
-    "bg-sky-200/30",
-    "bg-emerald-200/30",
-    "bg-violet-200/30",
-    "bg-amber-200/30",
-    "bg-rose-200/30",
-    "bg-indigo-200/25",
-  ]
-  return tints[i % tints.length]
 }
