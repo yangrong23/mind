@@ -1,7 +1,9 @@
 import Link from "next/link"
-import { Check } from "lucide-react"
+import { Check, ChevronDown } from "lucide-react"
+import { LANDING_COPY, LANDING_SIGN_IN_HREF, LANDING_WEB_APP_HREF } from "@/lib/mind-landing-copy"
 import { MindarLogo } from "@/components/mind-v2/mindar-logo"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 /** Glass card — design mock glassmorphism */
 export const landingCard = cn(
   "rounded-3xl border border-white/50",
@@ -76,27 +78,62 @@ export function BrowserChrome({
   )
 }
 
-/** @deprecated Prefer Button `variant="landing"` — kept for legacy className merges */
+/** Primary CTA — soft pastels that sit on the lavender/sky mesh background */
 export const landingCtaGradient =
-  "border border-slate-200/65 bg-white/88 text-slate-700 shadow-[0_4px_18px_-10px_rgba(15,23,42,0.07)] backdrop-blur-md hover:border-slate-300/60 hover:bg-white hover:text-slate-900 !bg-white/88"
+  "border border-white/80 bg-gradient-to-r from-white/95 via-teal-50/90 to-sky-50/95 text-slate-800 shadow-[0_4px_20px_-6px_rgba(99,102,241,0.14)] backdrop-blur-md backdrop-saturate-150 hover:border-teal-200/70 hover:from-white hover:via-teal-50 hover:to-violet-50/90 hover:text-teal-900"
 
 export function MindLogoMark({ className }: { className?: string }) {
   return (
     <Link href="/landing" className={cn("flex shrink-0 items-center", className)}>
-      <MindarLogo height={36} priority className="max-h-9" />
+      <MindarLogo variant="wordmark" priority />
     </Link>
   )
 }
 
-export { LandingHeaderNav } from "@/components/mind-landing/landing-header-nav"
+export function LandingHeaderNav() {
+  const { header } = LANDING_COPY
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/40 bg-white/50 backdrop-blur-2xl backdrop-saturate-150">
+      <LandingContainer className="flex h-[72px] items-center gap-6">
+        <MindLogoMark />
+        <nav className="hidden flex-1 items-center justify-center gap-8 md:flex" aria-label="Main">
+          {header.nav.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+            >
+              {item.label}
+              <ChevronDown className="size-3.5 opacity-50" strokeWidth={2.5} aria-hidden />
+            </a>
+          ))}
+        </nav>
+        <div className="ml-auto flex items-center gap-4 sm:gap-6">
+          <Link
+            href={LANDING_SIGN_IN_HREF}
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            {header.signIn}
+          </Link>
+          <Button
+            asChild
+            className={cn("h-10 rounded-full px-5 text-sm font-semibold", landingCtaGradient)}
+          >
+            <Link href={LANDING_WEB_APP_HREF}>{header.cta}</Link>
+          </Button>
+        </div>
+      </LandingContainer>
+    </header>
+  )
+}
 
 export function CheckRow({ items }: { items: readonly string[] }) {
   return (
     <ul className="space-y-5">
       {items.map((item) => (
         <li key={item} className="flex gap-3.5 text-[15px] leading-relaxed text-slate-600">
-          <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/80">
-            <Check className="size-3.5 text-slate-600" strokeWidth={3} />
+          <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-teal-200/90 ring-1 ring-teal-300/50">
+            <Check className="size-3.5 text-teal-800" strokeWidth={3} />
           </span>
           {item}
         </li>
@@ -105,6 +142,10 @@ export function CheckRow({ items }: { items: readonly string[] }) {
   )
 }
 
-export function MindarAvatar({ className }: { className?: string }) {
-  return <MindarLogo height={28} className={cn("ring-2 ring-white/80", className)} />
+export function MinderAvatar({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex items-center justify-center overflow-hidden rounded-full bg-white ring-2 ring-white/80", className)}>
+      <MindarLogo variant="avatar" className="!h-[70%] !w-[90%]" />
+    </div>
+  )
 }

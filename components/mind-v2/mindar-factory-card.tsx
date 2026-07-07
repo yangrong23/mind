@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { agentFactoryTone, kbFactoryTone } from "@/lib/factory-tone-classes"
+import { mx } from "@/lib/medrix-design-tokens"
 import type { FactoryModalKind, FactoryOptionSurface } from "@/components/mind-v2/content-factory-modals"
 import {
   FACTORY_CARD_INNER_FILL,
@@ -67,7 +67,6 @@ export function MindarFactoryCard({
   railStyle = "card",
   surface = "flat",
   gridLayout = "agent",
-  studioCompact = false,
   density = "default",
   selected = false,
   className,
@@ -84,8 +83,6 @@ export function MindarFactoryCard({
   railStyle?: "card" | "pill" | "inline"
   surface?: FactoryOptionSurface
   gridLayout?: "agent" | "kb"
-  /** Smaller KB Studio grid tiles */
-  studioCompact?: boolean
   density?: "default" | "compact"
   className?: string
 }) {
@@ -95,9 +92,8 @@ export function MindarFactoryCard({
   const railInline = isRail && railLayout === "scroll" && railStyle === "inline"
   const railCompact = isRail && density === "compact" && !railGrid && !railPill && !railInline
   const isKbGrid = gridLayout === "kb" && !isRail
-  const kbCompact = isKbGrid && studioCompact
   const filled = surface === "filled" && !isRail
-  const tone = filled ? kbFactoryTone(kind) : agentFactoryTone(kind)
+  const tone = filled ? mx.kbFactoryTone[kind] : mx.factoryTone[kind]
 
   return (
     <button
@@ -107,15 +103,12 @@ export function MindarFactoryCard({
         FACTORY_CARD_SHAPE,
         FACTORY_CARD_RADIUS,
         FACTORY_CARD_SHAPE_HOVER,
-        filled && "border-transparent bg-transparent dark:bg-transparent",
-        filled && tone.filledBorder,
+        filled && "bg-transparent dark:bg-transparent",
         filled && tone.filledShadow,
         filled && tone.filledShadowHover,
         "group relative flex h-full w-full overflow-hidden active:scale-[0.99]",
         isKbGrid
-          ? kbCompact
-            ? "min-h-[2.5rem] flex-col items-center justify-center gap-0.5 py-1 px-1 text-center"
-            : "min-h-[5.25rem] flex-col items-center justify-center gap-2.5 py-3.5 px-3 text-center"
+          ? "min-h-[5.25rem] flex-col items-center justify-center gap-2.5 py-3.5 px-3 text-center"
           : "flex-col items-center justify-center gap-2 px-2.5 py-3 text-center",
         railPill &&
           cn(
@@ -153,7 +146,7 @@ export function MindarFactoryCard({
             : MINDAR_FACTORY_RAIL_CARD_HEIGHT
           : "",
         !isRail && (isKbGrid ? MINDAR_FACTORY_CARD_HEIGHT_KB : MINDAR_FACTORY_CARD_HEIGHT),
-        "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        mx.navEase,
         className
       )}
     >
@@ -186,12 +179,9 @@ export function MindarFactoryCard({
                   : railCompact
                     ? cn(FACTORY_ICON_RADIUS, "h-8 w-8")
                     : cn(FACTORY_ICON_RADIUS, "h-10 w-10")
-              : cn(
-                  FACTORY_ICON_RADIUS,
-                  kbCompact ? "h-6 w-6" : isKbGrid ? "h-11 w-11" : "h-10 w-10"
-                ),
+              : cn(FACTORY_ICON_RADIUS, isKbGrid ? "h-11 w-11" : "h-10 w-10"),
             filled
-              ? cn(tone.well, "ring-1", tone.filledIconRing)
+              ? cn(tone.well, "bg-white/70 ring-1 ring-white/90 dark:bg-zinc-900/70", tone.filledIconRing)
               : tone.icon
           )}
         >
@@ -206,11 +196,9 @@ export function MindarFactoryCard({
                     : railCompact
                       ? "h-3.5 w-3.5"
                       : "h-5 w-5"
-                : kbCompact
-                  ? "h-3 w-3"
-                  : isKbGrid
-                    ? "h-5 w-5"
-                    : "h-[18px] w-[18px]",
+                : isKbGrid
+                  ? "h-5 w-5"
+                  : "h-[18px] w-[18px]",
               filled && tone.icon
             )}
             strokeWidth={1.85}
@@ -220,8 +208,7 @@ export function MindarFactoryCard({
       )}
       <span
         className={cn(
-          "relative z-[1] max-w-full px-1 font-semibold leading-snug tracking-tight",
-          filled && !isRail ? tone.icon : "text-zinc-700 dark:text-zinc-200",
+          "relative z-[1] max-w-full px-1 font-semibold leading-snug tracking-tight text-zinc-700 dark:text-zinc-200",
           isRail
             ? railPill
               ? "whitespace-nowrap px-0 text-[12px]"
@@ -232,16 +219,14 @@ export function MindarFactoryCard({
                 : railCompact
                   ? "line-clamp-2 text-[9px]"
                   : "line-clamp-2 text-[10px]"
-            : kbCompact
-              ? "line-clamp-1 whitespace-normal break-words text-[9px] leading-none"
-              : isKbGrid
-                ? "whitespace-normal break-words text-[13px]"
-                : "line-clamp-2 break-words text-[12px]"
+            : isKbGrid
+              ? "whitespace-normal break-words text-[13px]"
+              : "line-clamp-2 break-words text-[12px]"
         )}
       >
         {label}
       </span>
-      {filled && !kbCompact ? (
+      {filled ? (
         <Sparkles
           className={cn(
             "pointer-events-none absolute right-2.5 top-2.5 z-[1] h-3 w-3 opacity-0 transition-opacity duration-300 group-hover:opacity-80",

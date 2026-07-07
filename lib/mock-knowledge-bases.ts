@@ -7,9 +7,6 @@ export type KBCategory = "mine" | "team" | "subscribed"
 /** Subscribed section — libraries you publish vs libraries you follow */
 export type SubscribedKbRole = "published" | "followed"
 
-/** Team library — current user relationship */
-export type TeamMembershipRole = "owner" | "member"
-
 export type TeamMemberPermissions = "View & export" | "View only"
 export type TeamJoinMode = "Open join" | "Admin approval"
 
@@ -37,9 +34,6 @@ export type KnowledgeBase = {
   icon?: string
   color: string
   subscribers?: number
-  /** Social proof on plaza / subscribed libraries */
-  likeCount?: number
-  commentCount?: number
   /** Browses / Q&A hits for public-style detail */
   viewCount?: number
   /** Subtitle under title on public knowledge detail */
@@ -54,8 +48,8 @@ export type KnowledgeBase = {
   teamSettings?: TeamLibrarySettings
   /** Shared libraries — curator shown in library header */
   ownerName?: string
-  /** Team libraries — whether you manage or participate */
-  teamRole?: TeamMembershipRole
+  /** Your role in a team library — shown in the list */
+  teamMembershipRole?: "owner" | "member"
   /** Subscribed libraries — publisher pushed new sources since last visit */
   hasContentUpdate?: boolean
   /** Subscribed libraries — published by you vs followed from plaza */
@@ -68,7 +62,10 @@ export type KnowledgeBase = {
 
 /** Demo helper when creating a library from the Knowledge tab sheet. */
 export function knowledgeBaseFromCreate(
-  payload: Pick<KnowledgeBase, "name" | "description" | "color" | "category">,
+  payload: Pick<KnowledgeBase, "name" | "description" | "color" | "category"> & {
+    coverVariant?: LibraryCoverVariant
+    teamSettings?: TeamLibrarySettings
+  },
   id: number
 ): KnowledgeBase {
   return {
@@ -79,8 +76,14 @@ export function knowledgeBaseFromCreate(
     count: 0,
     lastUpdate: "Just now",
     color: payload.color,
-    coverVariant: libraryCoverVariantForId(id, payload.name),
-    ...(payload.category === "team" ? { teamSettings: { ...DEFAULT_TEAM_LIBRARY_SETTINGS } } : {}),
+    coverVariant: payload.coverVariant ?? libraryCoverVariantForId(id, payload.name),
+    ...(payload.category === "team"
+      ? {
+          ownerName: "You",
+          teamMembershipRole: "owner",
+          teamSettings: payload.teamSettings ?? { ...DEFAULT_TEAM_LIBRARY_SETTINGS },
+        }
+      : {}),
   }
 }
 
@@ -107,27 +110,19 @@ export function knowledgeBaseFromWebCreate(
     lastUpdate: "Just now",
     color: "from-zinc-500 to-zinc-600",
     coverVariant: payload.coverVariant,
-    ...(pub
+    ...(isPublicPublished
       ? {
-          publicSettings: {
-            ...pub,
-            lastSyncedAt: pub.lastSyncedAt ?? new Date().toISOString(),
-          },
-          ...(isPublicPublished
-            ? {
-                isPublicPublished: true,
-                subscribers: 0,
-                viewCount: 0,
-                publicTagline: pub.tagline?.trim() || "Public · Mindar agent",
-                publisherName: "You",
-              }
-            : {}),
+          isPublicPublished: true,
+          publicSettings: pub,
+          subscribers: 0,
+          viewCount: 0,
+          publicTagline: "Public · Mindar agent",
+          publisherName: "You",
         }
       : {}),
     ...(payload.category === "team"
       ? {
           ownerName: "You",
-          teamRole: "owner" as const,
           teamSettings: payload.teamSettings ?? { ...DEFAULT_TEAM_LIBRARY_SETTINGS },
         }
       : {}),
@@ -174,8 +169,8 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     lastUpdate: "2h ago",
     color: "from-zinc-500 to-zinc-600",
     coverVariant: "engineering",
-    ownerName: "You",
-    teamRole: "owner",
+    ownerName: "熊斌",
+    teamMembershipRole: "member",
     teamSettings: {
       ...DEFAULT_TEAM_LIBRARY_SETTINGS,
       recommendedQuestions: [
@@ -194,8 +189,8 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     lastUpdate: "3d ago",
     color: "from-zinc-500 to-zinc-600",
     coverVariant: "design",
-    ownerName: "熊斌",
-    teamRole: "member",
+    ownerName: "You",
+    teamMembershipRole: "owner",
     teamSettings: {
       ...DEFAULT_TEAM_LIBRARY_SETTINGS,
       joinMode: "Admin approval",
@@ -216,8 +211,6 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     lastUpdate: "Today",
     color: "from-zinc-500 to-zinc-600",
     subscribers: 2527,
-    likeCount: 1842,
-    commentCount: 96,
     viewCount: 8750,
     publicTagline: "Curated · prosecution-ready briefs",
     publisherName: "CN & global patents desk",
@@ -235,8 +228,6 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     lastUpdate: "Yesterday",
     color: "from-zinc-500 to-zinc-600",
     subscribers: 8900,
-    likeCount: 2104,
-    commentCount: 142,
     viewCount: 5120,
     publicTagline: "Playbooks and annotated wins",
     publisherName: "Product guild",
@@ -252,41 +243,11 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     lastUpdate: "2h ago",
     color: "from-zinc-500 to-zinc-600",
     subscribers: 4200,
-    likeCount: 968,
-    commentCount: 58,
     viewCount: 18600,
     publicTagline: "Weekly deep reads",
     publisherName: "You",
     coverVariant: "reading",
     subscribedRole: "published",
-    isPublicPublished: true,
-    publicSettings: {
-      isPublic: true,
-      boundAgentId: 202,
-      boundAgentName: "Meeting Recap",
-      displayName: "Deep Read Curator",
-      tagline: "Weekly deep reads with cited summaries",
-      topicScope:
-        "Long-form essays, book notes, and subscriber-only deep reads — not breaking news or stock tips.",
-      capabilities: ["Cited answers", "Compare sources", "Executive briefs"],
-      skills: [
-        {
-          id: "dr1",
-          label: "Summarize sources",
-          instruction: "Answer from uploaded essays only; lead with a tight summary and cite titles.",
-        },
-      ],
-      exampleQuestions: [
-        "Summarize this week's featured essay in five bullets with citations",
-        "Compare themes across the last three deep reads",
-        "What should a first-time subscriber read first?",
-      ],
-      groundingMode: "library-only" as const,
-      disclaimer: "Answers use this library's sources only and may be incomplete. Verify before acting.",
-      shareFactoryOutputsWithEveryone: true,
-      updateCadence: "weekly" as const,
-      lastSyncedAt: new Date().toISOString(),
-    },
   },
   {
     id: 9,
@@ -297,8 +258,6 @@ export const MOCK_KNOWLEDGE_BASES: KnowledgeBase[] = [
     lastUpdate: "Today",
     color: "from-zinc-500 to-zinc-600",
     subscribers: 6100,
-    likeCount: 1320,
-    commentCount: 74,
     viewCount: 9400,
     publicTagline: "Markets · weekly brief",
     publisherName: "Medrix markets",

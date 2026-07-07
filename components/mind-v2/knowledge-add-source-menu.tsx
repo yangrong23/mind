@@ -6,18 +6,19 @@ import {
   FileText,
   FolderInput,
   FolderPlus,
-  Lightbulb,
   Link2,
   Mic,
-  FilePlus,
+  Radio,
+  Upload,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type KnowledgeAddSourceAction =
   | "local-file"
   | "local-folder"
-  | "personal-kb"
   | "web-link"
+  | "youtube-link"
+  | "podcast-link"
   | "note-text"
   | "note-rich"
   | "recording"
@@ -27,8 +28,9 @@ const LABELS = {
   zh: {
     localFile: "本地文件",
     localFolder: "本地文件夹",
-    personalKb: "个人知识库",
     webLink: "网页链接",
+    youtubeLink: "YouTube 视频",
+    podcastLink: "播客链接",
     notes: "笔记",
     noteText: "文字笔记",
     noteRich: "富文本笔记",
@@ -38,8 +40,9 @@ const LABELS = {
   en: {
     localFile: "Local file",
     localFolder: "Local folder",
-    personalKb: "Personal library",
     webLink: "Web link",
+    youtubeLink: "YouTube",
+    podcastLink: "Podcast",
     notes: "Notes",
     noteText: "Text note",
     noteRich: "Rich note",
@@ -50,17 +53,18 @@ const LABELS = {
 
 type RowDef = {
   id: KnowledgeAddSourceAction | "notes"
-  icon: typeof FilePlus
+  icon: typeof Upload
   labelKey: keyof (typeof LABELS)["zh"]
   hasSubmenu?: boolean
   separatorBefore?: boolean
 }
 
 const ROWS: RowDef[] = [
-  { id: "local-file", icon: FilePlus, labelKey: "localFile" },
+  { id: "local-file", icon: FileText, labelKey: "localFile" },
   { id: "local-folder", icon: FolderInput, labelKey: "localFolder" },
-  { id: "personal-kb", icon: Lightbulb, labelKey: "personalKb" },
   { id: "web-link", icon: Link2, labelKey: "webLink" },
+  { id: "youtube-link", icon: Link2, labelKey: "youtubeLink" },
+  { id: "podcast-link", icon: Radio, labelKey: "podcastLink" },
   { id: "notes", icon: FileText, labelKey: "notes", hasSubmenu: true },
   { id: "recording", icon: Mic, labelKey: "recording" },
   { id: "new-folder", icon: FolderPlus, labelKey: "newFolder", separatorBefore: true },

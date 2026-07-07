@@ -1,60 +1,53 @@
 "use client"
 
-import { MINDAR_LOGO_ALT, MINDAR_LOGO_SRC } from "@/lib/mindar-logo"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { MINDAR_LOGO_HEIGHT, MINDAR_LOGO_SRC, MINDAR_LOGO_WIDTH } from "@/lib/mindar-brand"
 
-/** Wordmark aspect ratio (source asset 1024×445). */
-const LOGO_ASPECT = 1024 / 445
+const variantClass = {
+  /** Headers, nav — full wordmark */
+  wordmark: "h-7 w-auto max-w-[132px] object-contain object-left",
+  /** Auth card, larger contexts */
+  auth: "h-9 w-auto max-w-[168px] object-contain",
+  /** Agent home hero */
+  hero: "h-10 w-auto max-w-[200px] object-contain",
+  /** Small inline chip */
+  inline: "h-6 w-auto max-w-[108px] object-contain",
+  /** Circular / square avatar shell — scales wordmark inside */
+  avatar: "h-[70%] w-[85%] object-contain",
+} as const
 
-type MindarLogoProps = {
+export function MindarLogo({
+  variant = "wordmark",
+  className,
+  priority = false,
+}: {
+  variant?: keyof typeof variantClass
   className?: string
-  /** Rendered height in px; width follows aspect ratio */
-  height?: number
   priority?: boolean
-}
-
-/** Official Mindar horizontal wordmark (transparent PNG). */
-export function MindarLogo({ className, height = 32, priority }: MindarLogoProps) {
+}) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src={MINDAR_LOGO_SRC}
-      alt={MINDAR_LOGO_ALT}
-      className={cn("h-auto w-auto max-w-full object-contain object-center", className)}
-      style={{ height, maxHeight: height, aspectRatio: LOGO_ASPECT }}
-      loading={priority ? "eager" : "lazy"}
-      decoding="async"
+      alt="Mindar"
+      width={MINDAR_LOGO_WIDTH}
+      height={MINDAR_LOGO_HEIGHT}
+      className={cn(variantClass[variant], className)}
+      priority={priority}
     />
   )
 }
 
-type MindarLogoMarkProps = {
+/** Plain img for places that cannot use next/image easily */
+export function MindarLogoImg({
+  variant = "wordmark",
+  className,
+}: {
+  variant?: keyof typeof variantClass
   className?: string
-  /** Layout box height in px — wordmark scales inside */
-  size?: number
-  priority?: boolean
-}
-
-/** Compact wordmark for rails, agent avatar slots (same asset as MindarLogo). */
-export function MindarLogoMark({ className, size = 44, priority }: MindarLogoMarkProps) {
-  const height = Math.max(18, Math.round(size * 0.38))
-  return <MindarLogo height={height} priority={priority} className={cn("shrink-0", className)} />
-}
-
-type MindarAgentMarkProps = {
-  className?: string
-  size?: number
-  priority?: boolean
-}
-
-/** @deprecated Alias — same transparent wordmark; `size` maps to rendered height. */
-export function MindarAgentMark({ className, size = 22, priority }: MindarAgentMarkProps) {
-  const height = Math.max(16, Math.round(size * 0.42))
+}) {
   return (
-    <MindarLogo
-      height={height}
-      priority={priority}
-      className={cn("max-w-full object-contain object-left", className)}
-    />
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={MINDAR_LOGO_SRC} alt="Mindar" className={cn(variantClass[variant], className)} />
   )
 }

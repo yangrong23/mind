@@ -16,8 +16,6 @@ export type MindarContentFactoryGridProps = {
   surface?: FactoryOptionSurface
   /** `kb` — 2 columns × 3 rows (Knowledge Studio); `agent` — 3 columns × 2 rows */
   layout?: "agent" | "kb"
-  /** Tighter cards for the KB Studio column */
-  studioCompact?: boolean
 }
 
 export function MindarContentFactoryGrid({
@@ -26,32 +24,18 @@ export function MindarContentFactoryGrid({
   className,
   surface = "flat",
   layout = "agent",
-  studioCompact = false,
 }: MindarContentFactoryGridProps) {
-  const isKb = layout === "kb"
   return (
-    <div className={cn(isKb && studioCompact ? "mt-1.5 w-full" : "mt-4 w-full", className)}>
+    <div className={cn("mt-4 w-full", className)}>
       {librarySummary ? (
         <p
-          className={cn(
-            "truncate px-0.5 text-right font-medium tabular-nums text-zinc-400 dark:text-zinc-500",
-            isKb && studioCompact ? "mb-1 text-[8px]" : "mb-2 text-[10px]"
-          )}
+          className="mb-2 truncate px-0.5 text-right text-[10px] font-medium tabular-nums text-zinc-400 dark:text-zinc-500"
           title={librarySummary}
         >
           {librarySummary}
         </p>
       ) : null}
-      <div
-        className={cn(
-          isKb
-            ? studioCompact
-              ? "grid grid-cols-3 gap-1 items-stretch"
-              : MINDAR_FACTORY_GRID_CLASS_KB
-            : MINDAR_FACTORY_GRID_CLASS,
-          "pb-0.5"
-        )}
-      >
+      <div className={cn(layout === "kb" ? MINDAR_FACTORY_GRID_CLASS_KB : MINDAR_FACTORY_GRID_CLASS, "pb-0.5")}>
         {MINDAR_FACTORY_ITEMS.map((item) => (
           <div key={item.id} className="min-h-0">
             <MindarFactoryCard
@@ -61,7 +45,6 @@ export function MindarContentFactoryGrid({
               onClick={() => onSelect(item.id)}
               surface={surface}
               gridLayout={layout}
-              studioCompact={isKb && studioCompact}
             />
           </div>
         ))}

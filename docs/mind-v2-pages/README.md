@@ -20,7 +20,6 @@
 | [08-me-ai-insights-prompts.md](./08-me-ai-insights-prompts.md) | Me AI 洞察：各视角提示词与数据参数 |
 | [09-auth.md](./09-auth.md) | 全屏登录 / 注册（遮罩） |
 | [10-shared-sheets-modals.md](./10-shared-sheets-modals.md) | 跨页面弹层与共用组件（简要） |
-| [11-plaza-kb-agent.md](./11-plaza-kb-agent.md) | Plaza library as scoped agent — publish, subscribe, chat (English spec) |
 
 ## 导航关系（简图）
 

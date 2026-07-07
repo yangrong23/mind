@@ -34,10 +34,10 @@ export type MindAgent = {
   profile: AgentCapabilityProfile
 }
 
-export const MINDAR_COPILOT_PROFILE: AgentCapabilityProfile = {
-  tagline: "Copilot across libraries, notes, and deliverables",
-  capabilities: ["@ Any library", "Cross-source answers", "Studio handoff"],
-  strengthDetail: "Default entry when you need one thread tied to everything you’ve captured.",
+export const MINDER_COPILOT_PROFILE: AgentCapabilityProfile = {
+  tagline: "One agent — scoped threads per library and note",
+  capabilities: ["@ Link in chat", "Cross-source answers", "Studio handoff"],
+  strengthDetail: "Like ima: Mindar handles every task; each library or note keeps its own history.",
 }
 
 export const AGENT_SCENARIO_TABS: { id: AgentScenarioTabId; label: string }[] = [
@@ -49,7 +49,7 @@ export const AGENT_SCENARIO_TABS: { id: AgentScenarioTabId; label: string }[] = 
 ]
 
 /** Six scenario agents + Mindar (id 0) = default contact roster. */
-export const MINDAR_DEFAULT_SCENARIO_AGENTS: MindAgent[] = [
+export const MINDER_DEFAULT_SCENARIO_AGENTS: MindAgent[] = [
   {
     id: 201,
     name: "Research Partner",
@@ -373,14 +373,14 @@ export const PLAZA_TAB_HINTS: Partial<Record<AgentScenarioTabId, string>> = {
 }
 
 export const AGENT_PLAZA_ALL: MindAgent[] = [
-  ...MINDAR_DEFAULT_SCENARIO_AGENTS,
+  ...MINDER_DEFAULT_SCENARIO_AGENTS,
   ...AGENT_PLAZA_EXTRAS,
 ]
 
 const CATALOG_BY_ID = new Map(AGENT_PLAZA_ALL.map((a) => [a.id, a]))
 
 export function getMindAgentProfile(agentId: number): AgentCapabilityProfile | undefined {
-  if (agentId === 0) return MINDAR_COPILOT_PROFILE
+  if (agentId === 0) return MINDER_COPILOT_PROFILE
   return CATALOG_BY_ID.get(agentId)?.profile
 }
 

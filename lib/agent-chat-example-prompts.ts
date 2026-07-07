@@ -6,21 +6,6 @@ export type AgentExamplePrompt = {
 
 const BY_AGENT_ID: Record<number, AgentExamplePrompt[]> = {
   0: [
-    {
-      id: "research",
-      label: "Run quick research on my project theme",
-      prompt: "Run a quick research pass on my project theme using my linked libraries.",
-    },
-    {
-      id: "upload",
-      label: "How do I upload a PDF or Google Doc?",
-      prompt: "How do I upload a local PDF or Google Doc as sources?",
-    },
-    {
-      id: "studio",
-      label: "How do I generate a mind map in Studio?",
-      prompt: "How do I generate a mind map from the Studio panel?",
-    },
     { id: "sum", label: "Summarize my libraries", prompt: "Summarize the most important updates across my libraries this week." },
     { id: "plan", label: "What should I do next?", prompt: "Based on my notes and libraries, what are the top three next actions?" },
     { id: "report", label: "Draft a brief", prompt: "Draft a one-page brief from my latest meeting notes and product library." },
@@ -120,17 +105,4 @@ const GENERIC: AgentExamplePrompt[] = [
 
 export function getAgentExamplePrompts(agentId: number): AgentExamplePrompt[] {
   return BY_AGENT_ID[agentId] ?? GENERIC
-}
-
-/** Follow-up chips shown under the latest assistant message. */
-export function getAgentFollowUpPrompts(agentId: number, max = 3): AgentExamplePrompt[] {
-  return getAgentExamplePrompts(agentId).slice(0, max)
-}
-
-export function promptsFromStrings(questions: string[], prefix = "fu"): AgentExamplePrompt[] {
-  return questions.slice(0, 3).map((q, i) => ({
-    id: `${prefix}-${i}`,
-    label: q,
-    prompt: q,
-  }))
 }

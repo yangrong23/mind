@@ -192,8 +192,8 @@
 
 | 用途 | 宣传语（可直接使用） |
 |------|----------------------|
-| 一句话（垂直可选） | **Medrix Mind — 为科研与知识工作而生的 AI 知识管理平台** |
-| 一句话（对外主定位） | **Medrix Mind — AI 知识管理平台**（见 [`MIND_MARKETING_COPY_FULL.md`](./MIND_MARKETING_COPY_FULL.md)） |
+| 一句话（垂直可选） | **Mindar — 为科研与知识工作而生的 AI 知识管理平台** |
+| 一句话（对外主定位） | **Mindar — AI 知识管理平台**（见 [`MIND_MARKETING_COPY_FULL.md`](./MIND_MARKETING_COPY_FULL.md)） |
 | 副标题 | **会思考的知识库，每一条回答都能回到文献与数据** |
 | 背书 | **学术基因团队出品 · 面向论文、课题与实验室协作** |
 | 英文（可选） | *Research-grade knowledge work — capture, ground, cite, deliver.* |
@@ -283,7 +283,7 @@
 
 | 类型 | IMA 原文（引用用） | Mind / Medrix 对外表述 |
 |------|-------------------|------------------------|
-| 产品名 + 品类 | ima.copilot — 腾讯 AI 工作台 | **Medrix Mind — AI 知识管理平台** |
+| 产品名 + 品类 | ima.copilot — 腾讯 AI 工作台 | **Mindar — AI 知识管理平台** |
 | 主 Slogan | 智慧因你而生 | **智慧随库而生** |
 | 副 Slogan | 会思考的知识库，开启搜读写新体验 | **会思考的知识库，开启搜读写新体验** |
 | 能力概括 | 支持混元、DeepSeek 等多模型 | **支持 SOTA 大模型** |
@@ -540,7 +540,7 @@ IMA 下载页列举：Mac（macOS 12+）、Windows（10+）、微信小程序、
 
 | IMA 用词 | Mind 对外 |
 |----------|-----------|
-| ima / ima.copilot | Mind / Medrix Mind |
+| ima / ima.copilot | Mind / Mindar |
 | copilot | Mindar |
 | 知识库广场 | Library Plaza |
 

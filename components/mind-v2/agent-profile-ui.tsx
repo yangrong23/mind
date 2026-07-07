@@ -1,9 +1,10 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import {
   getMindAgentProfile,
-  MINDAR_COPILOT_PROFILE,
+  MINDER_COPILOT_PROFILE,
   scenarioLabel,
   type AgentCapabilityProfile,
   type AgentScenarioId,
@@ -64,12 +65,7 @@ export function AgentMultiRoleBlurb({
 
   if (variant === "hero") {
     return (
-      <p
-        className={cn(
-          "max-w-xs text-center text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400",
-          className
-        )}
-      >
+      <p className={cn("max-w-xs text-center", mx.typeBodySecondary, className)}>
         <span className="font-semibold text-zinc-700 dark:text-zinc-300">Multi-hat · </span>
         Spans {scope} in one agent
       </p>
@@ -77,7 +73,7 @@ export function AgentMultiRoleBlurb({
   }
 
   return (
-    <p className={cn("line-clamp-2 text-[12px] leading-snug text-zinc-600 dark:text-zinc-400", className)}>
+    <p className={cn("line-clamp-2", mx.typeBodySecondary, className)}>
       <span className="font-semibold text-zinc-700 dark:text-zinc-300">Multi-hat · </span>
       Spans {scope} in one agent
       {profile.strengthDetail ? (
@@ -246,7 +242,7 @@ export function AgentProfileSummary({
   className?: string
 }) {
   const profile =
-    profileProp ?? (agentId === 0 ? MINDAR_COPILOT_PROFILE : getMindAgentProfile(agentId))
+    profileProp ?? (agentId === 0 ? MINDER_COPILOT_PROFILE : getMindAgentProfile(agentId))
   if (!profile) return null
 
   return (
@@ -255,7 +251,7 @@ export function AgentProfileSummary({
         {agentId === 0 ? (
           <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-sky-950/40">
             <Sparkles className="h-3 w-3" strokeWidth={2} aria-hidden />
-            Mindar
+            Default copilot
           </span>
         ) : null}
         <AgentScenarioPill scenario={scenario} />

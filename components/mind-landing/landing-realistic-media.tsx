@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils"
 import type { LibraryCoverVariant } from "@/lib/product-media"
+import { MindarLogoImg } from "@/components/mind-v2/mindar-logo"
 
 const COVER_GRADIENT: Record<string, string> = {
   product: "from-zinc-600 via-zinc-500 to-stone-400",
@@ -272,20 +273,12 @@ export function PreviewSideRail({
   )
 }
 
-/** AI reply attribution — text chip, no logo image */
+/** AI reply attribution */
 export function AiSpeakerChip({ size = "md" }: { size?: "sm" | "md" }) {
-  const box = size === "sm" ? "h-4 min-w-[36px] px-1" : "h-5 min-w-[44px] px-1.5"
-  const text = size === "sm" ? "text-[6px]" : "text-[7px]"
+  const box = size === "sm" ? "h-4 px-1" : "h-5 px-1.5"
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center rounded-md border border-teal-200/80 bg-gradient-to-r from-teal-50 to-violet-50/80 font-semibold text-teal-800",
-        box,
-        text
-      )}
-      aria-hidden
-    >
-      Mindar
+    <span className={cn("inline-flex shrink-0 items-center overflow-hidden", box)} aria-hidden>
+      <MindarLogoImg variant="inline" className={cn("h-full w-auto object-contain", size === "sm" ? "!max-w-[40px]" : "!max-w-[52px]")} />
     </span>
   )
 }

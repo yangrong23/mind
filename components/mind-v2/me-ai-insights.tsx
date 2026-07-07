@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import { mockInsightRunResult } from "@/lib/me-insight-run-mock"
 import {
   MIND_FEATURED_INSIGHT_PERSPECTIVES,
@@ -12,7 +13,7 @@ import {
 import { MindChatThinking } from "@/components/mind-v2/mind-chat-thinking"
 import { MindViralShareCard } from "@/components/mind-v2/mind-viral-share-card"
 import { buildInsightSharePayload, type MindSharePayload } from "@/lib/mind-share-payload"
-import { ChevronRight, Clock, Plus, X } from "lucide-react"
+import { ChevronRight, Clock, Plus, Share2, X } from "lucide-react"
 
 type View = "picker" | "gallery" | "result"
 
@@ -34,8 +35,8 @@ export type MeAiInsightsProps = {
 
 function PerspectiveIcon({ icon: Icon }: { icon: InsightPerspective["icon"] }) {
   return (
-    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", "bg-[#f0eeec] dark:bg-zinc-800")}>
-      <Icon className={cn("h-5 w-5", "text-zinc-600 dark:text-zinc-300")} strokeWidth={1.75} aria-hidden />
+    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", mx.settingsIconWell)}>
+      <Icon className={cn("h-5 w-5", mx.settingsIconInk)} strokeWidth={1.75} aria-hidden />
     </div>
   )
 }
@@ -269,7 +270,7 @@ export function MeAiInsights({
       {view === "picker" && (
         <div className="min-h-0 flex-1 overflow-y-auto pb-6">
           <div className="px-5 pt-5 pb-3">
-            <p className={cn("text-[15px] font-semibold", "text-mind")}>Select a perspective to start</p>
+            <p className={cn("text-[15px] font-semibold", mx.accentBlue)}>Select a perspective to start</p>
             <p className="mt-1 text-[12px] leading-snug text-zinc-400">
               Insights use your notes and knowledge libraries to reflect what you capture and what you are learning.
             </p>
@@ -278,7 +279,7 @@ export function MeAiInsights({
                 {noteCount} notes · {libraryItemCount} library items · {tagCount} tags · {dayCount} days
               </span>
               <span className="text-zinc-300">·</span>
-              <button type="button" className={cn("font-medium", "text-mind hover:text-mind/90")} onClick={() => setFilterOpen(true)}>
+              <button type="button" className={cn("font-medium", mx.citationLink)} onClick={() => setFilterOpen(true)}>
                 Filter range
               </button>
             </div>
@@ -359,7 +360,7 @@ export function MeAiInsights({
             Have a better idea?{" "}
             <button
               type="button"
-              className={cn("font-medium", "text-mind hover:text-mind/90")}
+              className={cn("font-medium", mx.citationLink)}
               onClick={() =>
                 toast.message("Submit a perspective", {
                   description: "Community templates would open here (demo).",
@@ -379,15 +380,25 @@ export function MeAiInsights({
           ) : (
             <div className="animate-in fade-in duration-300">
               {insightSharePayload ? (
-                <MindViralShareCard
-                  card={insightSharePayload.card}
-                  displayName={displayName}
-                  onShare={openInsightShare}
-                  className="mb-5"
-                />
+                <>
+                  <MindViralShareCard
+                    card={insightSharePayload.card}
+                    displayName={displayName}
+                    fullPreview
+                    className="mb-4"
+                  />
+                  <button
+                    type="button"
+                    onClick={openInsightShare}
+                    className="mb-5 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+                  >
+                    <Share2 className="h-4 w-4" strokeWidth={2} aria-hidden />
+                    Share this card
+                  </button>
+                </>
               ) : null}
               <p className="mb-3 border-l-2 border-mind/40 pl-2 text-xs font-medium text-mind dark:text-mind/90">
-                AI-generated · <span className={"text-zinc-500"}>{selected.title}</span>
+                AI-generated · <span className={mx.citationMuted}>{selected.title}</span>
               </p>
               <p className="mb-4 text-xs text-zinc-500">
                 Range · {selected.rangeLabel} · by {selected.author}

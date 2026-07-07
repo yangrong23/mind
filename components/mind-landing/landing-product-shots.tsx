@@ -21,7 +21,6 @@ import {
   PermissionThumbTeam,
 } from "@/components/mind-landing/landing-realistic-media"
 import type { ProductScreenshotScene } from "@/lib/product-media"
-import type { UseCaseScene } from "@/lib/mind-use-case-guides"
 
 /** Floating product screenshot — design mock style */
 export function ProductShot({
@@ -242,7 +241,7 @@ export function UseCaseShot({
   title: string
   desc: string
   tint: string
-  scene: UseCaseScene
+  scene: "study" | "work" | "project" | "inspire" | "team" | "personal"
 }) {
   return (
     <div
@@ -266,15 +265,15 @@ export function UseCaseThumbnail({
   scene,
   className,
 }: {
-  scene: UseCaseScene
+  scene: "study" | "work" | "project" | "inspire" | "team" | "personal"
   className?: string
 }) {
-  const map: Record<UseCaseScene, ProductScreenshotScene> = {
+  const map: Record<typeof scene, ProductScreenshotScene> = {
     study: "study",
-    plaza: "plaza",
-    meeting: "work",
-    deliver: "project",
+    work: "work",
+    project: "project",
     inspire: "inspire",
+    team: "team",
     personal: "personal",
   }
   return (

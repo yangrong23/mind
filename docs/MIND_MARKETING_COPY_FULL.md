@@ -1,4 +1,4 @@
-# Medrix Mind — 对外宣传完整版
+# Mindar — 对外宣传完整版
 
 > **用途**：官网、应用商店、展会、销售 Brief、Onboarding、功能页、社媒。  
 > **版本**：v1.5 · 2026-05 · 价值主张：**知识全链路五环节**；落地页 `/landing`  
@@ -10,7 +10,7 @@
 
 ### 1.1 一句话定位
 
-**Medrix Mind — AI 知识管理平台**
+**Mindar — AI 知识管理平台**
 
 ### 1.2 主 Slogan 体系（对标 IMA §一 #1–3）
 
@@ -34,7 +34,7 @@
 
 ### 1.5 英文（可选）
 
-*Medrix Mind — AI knowledge management platform.*
+*Mindar — AI knowledge management platform.*
 
 ---
 
@@ -261,7 +261,7 @@ Mindar 帮你**对外**把知识库问清楚、做出来；AI 洞察帮你**向�
 
 ---
 
-## 四、你可以这样用 Mind — 使用案例引导
+## 四、你可以这样用 Mindar — 使用案例引导
 
 > 结构：场景说明 + 推荐路径。页面可配 **查看指引** 按钮。
 
@@ -431,9 +431,9 @@ Mac · Windows · iOS · Android · 网页版 · 微信小程序 · 浏览器插
 
 | 文档 | 内容 |
 |------|------|
-| **本文档** | Medrix Mind **对外宣传完整正文** |
+| **本文档** | Mindar **对外宣传完整正文** |
 | [`MIND_MARKETING_COPY_AND_USE_CASES.md`](./MIND_MARKETING_COPY_AND_USE_CASES.md) | IMA 原文存档、Mind 映射对照、内部撰写规范 |
 
 ---
 
-*Medrix Mind 宣传完整版 v1.5 · 获取·整理·消化·共享·交付 · 落地页 `/landing`*
+*Mindar 宣传完整版 v1.5 · 获取·整理·消化·共享·交付 · 落地页 `/landing`*

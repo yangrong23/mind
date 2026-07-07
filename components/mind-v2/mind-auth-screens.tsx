@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { ChevronLeft, Mail, Lock, Sparkles } from "lucide-react"
+import { ChevronLeft, Mail, Lock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
+import { MindarLogo } from "@/components/mind-v2/mindar-logo"
+
 type AuthMode = "landing" | "sign-in" | "sign-up"
 
 interface MindAuthScreensProps {
@@ -18,7 +21,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
   const [password, setPassword] = useState("")
 
   function finishAuth(label: string) {
-    toast.success(label, { description: "Welcome to Mind (demo)." })
+    toast.success(label, { description: "Welcome to Mindar (demo)." })
     onAuthenticated()
   }
 
@@ -62,20 +65,15 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
 
         <div className="flex w-full max-w-[320px] flex-col items-center text-center">
           <div
-            className={cn(
-              "mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 shadow-sm ring-1 ring-zinc-200/80 dark:bg-zinc-900 dark:ring-zinc-700"
-            )}
-            aria-hidden
+            className={cn("mb-5 flex h-16 items-center justify-center overflow-hidden px-2")}
+            aria-label="Mindar"
           >
-            <Sparkles className="h-8 w-8 text-mind" strokeWidth={1.5} />
+            <MindarLogo variant="auth" priority />
           </div>
-          <h1
+          <p
             id="mind-auth-title"
-            className="text-[26px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+            className="max-w-[280px] text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400"
           >
-            Mind
-          </h1>
-          <p className="mt-2 max-w-[280px] text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
             Sign in to sync notes, libraries, and your copilot across devices.
           </p>
 
@@ -85,7 +83,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
               onClick={() => setMode("sign-in")}
               className={cn(
                 "w-full rounded-2xl py-3.5 text-[16px] font-semibold shadow-sm transition-colors active:scale-[0.99]",
-                "mind-btn rounded-lg"
+                mx.brandCta
               )}
             >
               Sign in
@@ -110,7 +108,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
 
   const isSignIn = mode === "sign-in"
   const title = isSignIn ? "Sign in" : "Create account"
-  const subtitle = isSignIn ? "Use your Mind account to continue." : "Set up email and password to get started."
+  const subtitle = isSignIn ? "Use your Mindar account to continue." : "Set up email and password to get started."
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center bg-white px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 dark:bg-zinc-950">
@@ -178,7 +176,7 @@ export function MindAuthScreens({ onAuthenticated, onDismiss }: MindAuthScreensP
         <div className="mt-8 flex w-full flex-col items-center gap-3">
           <button
             type="submit"
-            className={cn("w-full rounded-2xl py-3.5 text-[16px] font-semibold shadow-sm transition-colors active:scale-[0.99]", "mind-btn rounded-lg")}
+            className={cn("w-full rounded-2xl py-3.5 text-[16px] font-semibold shadow-sm transition-colors active:scale-[0.99]", mx.brandCta)}
           >
             {isSignIn ? "Sign in" : "Create account"}
           </button>

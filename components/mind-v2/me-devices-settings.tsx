@@ -1,8 +1,15 @@
 "use client"
 
+import { useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { SettingsGroup } from "@/components/mind-v2/me-settings-ui"
+import { mx } from "@/lib/medrix-design-tokens"
+import { SettingsGroup, SettingsLinkRow } from "@/components/mind-v2/me-settings-ui"
+import {
+  DevicePairingFlowPanel,
+  MOCK_PAIR_DEVICE,
+  useDevicePairingMock,
+} from "@/components/mind-v2/device-pairing-mock"
 import {
   Battery,
   Bluetooth,
@@ -21,6 +28,9 @@ export interface MeDevicesSettingsPanelProps {
   offlineOnly: boolean
   onRequestOfflineEnable: () => void
   onOfflineDisable: () => void
+  onOpenPersonalization: () => void
+  onOpenCloudSync: () => void
+  onOpenRecordingSecurity: () => void
 }
 
 export function MeDevicesSettingsPanel({
@@ -33,9 +43,22 @@ export function MeDevicesSettingsPanel({
   offlineOnly,
   onRequestOfflineEnable,
   onOfflineDisable,
+  onOpenPersonalization,
+  onOpenCloudSync,
+  onOpenRecordingSecurity,
 }: MeDevicesSettingsPanelProps) {
+  const pairing = useDevicePairingMock(() => onSetDeviceConnected(true))
+  const { step, startScan, connectSelected, cancelScan, reset } = pairing
+
+  useEffect(() => {
+    if (isDeviceConnected) reset()
+  }, [isDeviceConnected, reset])
+
+  const showPairFlow = !isDeviceConnected && step !== "idle"
+
   return (
     <div className="space-y-4">
+      {!showPairFlow ? (
       <div
         className={cn(
           "rounded-2xl border-2 p-4",
@@ -55,40 +78,50 @@ export function MeDevicesSettingsPanel({
           </div>
           <div className="flex-1">
             <div className="mb-1 flex items-center gap-2">
-              <span className="font-semibold text-zinc-900">Mind Recorder</span>
+              <span className="font-semibold text-zinc-900">
+                {isDeviceConnected ? "Mindar Recorder" : MOCK_PAIR_DEVICE.name}
+              </span>
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-xs font-medium",
                   isDeviceConnected ? "bg-zinc-700 text-white" : "bg-stone-300 text-zinc-700"
                 )}
               >
-                {isDeviceConnected ? "Connected" : "Disconnected"}
+                {isDeviceConnected ? "Connected" : "Not connected"}
               </span>
             </div>
-            <span className="text-sm text-zinc-600">SN: MR-2024-001234</span>
+            <span className="text-sm text-zinc-600">
+              SN: {isDeviceConnected ? "MR-2024-001234" : MOCK_PAIR_DEVICE.serial}
+            </span>
+            {!isDeviceConnected ? (
+              <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
+                Pair your recorder below, then manage sync and capture preferences in this screen.
+              </p>
+            ) : null}
           </div>
         </div>
 
         {isDeviceConnected && (
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-xl bg-white/80 p-3 text-center">
-              <Battery className={cn("mx-auto mb-1 h-5 w-5", "text-white dark:text-[#1a1a1a]")} />
+              <Battery className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} />
               <div className="text-lg font-semibold text-zinc-900">85%</div>
               <div className="text-xs text-zinc-600">Battery</div>
             </div>
             <div className="rounded-xl bg-white/80 p-3 text-center">
-              <HardDrive className={cn("mx-auto mb-1 h-5 w-5", "text-white dark:text-[#1a1a1a]")} />
+              <HardDrive className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} />
               <div className="text-lg font-semibold text-zinc-900">2.3G</div>
               <div className="text-xs text-zinc-600">Free</div>
             </div>
             <div className="rounded-xl bg-white/80 p-3 text-center">
-              <Wifi className={cn("mx-auto mb-1 h-5 w-5", "text-white dark:text-[#1a1a1a]")} />
+              <Wifi className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} />
               <div className="text-lg font-semibold text-zinc-900">v2.1</div>
               <div className="text-xs text-zinc-600">Firmware</div>
             </div>
           </div>
         )}
       </div>
+      ) : null}
 
       <div className="space-y-2">
         {isDeviceConnected ? (
@@ -102,7 +135,7 @@ export function MeDevicesSettingsPanel({
               }}
               className={cn(
                 "flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white",
-                "mind-btn rounded-lg"
+                mx.brandCta
               )}
             >
               <RefreshCw className="h-5 w-5" />
@@ -117,20 +150,29 @@ export function MeDevicesSettingsPanel({
             </button>
           </>
         ) : (
-          <button
-            type="button"
-            onClick={() => onSetDeviceConnected(true)}
-            className={cn(
-              "flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white",
-              "mind-btn rounded-lg"
-            )}
-          >
-            <Bluetooth className="h-5 w-5" />
-            Search & connect
-          </button>
+          <DevicePairingFlowPanel
+            step={step}
+            onStartScan={startScan}
+            onConnect={connectSelected}
+            onCancel={cancelScan}
+          />
         )}
       </div>
 
+      {!showPairFlow ? (
+        <div className="space-y-2">
+          <p className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+            Recorder settings
+          </p>
+          <SettingsGroup>
+            <SettingsLinkRow label="Personalization" onClick={onOpenPersonalization} />
+            <SettingsLinkRow label="Cloud sync" onClick={onOpenCloudSync} />
+            <SettingsLinkRow label="Recording & security" onClick={onOpenRecordingSecurity} last />
+          </SettingsGroup>
+        </div>
+      ) : null}
+
+      {!showPairFlow ? (
       <div className="space-y-2">
         <p className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
           On this device
@@ -142,11 +184,13 @@ export function MeDevicesSettingsPanel({
               aria-hidden
             />
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-medium text-zinc-900">Medrix Mind</p>
+              <p className="text-[14px] font-medium text-zinc-900">Mindar</p>
               <p className="mt-0.5 text-[13px] text-zinc-500">
                 <span className="font-medium text-zinc-600">78%</span>
+                <span className="text-zinc-400"> battery · </span>
+                <span className="font-medium text-zinc-600">Device storage</span>
                 <span className="text-zinc-400"> · </span>
-                ~42h storage
+                ~42h recording left
               </p>
             </div>
           </div>
@@ -212,6 +256,7 @@ export function MeDevicesSettingsPanel({
           </div>
         </SettingsGroup>
       </div>
+      ) : null}
     </div>
   )
 }

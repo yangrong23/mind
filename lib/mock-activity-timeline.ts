@@ -157,6 +157,20 @@ export function getTodayTimelineDay(days: ActivityTimelineDay[]): ActivityTimeli
   )
 }
 
+export function groupTimelineByYear(days: ActivityTimelineDay[]) {
+  const map = new Map<number, { year: number; days: ActivityTimelineDay[] }>()
+  for (const day of days) {
+    const year = new Date(day.isoDate + "T12:00:00").getFullYear()
+    const existing = map.get(year)
+    if (existing) {
+      existing.days.push(day)
+    } else {
+      map.set(year, { year, days: [day] })
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.year - a.year)
+}
+
 export function groupTimelineByMonth(days: ActivityTimelineDay[]) {
   const map = new Map<string, { monthLabel: string; days: ActivityTimelineDay[] }>()
   for (const day of days) {

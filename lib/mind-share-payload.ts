@@ -1,6 +1,8 @@
 /** Structured share payloads for Daily review, AI insights, and timeline cards. */
 
-export type MindShareVariant = "daily" | "insight" | "timeline"
+export type MindShareVariant = "daily" | "insight" | "timeline" | "stats"
+
+export type MeStatsShareFocus = "memos" | "streak" | "days" | "overview"
 
 export type MindShareCardModel = {
   variant: MindShareVariant
@@ -51,7 +53,7 @@ export function buildDailyReviewSharePayload(input: {
     ...bullets.map((b) => `• ${b}`),
     "",
     `${input.dateLabel} · ${input.streakDays}-day streak · ${input.captureCountToday} captures today`,
-    `— ${input.displayName} on Mind`,
+    `— ${input.displayName} on Mindar`,
   ]
     .filter((line, i, arr) => line !== "" || (i > 0 && arr[i - 1] !== ""))
     .join("\n")
@@ -92,11 +94,81 @@ export function buildTimelineSharePayload(input: {
     displayName: input.displayName,
     card: {
       variant: "timeline",
-      eyebrow: "Mind timeline",
+      eyebrow: "Mindar timeline",
       headline: input.slogan,
       hook: input.dateLabel,
       excerpt: input.activityLine,
       chips: [`${input.streakDays}-day streak`, input.dateLabel],
+    },
+  }
+}
+
+const STATS_HOOKS: Record<MeStatsShareFocus, string> = {
+  overview: "Your knowledge habit, in one glance.",
+  memos: "Ideas decay in memory. They compound when you capture them.",
+  streak: "Consistency is the quiet flex nobody sees until they do.",
+  days: "Every day you show up, your library grows.",
+}
+
+const STATS_HEADLINES: Record<MeStatsShareFocus, (s: MeStatsShareInput) => string> = {
+  overview: (s) => `${s.streak}-day streak\n${s.memos} memos · ${s.usedDays} days on Mindar`,
+  memos: (s) => `${s.memos} memos\nand counting`,
+  streak: () => "",
+  days: (s) => `${s.usedDays} days\non Mindar`,
+}
+
+type MeStatsShareInput = {
+  displayName: string
+  memos: number
+  streak: number
+  usedDays: number
+  rankLabel?: string
+  percentileLabel?: string
+}
+
+export function buildMeStatsSharePayload(
+  input: MeStatsShareInput & { focus: MeStatsShareFocus }
+): MindSharePayload {
+  const { focus, displayName, memos, streak, usedDays, rankLabel, percentileLabel } = input
+  const hook = STATS_HOOKS[focus]
+  const headline = STATS_HEADLINES[focus](input)
+  const chips = [
+    `${memos} memos`,
+    `${streak}-day streak`,
+    `${usedDays} days on Mindar`,
+  ]
+  if (rankLabel) chips.push(rankLabel)
+  if (percentileLabel) chips.push(percentileLabel)
+
+  const body = [
+    hook,
+    headline ? "" : null,
+    headline ? headline.replace(/\n/g, " · ") : null,
+    "",
+    `Memos ${memos} · Streak ${streak} days · ${usedDays} days on Mindar`,
+    rankLabel ? rankLabel : "",
+    percentileLabel ? percentileLabel : "",
+    "",
+    `— ${displayName} on Mindar`,
+  ]
+    .filter(Boolean)
+    .join("\n")
+
+  return {
+    variant: "stats",
+    title: `My Mindar stats · ${focus === "overview" ? "overview" : focus}`,
+    body,
+    displayName,
+    card: {
+      variant: "stats",
+      eyebrow: "Mindar stats",
+      headline,
+      hook,
+      bullets:
+        focus === "overview"
+          ? ["Share your rhythm—invite friends to build libraries together."]
+          : undefined,
+      chips: chips.slice(0, 4),
     },
   }
 }
@@ -123,7 +195,7 @@ export function buildInsightSharePayload(input: {
     `Next step: ${input.suggestedNextStep}`,
     "",
     `Range · ${input.rangeLabel} · by ${input.author}`,
-    `— ${input.displayName} on Mind`,
+    `— ${input.displayName} on Mindar`,
   ].join("\n")
 
   return {

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 
-export default function WebIndexPage() {
-  redirect("/web/agent")
+/** Web workspace removed — mobile demo only. */
+export default function WebWorkspacePage() {
+  redirect("/")
 }

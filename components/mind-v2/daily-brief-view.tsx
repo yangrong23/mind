@@ -1,13 +1,60 @@
 "use client"
 
-import { Calendar, ExternalLink, FileText, Mail } from "lucide-react"
+import {
+  Calendar,
+  ChevronRight,
+  ExternalLink,
+  FileText,
+  HelpCircle,
+  Layers,
+  Mail,
+  Presentation,
+  Volume2,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { DailyBriefAction, DailyBriefContent } from "@/lib/daily-brief-content"
+import { mx } from "@/lib/medrix-design-tokens"
+import type {
+  DailyBriefAction,
+  DailyBriefContent,
+  DailyBriefOutputFile,
+  DailyBriefOutputKind,
+} from "@/lib/daily-brief-content"
 
 function BriefActionIcon({ kind }: { kind?: DailyBriefAction["kind"] }) {
-  if (kind === "calendar") return <Calendar className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+  if (kind === "calendar") return <Calendar className="h-3 w-3" strokeWidth={2} aria-hidden />
   if (kind === "link") return <ExternalLink className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
   return <Mail className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+}
+
+function OutputFileIcon({ kind }: { kind: DailyBriefOutputKind }) {
+  const className = "h-[17px] w-[17px] shrink-0"
+  switch (kind) {
+    case "audio":
+      return <Volume2 className={className} strokeWidth={1.85} aria-hidden />
+    case "flashcards":
+      return <Layers className={className} strokeWidth={1.85} aria-hidden />
+    case "slides":
+      return <Presentation className={className} strokeWidth={1.85} aria-hidden />
+    case "quiz":
+      return <HelpCircle className={className} strokeWidth={1.85} aria-hidden />
+    default:
+      return <FileText className={className} strokeWidth={1.85} aria-hidden />
+  }
+}
+
+function outputFileTone(kind: DailyBriefOutputKind) {
+  switch (kind) {
+    case "audio":
+      return "bg-cyan-500/12 text-cyan-700 dark:bg-cyan-500/18 dark:text-cyan-300"
+    case "flashcards":
+      return "bg-blue-500/12 text-blue-700 dark:bg-blue-500/18 dark:text-blue-300"
+    case "slides":
+      return "bg-violet-500/12 text-violet-700 dark:bg-violet-500/18 dark:text-violet-300"
+    case "quiz":
+      return "bg-amber-500/12 text-amber-800 dark:bg-amber-500/18 dark:text-amber-300"
+    default:
+      return "bg-mind/10 text-mind dark:bg-mind/15 dark:text-sky-300"
+  }
 }
 
 function renderLeadText(text: string) {
@@ -25,10 +72,12 @@ function renderLeadText(text: string) {
 
 export function DailyBriefView({
   content,
+  onOutputFileClick,
   onAction,
   className,
 }: {
   content: DailyBriefContent
+  onOutputFileClick?: (file: DailyBriefOutputFile) => void
   onAction?: (actionId: string, itemId: string) => void
   className?: string
 }) {
@@ -80,9 +129,9 @@ export function DailyBriefView({
                         type="button"
                         onClick={() => onAction?.(action.id, item.id)}
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-xl bg-mind/[0.06] px-3.5 py-2",
-                          "text-[13px] font-semibold text-mind transition-colors hover:bg-mind/10",
-                          "dark:bg-mind/12 dark:hover:bg-mind/16"
+                          "inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-white px-3 py-1.5",
+                          "text-[12px] font-medium text-zinc-700 transition-colors hover:bg-stone-50",
+                          "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
                         )}
                       >
                         <BriefActionIcon kind={action.kind} />
@@ -97,35 +146,44 @@ export function DailyBriefView({
         </section>
       ))}
 
-      {content.sourceFiles && content.sourceFiles.length > 0 ? (
-        <section
-          aria-label="Files for this period"
-          className="rounded-2xl border border-stone-200/90 bg-stone-50/60 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-900/40"
-        >
-          <h3 className="flex items-center gap-2 text-[14px] font-semibold text-zinc-800 dark:text-zinc-100">
-            <FileText className="h-4 w-4 text-zinc-500" strokeWidth={2} aria-hidden />
-            Files from this period
-          </h3>
-          <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">
-            Sources you captured or edited — open from your library or device log.
-          </p>
-          <ul className="mt-3 divide-y divide-stone-200/80 dark:divide-zinc-800">
-            {content.sourceFiles.map((file) => (
-              <li key={file.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-black/[0.05] dark:bg-zinc-950 dark:ring-white/10">
-                  <FileText className="h-3.5 w-3.5 text-zinc-500" strokeWidth={2} aria-hidden />
+      {content.outputFiles.length > 0 ? (
+        <section aria-label="Files from this day">
+          <p className="mb-3 text-[13px] font-medium text-zinc-500 dark:text-zinc-400">Files from this day</p>
+          <div className="space-y-2">
+            {content.outputFiles.map((file) => (
+              <button
+                key={file.id}
+                type="button"
+                onClick={() => onOutputFileClick?.(file)}
+                className={cn(
+                  mx.elevatedCard,
+                  "flex w-full items-center gap-3 px-3.5 py-3 text-left transition-all",
+                  "hover:border-[#E9ECEF] active:scale-[0.99] dark:hover:border-zinc-600",
+                  mx.brandFocusRing
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                    outputFileTone(file.kind)
+                  )}
+                  aria-hidden
+                >
+                  <OutputFileIcon kind={file.kind} />
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[14px] font-medium leading-snug text-zinc-800 dark:text-zinc-100">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
                     {file.title}
-                  </p>
-                  <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">
-                    {[file.time, file.source].filter(Boolean).join(" · ") || "Capture"}
-                  </p>
-                </div>
-              </li>
+                  </span>
+                  <span className="mt-0.5 block text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                    {file.kindLabel}
+                    {file.time ? ` · ${file.time}` : ""}
+                  </span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300 dark:text-zinc-600" strokeWidth={1.75} aria-hidden />
+              </button>
             ))}
-          </ul>
+          </div>
         </section>
       ) : null}
     </div>

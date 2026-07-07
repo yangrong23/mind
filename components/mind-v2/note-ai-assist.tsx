@@ -1,8 +1,10 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { AgentChat, MINDAR_COPILOT_AGENT } from "@/components/mind-v2/agent-tab"
+import { AgentChat, MINDER_COPILOT_AGENT } from "@/components/mind-v2/agent-tab"
 import { MindarLogo } from "@/components/mind-v2/mindar-logo"
+import { resolveAgentThreadKey } from "@/lib/agent-chat-threads"
+import type { FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import { noteChatEntryHint, type NoteChatLaunchContext } from "@/lib/note-chat-context"
 
 export function NoteAiAssistBubble({
@@ -25,7 +27,7 @@ export function NoteAiAssistBubble({
       )}
       aria-label="Ask Mindar about this note"
     >
-      <MindarLogo height={28} className="max-w-[4.5rem]" />
+      <MindarLogo variant="inline" className="!h-6 !max-w-[72px]" />
     </button>
   )
 }
@@ -36,30 +38,83 @@ export function NoteAiChatOverlay({
   context,
   requireAuthThen,
   onNavigateToKnowledge,
+  variant = "text",
 }: {
   open: boolean
   onClose: () => void
   context?: NoteChatLaunchContext | null
   requireAuthThen?: (run: () => void) => void
-  onNavigateToKnowledge?: () => void
+  onNavigateToKnowledge?: (factoryKind?: FactoryModalKind) => void
+  /** `recording` = bottom sheet over note detail; `text` = full in-editor overlay */
+  variant?: "text" | "recording"
 }) {
-  if (!open) return null
+  if (!open || !context) return null
+
+  const threadScope = {
+    type: "note" as const,
+    noteId: context.noteId,
+    noteTitle: context.noteTitle,
+  }
+  const threadId = resolveAgentThreadKey(threadScope)
+
+  const chat = (
+    <AgentChat
+      embedded
+      showModalClose
+      noteChatStyle={variant}
+      requireAuthThen={requireAuthThen}
+      agent={MINDER_COPILOT_AGENT}
+      threadId={threadId}
+      threadScope={threadScope}
+      onBack={onClose}
+      entryHint={noteChatEntryHint(context)}
+      noteContext={{
+        noteTitle: context.noteTitle,
+        notePreview: context.notePreview,
+      }}
+      initialPrompt={context.initialPrompt}
+      onNavigateToKnowledge={onNavigateToKnowledge}
+    />
+  )
+
+  if (variant === "recording") {
+    return (
+      <div
+        className="absolute inset-0 z-[80] flex flex-col justify-end"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Ask Mindar about this recording"
+      >
+        <button
+          type="button"
+          className="absolute inset-0 bg-black/40 backdrop-blur-[1px] animate-in fade-in duration-200"
+          aria-label="Close"
+          onClick={onClose}
+        />
+        <div
+          className={cn(
+            "relative flex min-h-[52%] max-h-[min(88dvh,720px)] flex-col overflow-hidden",
+            "rounded-t-[20px] bg-white shadow-[0_-12px_48px_rgba(15,23,42,0.16)]",
+            "animate-in slide-in-from-bottom duration-300 dark:bg-zinc-950 dark:shadow-[0_-12px_48px_rgba(0,0,0,0.45)]"
+          )}
+        >
+          {chat}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="absolute inset-0 z-[80] flex flex-col bg-white dark:bg-zinc-950">
-      <AgentChat
-        requireAuthThen={requireAuthThen}
-        agent={MINDAR_COPILOT_AGENT}
-        onBack={onClose}
-        entryHint={context ? noteChatEntryHint(context) : "Ask about this note—grounded on what you captured."}
-        noteContext={
-          context
-            ? { noteTitle: context.noteTitle, notePreview: context.notePreview }
-            : undefined
-        }
-        initialPrompt={context?.initialPrompt}
-        onNavigateToKnowledge={onNavigateToKnowledge}
-      />
+    <div
+      className={cn(
+        "absolute inset-0 z-[80] flex flex-col overflow-hidden bg-white",
+        "animate-in slide-in-from-bottom duration-300 dark:bg-zinc-950"
+      )}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Mindar assistant"
+    >
+      {chat}
     </div>
   )
 }

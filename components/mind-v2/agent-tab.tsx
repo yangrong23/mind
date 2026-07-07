@@ -3,8 +3,14 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import { MOCK_KNOWLEDGE_BASES, type KnowledgeBase } from "@/lib/mock-knowledge-bases"
 import { isNoteRecording } from "@/lib/note-status"
+import { TEXT_NOTE_AI_PROMPTS } from "@/lib/text-note-ai-prompts"
+import { RECORDING_NOTE_FACTORY_ITEMS } from "@/lib/recording-note-factory-chips"
+import { RECORDING_NOTE_CHAT_SUGGESTIONS } from "@/lib/recording-note-chat-suggestions"
+import { NoteRecordingChatSuggestionCards } from "@/components/mind-v2/note-recording-chat-suggestion-cards"
+import { CHAT_FACTORY_RAIL_ITEMS, MindChatFactoryRail } from "@/components/mind-v2/mind-chat-factory-rail"
 import { mockNotes } from "@/lib/mock-notes"
 import { MindSaveToLibrarySheet } from "@/components/mind-v2/mind-save-to-library-sheet"
 import {
@@ -16,14 +22,8 @@ import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
 import { MindKbAtMenu } from "@/components/mind-v2/mind-kb-at-menu"
 import { AgentExamplePromptRail } from "@/components/mind-v2/agent-example-prompt-rail"
 import { AgentHomeComposerStack } from "@/components/mind-v2/agent-home-composer-stack"
-import {
-  MindChatFactoryRail,
-  resolveFactoryRailSelection,
-} from "@/components/mind-v2/mind-chat-factory-rail"
 import { MindChatHeaderActions } from "@/components/mind-v2/mind-chat-header-actions"
 import { MindChatMessageActions } from "@/components/mind-v2/mind-chat-message-actions"
-import { MindarLogo, MindarLogoMark } from "@/components/mind-v2/mindar-logo"
-import { MINDAR_MARK_SRC } from "@/lib/mindar-logo"
 import {
   MindChatQaHistoryPanel,
   seedDemoQaHistory,
@@ -36,42 +36,36 @@ import {
   type StudioLibraryLinkMode,
 } from "@/components/mind-v2/studio-handoff"
 import {
-  AGENT_SCENARIO_TABS,
-  agentsForPlazaTab,
-  getPlazaTabHint,
-  getMindAgentCatalog,
   getMindAgentProfile,
-  MINDAR_COPILOT_PROFILE,
-  MINDAR_DEFAULT_SCENARIO_AGENTS,
-  scenarioLabel,
+  MINDER_COPILOT_PROFILE,
+  MINDER_DEFAULT_SCENARIO_AGENTS,
   type AgentCapabilityProfile,
-  type AgentScenarioTabId,
   type MindAgent,
 } from "@/lib/mind-agent-catalog"
+import { MindarLogo } from "@/components/mind-v2/mindar-logo"
+import { AgentHomeSidebar } from "@/components/mind-v2/agent-home-sidebar"
+import { AgentHomePlazaPager, type AgentHomePagerPage } from "@/components/mind-v2/agent-home-plaza-pager"
+import { LibraryPlazaView } from "@/components/mind-v2/library-plaza-view"
+import type { PlazaCategoryId } from "@/lib/mock-plaza-libraries"
 import {
-  getAgentExamplePrompts,
-  getAgentFollowUpPrompts,
-  type AgentExamplePrompt,
-} from "@/lib/agent-chat-example-prompts"
-import { AgentFollowUpPromptRail } from "@/components/mind-v2/agent-follow-up-prompt-rail"
-import { NOTE_WRITING_PROMPTS } from "@/lib/note-writing-prompts"
-import { AgentMultiRoleBlurb, AgentMultiRoleFlow } from "@/components/mind-v2/agent-profile-ui"
+  clearThreadMessages,
+  listAgentThreadSummaries,
+  newHomeSessionId,
+  readThreadMessages,
+  resolveAgentThreadKey,
+  writeThreadMessages,
+  type AgentThreadScope,
+  type AgentThreadSummary,
+} from "@/lib/agent-chat-threads"
+import { getAgentExamplePrompts } from "@/lib/agent-chat-example-prompts"
+import { AgentMultiRoleBlurb } from "@/components/mind-v2/agent-profile-ui"
 import {
-  Plus,
+  Menu,
+  Trash2,
+  MoreHorizontal,
+  X,
   ChevronRight,
-  ChevronDown,
   Sparkles,
-  Volume2,
-  Eye,
-  LayoutDashboard,
-  MessageCircle,
-  Library,
-  Bot,
-  Globe,
-  AtSign,
-  AudioLines,
-  Search,
-  SquarePen,
 } from "lucide-react"
 
 export interface Agent {
@@ -84,216 +78,47 @@ export interface Agent {
   author?: string
   isOfficial?: boolean
   scenario?: MindAgent["scenario"]
+  linkedKbIds?: number[]
   profile?: AgentCapabilityProfile
 }
 
+export type AgentConversationLaunchOptions = AgentChatLaunchOptions & {
+  scope?: AgentThreadScope
+}
+
 /** Default agent when sending from the Mindar home composer. */
-export const MINDAR_COPILOT_AGENT: Agent = {
+export const MINDER_COPILOT_AGENT: Agent = {
   id: 0,
   name: "Mindar",
-  description: "Your knowledge assistant",
-  avatar: MINDAR_MARK_SRC,
+  description: "Copilot",
+  avatar: "🧠",
   color: "from-zinc-500 to-stone-600",
 }
 
 export type AgentChatLaunchOptions = {
   initialPrompt?: string
+  scope?: AgentThreadScope
 }
 
-/** Default scenario agents (contacts list excludes Mindar id 0). */
-export const MINDAR_DEMO_MY_AGENTS: Agent[] = MINDAR_DEFAULT_SCENARIO_AGENTS
-
-export const MINDAR_DEMO_CHAT_HISTORY = [
-  { date: "May 8, 2026", items: [
-    { id: 1, title: "Mind map draft", icon: "💭", subItems: [{ text: "Notes and reflections…", type: "note" }] },
-    { id: 2, title: "Build an agent", icon: "💭", subItems: [{ text: "ima claw setup", type: "config" }] },
-    { id: 3, title: "TCL Zhonghuan news…", icon: "💭" },
-  ]},
-  { date: "May 6, 2026", items: [
-    { id: 4, title: "What’s inside?", icon: "💭" },
-  ]},
-]
+/** Legacy export — plaza / web still reference scenario roster elsewhere. */
+export const MINDER_DEMO_MY_AGENTS: Agent[] = MINDER_DEFAULT_SCENARIO_AGENTS
 
 interface AgentTabProps {
-  onAgentChat: (agent: Agent, options?: AgentChatLaunchOptions) => void
+  onOpenConversation: (scope: AgentThreadScope, options?: AgentChatLaunchOptions) => void
+  onOpenKnowledgeBase: (kb: KnowledgeBase) => void
+  allKnowledgeBases?: KnowledgeBase[]
+  onNavigateToKnowledge?: (factoryKind?: FactoryModalKind) => void
   /** Run send / attach only after demo sign-in. */
   requireAuthThen?: (run: () => void) => void
-  /** Desktop split: hide drawer; parent shows agent list */
-  webLayout?: boolean
 }
-
-const myAgents = MINDAR_DEMO_MY_AGENTS
 
 const AGENT_LINKABLE_NOTES = mockNotes
   .filter((n) => !isNoteRecording(n))
   .slice(0, 8)
   .map((n) => ({ id: n.id, title: n.title }))
 
-type AgentContact = Agent & {
-  preview: string
-  timeLabel?: string
-}
-
-const DEFAULT_CONTACT_TIME_LABELS = ["Yesterday", "Mon", "Sun", "Sat", "Fri", "Thu"] as const
-
-function buildAgentContacts(): AgentContact[] {
-  return [
-    {
-      ...MINDAR_COPILOT_AGENT,
-      profile: MINDAR_COPILOT_PROFILE,
-      preview: MINDAR_COPILOT_PROFILE.tagline,
-      timeLabel: "Now",
-    },
-    ...myAgents.map((a, i) => {
-      const catalog = getMindAgentCatalog(a.id)
-      return {
-        ...a,
-        scenario: catalog?.scenario ?? a.scenario,
-        profile: catalog?.profile ?? getMindAgentProfile(a.id),
-        preview: catalog?.contactPreview ?? catalog?.profile?.tagline ?? a.description,
-        timeLabel: DEFAULT_CONTACT_TIME_LABELS[i] ?? "",
-      }
-    }),
-  ]
-}
-
 function agentAvatarIsRemoteUrl(avatar: string) {
   return /^https?:\/\//i.test(avatar) || avatar.startsWith("/")
-}
-
-export function AgentContactAvatar({
-  agent,
-  className,
-  size = 48,
-}: {
-  agent: Agent
-  className?: string
-  size?: number
-}) {
-  const remote = agentAvatarIsRemoteUrl(agent.avatar)
-  if (agent.id === MINDAR_COPILOT_AGENT.id) {
-    return <MindarLogoMark size={size} className={className} />
-  }
-  return (
-    <div
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xl ring-1 ring-stone-200/60 dark:ring-zinc-700",
-        agent.color,
-        className
-      )}
-      style={{ width: size, height: size }}
-    >
-      {remote ? (
-        <img src={agent.avatar} alt="" className="h-full w-full rounded-full object-cover" />
-      ) : (
-        <span
-          className={cn(
-            "leading-none",
-            size >= 72 ? "text-3xl" : size >= 48 ? "text-xl" : "text-lg"
-          )}
-          aria-hidden
-        >
-          {agent.avatar}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function AgentContactRow({ contact, onOpen }: { contact: AgentContact; onOpen: () => void }) {
-  const profile = contact.profile ?? getMindAgentProfile(contact.id)
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-stone-50/90 active:bg-stone-100/80 dark:hover:bg-zinc-900/60 dark:active:bg-zinc-800/80"
-    >
-      <AgentContactAvatar agent={contact} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="truncate text-[16px] font-semibold text-zinc-900 dark:text-zinc-50">{contact.name}</span>
-          {contact.isOfficial ? (
-            <span className="shrink-0 rounded-md bg-mind/10 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-mind/20">
-              Official
-            </span>
-          ) : null}
-        </div>
-        {profile?.multiRole ? (
-          <AgentMultiRoleBlurb profile={profile} className="mt-0.5" />
-        ) : profile ? (
-          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium text-zinc-600 dark:text-zinc-400">
-            {profile.tagline}
-          </p>
-        ) : (
-          <p className="mt-0.5 line-clamp-1 text-[13px] text-zinc-500 dark:text-zinc-400">{contact.preview}</p>
-        )}
-      </div>
-      {contact.timeLabel ? (
-        <span className="shrink-0 pt-0.5 text-[11px] tabular-nums text-zinc-400 dark:text-zinc-500">
-          {contact.timeLabel}
-        </span>
-      ) : null}
-    </button>
-  )
-}
-
-function AgentContactsView({
-  onOpenAgent,
-  onDiscover,
-  onNewAgent,
-  onSearch,
-}: {
-  onOpenAgent: (agent: Agent) => void
-  onDiscover: () => void
-  onNewAgent: () => void
-  onSearch: () => void
-}) {
-  const contacts = buildAgentContacts()
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-zinc-950">
-      <div className="shrink-0 border-b border-stone-100/90 bg-white/95 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/95">
-        <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-2.5">
-          <button
-            type="button"
-            onClick={onDiscover}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100/80 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
-            aria-label="Discover agents"
-          >
-            <LayoutDashboard className="h-5 w-5" strokeWidth={1.75} />
-          </button>
-          <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Agents</h1>
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              onClick={onSearch}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100/80 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
-              aria-label="Search agents"
-            >
-              <Search className="h-5 w-5" strokeWidth={1.75} />
-            </button>
-            <button
-              type="button"
-              onClick={onNewAgent}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100/80 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
-              aria-label="New chat"
-            >
-              <SquarePen className="h-5 w-5" strokeWidth={1.75} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="divide-y divide-stone-100/90 dark:divide-zinc-800/80">
-          {contacts.map((contact) => (
-            <AgentContactRow key={contact.id} contact={contact} onOpen={() => onOpenAgent(contact)} />
-          ))}
-        </div>
-        <div className="h-4 shrink-0" aria-hidden />
-      </div>
-    </div>
-  )
 }
 
 function libraryLinkSummary(
@@ -315,463 +140,124 @@ function libraryLinkSummary(
   return `${rows[0].name} +${rows.length - 1}`
 }
 
-export function AgentTab({ onAgentChat, requireAuthThen, webLayout = false }: AgentTabProps) {
+export function AgentTab({
+  onOpenConversation,
+  onOpenKnowledgeBase,
+  allKnowledgeBases,
+  onNavigateToKnowledge,
+  requireAuthThen,
+}: AgentTabProps) {
   const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
-  const [showCreateSheet, setShowCreateSheet] = useState(false)
-  const [showExplore, setShowExplore] = useState(false)
-  const [agentHomeKbMenuOpen, setAgentHomeKbMenuOpen] = useState(false)
-  const [libraryLinkMode, setLibraryLinkMode] = useState<StudioLibraryLinkMode>("all")
-  const [pickedKbIds, setPickedKbIds] = useState<number[]>([])
-  const [pickedNoteId, setPickedNoteId] = useState<number | null>(null)
-  const [agentHomeDraft, setAgentHomeDraft] = useState("")
-  const [agentStudioSession, setAgentStudioSession] = useState<StudioFromAgentHandoff | null>(null)
-  const [agentHomeVoiceOn, setAgentHomeVoiceOn] = useState(false)
-  const [agentHomeSelectedFactory, setAgentHomeSelectedFactory] = useState<FactoryModalKind | null>(null)
-  const mindarExamplePrompts = getAgentExamplePrompts(0)
+  const libraries = allKnowledgeBases ?? MOCK_KNOWLEDGE_BASES
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [agentPagerPage, setAgentPagerPage] = useState<AgentHomePagerPage>("agent")
+  const [plazaCategory, setPlazaCategory] = useState<PlazaCategoryId>("recommended")
+  const [plazaQuery, setPlazaQuery] = useState("")
+  const [homeScope, setHomeScope] = useState<AgentThreadScope>({ type: "home" })
+  const homeThreadId = resolveAgentThreadKey(homeScope)
 
-  const linkSummary = libraryLinkSummary(libraryLinkMode, pickedKbIds, pickedNoteId)
+  const flatThreads = useMemo(() => listAgentThreadSummaries(), [homeThreadId, sidebarOpen])
 
-  function openStudioWithKind(factoryKind: FactoryModalKind) {
-    const mode =
-      libraryLinkMode === "pick" && pickedKbIds.length === 0 ? "all" : libraryLinkMode
-    const ids = mode === "pick" ? pickedKbIds : []
-    setAgentStudioSession(
-      normalizeStudioFromAgentHandoff({ factoryKind, libraryLinkMode: mode, pickedKbIds: ids })
-    )
+  function openThread(thread: AgentThreadSummary) {
+    setSidebarOpen(false)
+    if (thread.scope.type === "home") {
+      setHomeScope(thread.scope)
+      setAgentPagerPage("agent")
+      return
+    }
+    onOpenConversation(thread.scope)
   }
 
-  function submitAgentHomePrompt() {
-    runWithAuth(() => {
-      const q = agentHomeDraft.trim()
-      if (!q) {
-        toast.error("Add a prompt first")
-        return
-      }
-      onAgentChat(MINDAR_COPILOT_AGENT, {
-        initialPrompt: q,
-      })
-      setAgentHomeDraft("")
-    })
+  function startNewHomeSession() {
+    setHomeScope({ type: "home", sessionId: newHomeSessionId() })
   }
 
-  const openAgentChat = (agent: Agent) => runWithAuth(() => onAgentChat(agent))
-
-  return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-x-hidden bg-white font-sans text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
-      {!webLayout ? (
-        <AgentContactsView
-          onOpenAgent={openAgentChat}
-          onDiscover={() => runWithAuth(() => setShowExplore(true))}
-          onNewAgent={() => runWithAuth(() => onAgentChat(MINDAR_COPILOT_AGENT))}
-          onSearch={() =>
-            runWithAuth(() =>
-              toast.message("Search agents", { description: "Find agents by name or topic (demo)." })
-            )
-          }
-        />
-      ) : (
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible">
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center pt-4">
-          <div
-            className="aspect-[4/3] w-[min(100%,380px)] max-h-[48vh] bg-[radial-gradient(ellipse_70%_58%_at_50%_45%,rgba(24,24,27,0.06),transparent_68%)] dark:bg-[radial-gradient(ellipse_70%_58%_at_50%_45%,rgba(255,255,255,0.05),transparent_68%)]"
-            aria-hidden
-          />
-        </div>
-
-        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-12 sm:pt-14">
-            <div className="flex flex-col items-center pt-8 sm:pt-10">
-              <div className="flex flex-col items-center" aria-label="Mindar">
-                <MindarLogo height={26} className="max-w-[5.5rem] dark:opacity-95" />
-              </div>
-              <h2 className="mt-6 text-center text-[22px] font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-[26px]">
-                What can I help you with?
-              </h2>
-              <AgentExamplePromptRail
-                layout="wrap"
-                prompts={mindarExamplePrompts}
-                onSelect={(prompt) => runWithAuth(() => setAgentHomeDraft(prompt))}
-                className="mt-6 w-full max-w-3xl"
-              />
-            </div>
-
-            <div className="mt-auto w-full max-w-2xl shrink-0 self-center pt-6 sm:pt-8">
-              <AgentHomeComposerStack
-                factoryPlacement="inside"
-                selectedFactoryId={agentHomeSelectedFactory}
-                onFactorySelect={(kind) =>
-                  runWithAuth(() => {
-                    setAgentHomeSelectedFactory(kind)
-                    openStudioWithKind(kind)
-                  })
-                }
-                examplePrompts={undefined}
-                onExampleSelect={undefined}
-                composer={
-                  <MindChatComposer
-                    variant="home"
-                    value={agentHomeDraft}
-                    onChange={setAgentHomeDraft}
-                    onSubmit={submitAgentHomePrompt}
-                    placeholder="Ask anything…"
-                    voiceOn={agentHomeVoiceOn}
-                    onVoiceToggle={() =>
-                      runWithAuth(() => {
-                        setAgentHomeVoiceOn((prev) => {
-                          const next = !prev
-                          toast.message(next ? "Voice input" : "Voice input off", {
-                            description: next ? "Demo: tap again to stop." : "Demo: no audio sent.",
-                          })
-                          return next
-                        })
-                      })
-                    }
-                    factoryToolbar={
-                      <MindChatFactoryRail
-                        railStyle="inline"
-                        density="compact"
-                        selectedId={agentHomeSelectedFactory}
-                        onSelect={(id) =>
-                          runWithAuth(() => {
-                            const kind = resolveFactoryRailSelection(id)
-                            setAgentHomeSelectedFactory(kind)
-                            openStudioWithKind(kind)
-                          })
-                        }
-                      />
-                    }
-                    atTitle={linkSummary}
-                    atMenu={
-                      <MindKbAtMenu
-                        scopeShortcuts={[
-                          {
-                            id: "all",
-                            label: "All libraries",
-                            selected: libraryLinkMode === "all" && pickedNoteId == null,
-                            onSelect: () => {
-                              setLibraryLinkMode("all")
-                              setPickedKbIds([])
-                              setPickedNoteId(null)
-                              setAgentHomeKbMenuOpen(false)
-                            },
-                          },
-                        ]}
-                        items={MOCK_KNOWLEDGE_BASES.slice(0, 6).map((kb) => ({ id: kb.id, name: kb.name }))}
-                        isItemSelected={(kb) =>
-                          libraryLinkMode === "pick" && pickedKbIds.includes(kb.id) && pickedNoteId == null
-                        }
-                        onSelect={(kb) => {
-                          setLibraryLinkMode("pick")
-                          setPickedKbIds([kb.id])
-                          setPickedNoteId(null)
-                          setAgentHomeKbMenuOpen(false)
-                        }}
-                        noteItems={AGENT_LINKABLE_NOTES}
-                        isNoteSelected={(note) => pickedNoteId === note.id}
-                        onNoteSelect={(note) => {
-                          setPickedNoteId(note.id)
-                          setLibraryLinkMode("all")
-                          setPickedKbIds([])
-                          setAgentHomeKbMenuOpen(false)
-                        }}
-                      />
-                    }
-                    atMenuOpen={agentHomeKbMenuOpen}
-                    onAtMenuOpenChange={setAgentHomeKbMenuOpen}
-                    onUploadClick={() =>
-                      runWithAuth(() =>
-                        toast.message("Upload file", { description: "Demo — pick a file from your device." })
-                      )
-                    }
-                  />
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      )}
-
-      {/* Create agent sheet */}
-      {showCreateSheet && (
-        <CreateAgentSheet onClose={() => setShowCreateSheet(false)} />
-      )}
-
-      {/* Explore agents */}
-      {showExplore && (
-        <ExploreAgentsPage 
-          onClose={() => setShowExplore(false)}
-          onSelect={(agent) => {
-            setShowExplore(false)
-            onAgentChat(agent)
-          }}
-          onCreate={() => {
-            setShowExplore(false)
-            setShowCreateSheet(true)
-          }}
-        />
-      )}
-
-      {agentStudioSession && (
-        <ContentFactoryModals
-          open={agentStudioSession.factoryKind}
-          onClose={() => setAgentStudioSession(null)}
-          libraryName={resolveAgentStudioLibraryName(agentStudioSession)}
-          modalDensity="compact"
-          onGenerateSubmit={(kind) => {
-            setAgentStudioSession(null)
-            toast.success("Queued", {
-              description: `${kind} run started from your library scope (demo).`,
-            })
-          }}
-        />
-      )}
-    </div>
+  const agentHomeChat = (
+    <AgentChat
+      key={homeThreadId}
+      agent={MINDER_COPILOT_AGENT}
+      threadId={homeThreadId}
+      threadScope={homeScope}
+      embedded
+      tabRoot
+      requireAuthThen={requireAuthThen}
+      onNavigateToKnowledge={onNavigateToKnowledge}
+      onBack={() => {}}
+      onNewChatSession={startNewHomeSession}
+      onOpenSidebar={() => runWithAuth(() => setSidebarOpen(true))}
+    />
   )
-}
 
-// Create agent sheet
-function CreateAgentSheet({ onClose }: { onClose: () => void }) {
-  const [name, setName] = useState("")
-  const [persona, setPersona] = useState("")
-
-  return (
-    <div className="absolute inset-0 z-50 flex flex-col animate-in slide-in-from-bottom duration-200 bg-white dark:bg-zinc-950 font-sans dark:bg-zinc-950">
-      {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-stone-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-        <button type="button" onClick={onClose} className="text-[15px] text-zinc-600 dark:text-zinc-400">
-          Cancel
-        </button>
-        <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">New agent</h1>
-        <button type="button" className="text-[15px] font-medium text-mind">
-          Save
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
-        {/* Avatar */}
-        <div className="flex justify-center py-8">
-          <div className="relative">
-            <div className="w-32 h-32 rounded-full bg-zinc-100 flex items-center justify-center">
-              <div className="flex gap-2">
-                <div className="h-2 w-2 rounded-full bg-zinc-400" />
-                <div className="h-2 w-2 rounded-full bg-zinc-400" />
-              </div>
-            </div>
-            <button className="absolute bottom-0 right-0 w-10 h-10 bg-zinc-900 rounded-full flex items-center justify-center">
-              <Plus className="w-5 h-5 text-white" />
-            </button>
-          </div>
-        </div>
-
-        {/* Autofill */}
-        <div className="px-5 mb-4">
-          <button type="button" className="flex items-center gap-1 text-sm text-mind">
-            <Sparkles className="h-4 w-4" />
-            Autofill
-          </button>
-        </div>
-
-        {/* Name */}
-        <div className="mx-5 mb-4 rounded-xl bg-white p-4 dark:bg-zinc-900">
-          <div className="flex items-center gap-3">
-            <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Name</span>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. English coach"
-              className="flex-1 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none dark:bg-transparent dark:text-zinc-100 dark:placeholder:text-zinc-500"
-            />
-          </div>
-        </div>
-
-        {/* Instructions */}
-        <div className="mx-5 mb-4 rounded-xl bg-white p-4 dark:bg-zinc-900">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">Instructions</span>
-            <button type="button" className="flex items-center gap-1 text-sm text-mind">
-              <Sparkles className="h-4 w-4" />
-              Polish
-            </button>
-          </div>
-          <textarea
-            value={persona}
-            onChange={(e) => setPersona(e.target.value)}
-            placeholder="How should this agent sound and behave?"
-            rows={4}
-            className="w-full resize-none text-[15px] leading-relaxed text-zinc-500 placeholder:text-zinc-400 focus:outline-none dark:bg-transparent dark:text-zinc-300 dark:placeholder:text-zinc-500"
-          />
-        </div>
-
-        {/* Voice */}
-        <div className="mx-5 mb-4 rounded-xl bg-white dark:bg-zinc-900">
-          <button className="w-full flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
-                <Volume2 className="w-5 h-5 text-zinc-700" />
-              </div>
-              <span className="text-[15px] text-zinc-900 dark:text-zinc-100">Voice</span>
-            </div>
-            <div className="flex items-center gap-2 text-zinc-400">
-              <span className="text-sm">Edit</span>
-              <ChevronRight className="w-5 h-5" />
-            </div>
-          </button>
-          <div className="border-t border-stone-100 dark:border-zinc-800" />
-          <button className="w-full flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
-                <Eye className="w-5 h-5 text-zinc-600" />
-              </div>
-              <span className="text-[15px] text-zinc-900 dark:text-zinc-100">Public · anyone can chat</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-zinc-400" />
-          </button>
-        </div>
-
-        {/* More advanced options */}
-        <div className="px-5 mb-4">
-          <button type="button" className="flex w-full items-center justify-center gap-1 py-3 text-[15px] text-zinc-500">
-            <Plus className="h-4 w-4" />
-            More options
-          </button>
-        </div>
-
-      </div>
-    </div>
-  )
-}
-
-// Agent gallery page
-interface ExploreAgentsPageProps {
-  onClose: () => void
-  onSelect: (agent: Agent) => void
-  onCreate: () => void
-}
-
-function ExploreAgentsPage({ onClose, onSelect, onCreate }: ExploreAgentsPageProps) {
-  const [activeTab, setActiveTab] = useState<AgentScenarioTabId>("featured")
-  const [selectedAgents, setSelectedAgents] = useState<number[]>([])
-  const visibleAgents = agentsForPlazaTab(activeTab)
-
-  const toggleAgent = (id: number) => {
-    setSelectedAgents((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
-  }
-
-  return (
-    <div className="absolute inset-0 z-50 flex flex-col animate-in slide-in-from-right duration-200 bg-white font-sans dark:bg-zinc-950">
-      {/* Top bar */}
-      <div className="flex items-center gap-3 border-b border-stone-100 px-4 py-3 dark:border-zinc-800">
-        <button onClick={onClose} className="rounded-full p-1 hover:bg-stone-100 dark:hover:bg-zinc-800">
-          <ChevronRight className="h-6 w-6 rotate-180 text-zinc-600" />
+  const agentPlazaPanel = (
+    <div className={cn("flex h-full min-h-0 flex-col", mx.pageBg)}>
+      <header
+        className={cn(
+          "flex shrink-0 items-center gap-2 border-b px-3 py-2.5",
+          "border-stone-200/90 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setAgentPagerPage("agent")}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-700 hover:bg-stone-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          aria-label="Back to Mindar"
+        >
+          <ChevronRight className="h-5 w-5 rotate-180" strokeWidth={1.75} />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Agent plaza</h1>
-          <p className="text-[12px] text-zinc-500 dark:text-zinc-400">By knowledge scenario</p>
+          <h1 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Plaza</h1>
+          <p className="truncate text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Discover knowledge libraries</p>
         </div>
+      </header>
+      <div className="min-h-0 flex-1">
+        <LibraryPlazaView
+          embedded
+          hideOuterNav
+          onBack={() => setAgentPagerPage("agent")}
+          onPickLibrary={(kb) => runWithAuth(() => onOpenKnowledgeBase(kb))}
+          activeCategory={plazaCategory}
+          onCategoryChange={setPlazaCategory}
+          query={plazaQuery}
+          onQueryChange={setPlazaQuery}
+        />
       </div>
+    </div>
+  )
 
-      {/* Scenario tabs */}
-      <div className="border-b border-stone-100 dark:border-zinc-800">
-        <div className="scrollbar-hide flex gap-5 overflow-x-auto px-4 py-3">
-          {AGENT_SCENARIO_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "shrink-0 whitespace-nowrap border-b-2 pb-1 text-[15px] font-medium transition-colors",
-                activeTab === tab.id
-                  ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
-                  : "border-transparent text-zinc-400 dark:text-zinc-500"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+  return (
+    <div className={cn("relative flex h-full min-h-0 flex-col overflow-x-hidden font-sans text-zinc-800 dark:text-zinc-200", mx.pageBg)}>
+      <AgentHomePlazaPager
+        page={agentPagerPage}
+        onPageChange={setAgentPagerPage}
+        plaza={agentPlazaPanel}
+        agent={agentHomeChat}
+        className="min-h-0 flex-1"
+      />
 
-      {getPlazaTabHint(activeTab) ? (
-        <div className="border-b border-stone-100/90 bg-stone-50/80 px-5 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/40">
-          <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-400">{getPlazaTabHint(activeTab)}</p>
-        </div>
+      {/* Create agent sheet */}
+      {sidebarOpen ? (
+        <AgentHomeSidebar
+          open
+          threads={flatThreads}
+          libraries={libraries}
+          onClose={() => setSidebarOpen(false)}
+          onAskMindar={() => {
+            runWithAuth(startNewHomeSession)
+          }}
+          onOpenLibraries={() => {
+            runWithAuth(() => {
+              setSidebarOpen(false)
+              setAgentPagerPage("plaza")
+            })
+          }}
+          onOpenThread={(thread) => {
+            runWithAuth(() => openThread(thread))
+          }}
+          onOpenLibrary={(kb) => {
+            runWithAuth(() => onOpenKnowledgeBase(kb))
+          }}
+        />
       ) : null}
-
-      {/* Agent list */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {visibleAgents.length === 0 ? (
-          <p className="px-5 py-10 text-center text-[14px] text-zinc-500">No agents in this scenario yet.</p>
-        ) : (
-          visibleAgents.map((agent) => (
-            <div
-              key={agent.id}
-              className="flex items-start gap-3 border-b border-stone-100/70 px-5 py-4 dark:border-zinc-800/80"
-            >
-              <button
-                type="button"
-                onClick={() => onSelect(agent)}
-                className="flex min-w-0 flex-1 items-start gap-3 text-left"
-              >
-              <AgentContactAvatar agent={agent} className="h-14 w-14 rounded-xl text-2xl" />
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                  <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{agent.name}</h3>
-                  {agent.isOfficial ? (
-                    <span className="rounded bg-mind/10 px-1.5 py-0.5 text-[10px] font-semibold text-mind dark:bg-mind/20">
-                      Official
-                    </span>
-                  ) : null}
-                </div>
-                {agent.profile?.multiRole && agent.profile.teamRoles?.length ? (
-                  <AgentMultiRoleFlow roles={agent.profile.teamRoles} variant="inline" className="mt-1" />
-                ) : (
-                  <p className="text-[13px] leading-snug text-zinc-600 dark:text-zinc-400">{agent.profile?.tagline}</p>
-                )}
-                <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-zinc-400">
-                  {agent.chatCount ? <span>{agent.chatCount}</span> : null}
-                  {agent.author ? (
-                    <>
-                      {agent.chatCount ? <span aria-hidden>·</span> : null}
-                      <span>{agent.author}</span>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleAgent(agent.id)}
-                className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                  selectedAgents.includes(agent.id)
-                    ? "bg-mind/10 text-mind dark:bg-mind/20"
-                    : "bg-stone-100 text-zinc-600 dark:bg-zinc-800"
-                )}
-                aria-label={selectedAgents.includes(agent.id) ? "Remove from picks" : "Add to picks"}
-              >
-                {selectedAgents.includes(agent.id) ? (
-                  <span className="text-lg leading-none">✓</span>
-                ) : (
-                  <Plus className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Bottom CTA */}
-      <div className="border-t border-stone-100 p-5 dark:border-zinc-800">
-        <button
-          onClick={onCreate}
-          className="w-full py-4 bg-zinc-500 text-white rounded-xl font-medium text-[15px] flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Create agent
-        </button>
-      </div>
     </div>
   )
 }
@@ -823,14 +309,28 @@ interface AgentChatProps {
   knowledgeContext?: { kbName: string; contentTitle?: string }
   /** Mobile note detail / rich-text editor — grounded on a single capture. */
   noteContext?: { noteTitle: string; notePreview?: string }
+  /** `recording` = Plaud-style Ask sheet for audio memos; `text` = rich-note assistant. */
+  noteChatStyle?: "text" | "recording"
   /** From Mindar home composer — auto-send on mount. */
   initialPrompt?: string
   /** Web split pane: no back chevron; wider transcript */
   embedded?: boolean
-  /** Parent supplies chrome (e.g. web Notes AI writing column). */
-  suppressEmbeddedHeader?: boolean
-  /** Quick questions for note co-writing empty state; defaults to NOTE_WRITING_PROMPTS. */
-  noteWritingPrompts?: AgentExamplePrompt[]
+  /** Plaza library agent — quick questions above the composer. */
+  quickQuestions?: string[]
+  /** Multi-turn Q&A vs autonomous task delivery (Agent tab tasks). */
+  composerMode?: AgentComposerMode
+  /** Hide Studio factory rail — use in popup chat tied to a note or library. */
+  hideFactoryRail?: boolean
+  /** Full-screen modal (ima-style): show × in embedded header. */
+  showModalClose?: boolean
+  /** Separate transcript per KB / note / home — single Mindar agent. */
+  threadId?: string
+  /** Scope for thread metadata updates. */
+  threadScope?: AgentThreadScope
+  /** Agent tab root — inline Mindar home chat, no back navigation. */
+  tabRoot?: boolean
+  onNewChatSession?: () => void
+  onOpenSidebar?: () => void
 }
 
 /** dialog = multi-turn chat; agent = autonomous delivery (demo). */
@@ -844,16 +344,28 @@ export function AgentChat({
   onNavigateToKnowledge,
   knowledgeContext,
   noteContext,
+  noteChatStyle = "text",
   initialPrompt,
   embedded = false,
-  suppressEmbeddedHeader = false,
-  noteWritingPrompts: noteWritingPromptsProp,
+  quickQuestions,
+  composerMode: composerModeProp = "dialog",
+  hideFactoryRail = false,
+  showModalClose = false,
+  threadId,
+  threadScope,
+  tabRoot = false,
+  onNewChatSession,
+  onOpenSidebar,
 }: AgentChatProps) {
   const runWithAuth = requireAuthThen ?? ((fn: () => void) => fn())
   const avatar = agent.avatar ?? ""
   const showRemoteAvatar = agentAvatarIsRemoteUrl(avatar)
-  const isLibraryChat = Boolean(knowledgeContext)
+  const isMindarAgent = agent.id === 0
+  const hasKbGrounding = Boolean(knowledgeContext)
+  const isLegacyLibraryChat = hasKbGrounding
   const isNoteChat = Boolean(noteContext)
+  const isRecordingNoteChat = isNoteChat && noteChatStyle === "recording"
+  const isTextNoteChat = isNoteChat && noteChatStyle === "text"
   const kbLabel = knowledgeContext?.kbName ?? ""
   const noteTitle = noteContext?.noteTitle ?? ""
   const scopeLabel = knowledgeContext?.contentTitle
@@ -862,12 +374,23 @@ export function AgentChat({
       ? noteTitle
       : kbLabel
 
+  const chatHeaderTitle = isMindarAgent || hasKbGrounding || isNoteChat ? "Mindar" : agent.name
+  const chatHeaderSubtitle =
+    hasKbGrounding ? scopeLabel : isNoteChat ? noteTitle : undefined
+
   const agentProfile =
-    agent.profile ?? getMindAgentProfile(agent.id) ?? (agent.id === 0 ? MINDAR_COPILOT_PROFILE : undefined)
-  const agentScenario = agent.scenario ?? getMindAgentCatalog(agent.id)?.scenario
+    agent.profile ?? getMindAgentProfile(agent.id) ?? (agent.id === 0 ? MINDER_COPILOT_PROFILE : undefined)
+
+  const headerSubtitle =
+    chatHeaderSubtitle ??
+    (agentProfile?.multiRole && agentProfile.teamRoles?.length
+      ? null
+      : agentProfile?.tagline ?? agent.description)
 
   const [input, setInput] = useState("")
-  const [messages, setMessages] = useState<ChatMsg[]>([])
+  const [messages, setMessages] = useState<ChatMsg[]>(() =>
+    threadId ? readThreadMessages(threadId) : []
+  )
   const [kbMenuOpen, setKbMenuOpen] = useState(false)
   const [voiceOn, setVoiceOn] = useState(false)
   /** Optional KB / note grounding chosen via @ (demo). */
@@ -878,16 +401,31 @@ export function AgentChat({
   const [factoryModal, setFactoryModal] = useState<FactoryModalKind | null>(null)
   const [selectedFactoryKind, setSelectedFactoryKind] = useState<FactoryModalKind | null>(null)
   const examplePrompts = getAgentExamplePrompts(agent.id)
-  const lastAiMessageId = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "ai") return messages[i].id
-    }
-    return null
-  }, [messages])
   const [messageFeedback, setMessageFeedback] = useState<Record<string, "up" | "down">>({})
   const [saveToLibrarySheet, setSaveToLibrarySheet] = useState<{ text: string } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const seededInitialPromptRef = useRef(false)
   const locale = "en-US" as const
+
+  const resolvedThreadScope = useMemo((): AgentThreadScope | undefined => {
+    if (threadScope) return threadScope
+    if (isNoteChat && noteContext) {
+      const note = mockNotes.find((n) => n.title === noteTitle)
+      return { type: "note", noteId: note?.id ?? 0, noteTitle }
+    }
+    if (hasKbGrounding) {
+      return {
+        type: "kb",
+        kbName: kbLabel,
+        contentTitle: knowledgeContext?.contentTitle,
+      }
+    }
+    if (threadId?.startsWith("mindar:home:")) {
+      return { type: "home", sessionId: threadId.slice("mindar:home:".length) }
+    }
+    if (threadId === "mindar:home") return { type: "home" }
+    return undefined
+  }, [threadScope, isNoteChat, noteContext, noteTitle, hasKbGrounding, kbLabel, knowledgeContext, threadId])
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -899,6 +437,17 @@ export function AgentChat({
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
+
+  useEffect(() => {
+    if (!threadId) return
+    writeThreadMessages(threadId, messages, resolvedThreadScope)
+  }, [threadId, messages, resolvedThreadScope])
+
+  useEffect(() => {
+    if (!threadId) return
+    setMessages(readThreadMessages(threadId))
+    seededInitialPromptRef.current = false
+  }, [threadId])
 
   const startGeneration = useCallback(
     (modeAtSend: AgentComposerMode, kbGround: string, userQuery: string, replaceMsgId?: string) => {
@@ -915,55 +464,43 @@ export function AgentChat({
     [agent, isNoteChat, noteTitle]
   )
 
-  const seededInitialPromptRef = useRef(false)
 
   useEffect(() => {
     const q = initialPrompt?.trim()
     if (!q || seededInitialPromptRef.current) return
     seededInitialPromptRef.current = true
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content: q }
-    const modeAtSend: AgentComposerMode = "dialog"
+    const modeAtSend: AgentComposerMode = composerModeProp
     const kbGround = (
       pickedNoteTitle ||
       pickedKbName ||
-      (isLibraryChat ? kbLabel : isNoteChat ? noteTitle : "")
+      (hasKbGrounding ? kbLabel : isNoteChat ? noteTitle : "")
     ).trim()
     setMessages([userMsg])
     setQaHistoryItems((prev) => [{ id: `qa-${Date.now()}`, at: Date.now(), query: q }, ...prev])
     startGeneration(modeAtSend, kbGround, q)
-  }, [initialPrompt, isLibraryChat, isNoteChat, kbLabel, noteTitle, pickedKbName, pickedNoteTitle, startGeneration])
-
-  const sendUserQuery = useCallback(
-    (raw: string) => {
-      const content = raw.trim()
-      if (!content) return
-      const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content }
-      const modeAtSend: AgentComposerMode = "dialog"
-      const kbGround = (
-        pickedNoteTitle ||
-        pickedKbName ||
-        (isLibraryChat ? kbLabel : isNoteChat ? noteTitle : "")
-      ).trim()
-      setMessages((prev) => [...prev, userMsg])
-      setQaHistoryItems((prev) => [{ id: `qa-${Date.now()}`, at: Date.now(), query: content }, ...prev])
-      setInput("")
-      setKbMenuOpen(false)
-      startGeneration(modeAtSend, kbGround, content)
-    },
-    [
-      isLibraryChat,
-      isNoteChat,
-      kbLabel,
-      noteTitle,
-      pickedKbName,
-      pickedNoteTitle,
-      startGeneration,
-    ]
-  )
+  }, [initialPrompt, hasKbGrounding, isNoteChat, kbLabel, noteTitle, pickedKbName, pickedNoteTitle, startGeneration, composerModeProp])
 
   const handleSend = () => {
     if (!input.trim()) return
-    sendUserQuery(input)
+    submitUserQuery(input.trim())
+    setInput("")
+    setKbMenuOpen(false)
+  }
+
+  function submitUserQuery(content: string) {
+    const query = content.trim()
+    if (!query) return
+    const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: "user", content: query }
+    const modeAtSend: AgentComposerMode = composerModeProp
+    const kbGround = (
+      pickedNoteTitle ||
+      pickedKbName ||
+      (hasKbGrounding ? kbLabel : isNoteChat ? noteTitle : "")
+    ).trim()
+    setMessages((prev) => [...prev, userMsg])
+    setQaHistoryItems((prev) => [{ id: `qa-${Date.now()}`, at: Date.now(), query }, ...prev])
+    startGeneration(modeAtSend, kbGround, query)
   }
 
   const trySend = () => runWithAuth(handleSend)
@@ -972,14 +509,27 @@ export function AgentChat({
     const kbGround = (
       pickedNoteTitle ||
       pickedKbName ||
-      (isLibraryChat ? kbLabel : isNoteChat ? noteTitle : "")
+      (hasKbGrounding ? kbLabel : isNoteChat ? noteTitle : "")
     ).trim()
     const userQuery = lastUserQueryBefore(msgId, messages)
-    runWithAuth(() => startGeneration("dialog", kbGround, userQuery, msgId))
+    runWithAuth(() => startGeneration(composerModeProp, kbGround, userQuery, msgId))
   }
 
   function startNewChat() {
+    if (tabRoot && onNewChatSession) {
+      onNewChatSession()
+      setInput("")
+      setKbMenuOpen(false)
+      setPickedKbName(null)
+      setPickedNoteTitle(null)
+      setQaHistoryOpen(false)
+      setMessageFeedback({})
+      seededInitialPromptRef.current = false
+      toast.message("New chat", { description: "Started a fresh thread (demo)." })
+      return
+    }
     setMessages([])
+    if (threadId) clearThreadMessages(threadId)
     setInput("")
     setKbMenuOpen(false)
     setPickedKbName(null)
@@ -1025,7 +575,7 @@ export function AgentChat({
   function shareAiReply(text: string) {
     runWithAuth(() => {
       if (typeof navigator !== "undefined" && navigator.share) {
-        void navigator.share({ title: "Mind", text }).catch(() => {
+        void navigator.share({ title: "Mindar", text }).catch(() => {
           toast.message("Share text copied", { description: text.slice(0, 120) + (text.length > 120 ? "…" : "") })
         })
       } else {
@@ -1040,7 +590,7 @@ export function AgentChat({
   const displayScopeName =
     pickedNoteTitle ??
     pickedKbName ??
-    (isLibraryChat ? kbLabel : isNoteChat ? noteTitle : null)
+    (hasKbGrounding ? kbLabel : isNoteChat ? noteTitle : null)
 
   const kbAtMenu = (
     <MindKbAtMenu
@@ -1056,10 +606,10 @@ export function AgentChat({
           },
         },
       ]}
-      items={MOCK_KNOWLEDGE_BASES.slice(0, 6).map((kb) => ({ id: kb.id, name: kb.name }))}
+      items={MOCK_KNOWLEDGE_BASES.map((kb) => ({ id: kb.id, name: kb.name }))}
       selectedName={displayScopeName}
       isItemSelected={(kb) =>
-        pickedKbName === kb.name || (isLibraryChat && kbLabel === kb.name && !pickedKbName && !pickedNoteTitle)
+        pickedKbName === kb.name || (hasKbGrounding && kbLabel === kb.name && !pickedKbName && !pickedNoteTitle)
       }
       onSelect={(kb) => {
         setPickedKbName(kb.name)
@@ -1078,39 +628,31 @@ export function AgentChat({
     />
   )
 
-  const latestAiReply = [...messages].reverse().find((m) => m.role === "ai" && m.content.trim())?.content ?? ""
-  /** Agent contact / copilot threads — same composer + factory grid as the agent home. */
-  const isContactStyleChat = !isLibraryChat && !isNoteChat
-
-  const libraryToolbarLead = isLibraryChat ? (
-    <button
-      type="button"
-      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2.5 text-[11px] font-semibold text-mind transition-colors hover:bg-stone-100 dark:border-stone-200 dark:bg-stone-100 dark:text-mind/10 dark:hover:bg-zinc-800"
-      onClick={() => openSaveToLibrarySheet(latestAiReply)}
-    >
-      <Library className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-      Add to library
-    </button>
-  ) : null
+  const isContactStyleChat = !isLegacyLibraryChat && !isNoteChat
+  const showContentFactoryRail =
+    !hideFactoryRail && (isContactStyleChat || hasKbGrounding || isNoteChat)
+  const useMindarHomeEmpty = isMindarAgent && !hasKbGrounding && !isNoteChat
+  const inConversation = messages.length > 0
 
   const composer = (
     <MindChatComposer
-      variant={isContactStyleChat ? "home" : "thread"}
+      variant={isContactStyleChat ? (inConversation ? "thread" : "home") : "thread"}
       value={input}
       onChange={setInput}
       onSubmit={trySend}
       placeholder={
-        isLibraryChat
+        hasKbGrounding
           ? "Ask this knowledge base…"
-          : isNoteChat
-            ? embedded
-              ? "Refine this note or ask for a rewrite…"
-              : "Ask about this note…"
-            : entryHint
-              ? "Turn saved knowledge into an outcome…"
-              : ""
+          : isRecordingNoteChat
+            ? "Ask about this recording"
+            : isTextNoteChat
+              ? "Message or hold to speak"
+              : isNoteChat
+                ? "Ask about this note…"
+              : entryHint
+                ? "Turn saved knowledge into an outcome…"
+                : ""
       }
-      toolbarLead={libraryToolbarLead}
       voiceOn={voiceOn}
       onVoiceToggle={() =>
         runWithAuth(() => {
@@ -1133,7 +675,7 @@ export function AgentChat({
           toast.message("Upload file", { description: "Demo — pick a file from your device." })
         )
       }
-      showScreenshotButton={isNoteChat}
+      showScreenshotButton={isNoteChat && !isRecordingNoteChat && !isTextNoteChat}
       onScreenshotClick={() =>
         runWithAuth(() =>
           toast.message("Screenshot", { description: "Demo — capture a region and attach to the chat." })
@@ -1155,7 +697,7 @@ export function AgentChat({
 
   const handleFactoryGenerateSubmit = (kind: FactoryModalKind, settings?: FactoryGenerationSettings) => {
     setFactoryModal(null)
-    if (isLibraryChat) {
+    if (hasKbGrounding) {
       toast.success("Queued", {
         description: `${kind} run started for ${factoryLibraryLabel || "your library"} (demo).`,
       })
@@ -1167,28 +709,133 @@ export function AgentChat({
     })
   }
 
-  const noteWritingPrompts =
-    noteWritingPromptsProp ?? (isNoteChat ? NOTE_WRITING_PROMPTS : [])
-  const followUpPrompts =
-    isNoteChat && noteWritingPrompts.length > 0
-      ? noteWritingPrompts.slice(0, 3)
-      : getAgentFollowUpPrompts(agent.id)
-  const showNoteWritingPrompts =
-    messages.length === 0 && isNoteChat && noteWritingPrompts.length > 0
-  const showHeroExamplePrompts =
-    messages.length === 0 && !isNoteChat && examplePrompts.length > 0
+  const noteQuickPrompts = useMemo(
+    () =>
+      TEXT_NOTE_AI_PROMPTS.map((item) => ({
+        id: item.id,
+        label: item.label,
+        prompt: item.prompt,
+      })),
+    []
+  )
 
-  const chatFooter = (
+  const quickQuestionItems = useMemo(
+    () =>
+      (quickQuestions ?? []).slice(0, 3).map((q, index) => ({
+        id: `kq-${index}`,
+        label: q,
+        prompt: q,
+      })),
+    [quickQuestions]
+  )
+
+  const showHeroExamplePrompts =
+    messages.length === 0 && useMindarHomeEmpty && examplePrompts.length > 0
+
+  const mindarHomeCentered = useMindarHomeEmpty && !hasKbGrounding && !isNoteChat
+
+  const footerExamplePrompts =
+    isNoteChat
+      ? undefined
+      : mindarHomeCentered && showHeroExamplePrompts
+        ? examplePrompts
+        : isContactStyleChat
+          ? undefined
+          : showHeroExamplePrompts
+            ? undefined
+            : examplePrompts
+
+  const submitQuickQuestion = (prompt: string) => runWithAuth(() => submitUserQuery(prompt))
+
+  const recordingChatFooter = isRecordingNoteChat ? (
+    <div className={cn("w-full", embedded ? "max-w-3xl mx-auto" : "max-w-2xl mx-auto")}>
+      <MindChatFactoryRail
+        items={RECORDING_NOTE_FACTORY_ITEMS}
+        layout="scroll"
+        railStyle="pill"
+        density="tight"
+        selectedId={selectedFactoryKind}
+        onSelect={handleFactorySelect}
+        className="mb-2"
+      />
+      <div className="relative">
+        <span className="absolute left-4 top-0 z-10 -translate-y-1/2 rounded border border-stone-200/90 bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+          Beta
+        </span>
+        <div className="rounded-[22px] bg-gradient-to-r from-violet-400/90 via-fuchsia-300/80 to-teal-400/90 p-[1.5px]">
+          <div className="overflow-hidden rounded-[20.5px] bg-white dark:bg-zinc-950">{composer}</div>
+        </div>
+      </div>
+      <p className={cn("mt-2 text-center", mx.typeCaption)}>
+        AI-generated content is for reference only.
+      </p>
+    </div>
+  ) : null
+
+  const textChatFooter = isTextNoteChat ? (
+    <div className={cn("w-full", embedded ? "max-w-3xl mx-auto" : "max-w-2xl mx-auto")}>
+      <MindChatFactoryRail
+        items={CHAT_FACTORY_RAIL_ITEMS}
+        layout="scroll"
+        railStyle="pill"
+        density="tight"
+        selectedId={selectedFactoryKind}
+        onSelect={handleFactorySelect}
+        className="mb-2"
+      />
+      <div className="overflow-hidden rounded-[22px] border border-stone-200/90 bg-white dark:border-zinc-700 dark:bg-zinc-950">
+        <MindChatComposer
+          variant="thread"
+          className="max-w-none !rounded-none !border-0"
+          value={input}
+          onChange={setInput}
+          onSubmit={trySend}
+          placeholder="Message or hold to speak"
+          voiceOn={voiceOn}
+          onVoiceToggle={() =>
+            runWithAuth(() => {
+              setVoiceOn((prev) => {
+                const next = !prev
+                toast.message(next ? "Voice input on" : "Voice input off", {
+                  description: next ? "Demo: tap again to stop." : "Demo: no audio uploaded.",
+                })
+                return next
+              })
+            })
+          }
+          atTitle={displayScopeName ?? undefined}
+          atMenu={kbAtMenu}
+          atMenuOpen={kbMenuOpen}
+          onAtMenuOpenChange={setKbMenuOpen}
+          showAtButton
+          showScreenshotButton={false}
+          onUploadClick={() =>
+            runWithAuth(() => toast.message("Attachment", { description: "Coming soon (demo)." }))
+          }
+        />
+      </div>
+      <p className={cn("mt-2 text-center", mx.typeCaption)}>
+        AI-generated content is for reference only.
+      </p>
+    </div>
+  ) : null
+
+  const chatFooter = recordingChatFooter ?? textChatFooter ?? (
     <div className={cn("w-full", embedded ? "max-w-3xl mx-auto" : "max-w-2xl mx-auto")}>
       <AgentHomeComposerStack
-        showFactoryRail={!isNoteChat}
+        showFactoryRail={showContentFactoryRail}
+        factoryPlacement={hasKbGrounding || isNoteChat ? "above" : "below"}
+        factoryRailDensity={inConversation || hasKbGrounding ? "tight" : "compact"}
+        elevateComposer={inConversation && !hasKbGrounding}
         factoryRailLayout="scroll"
-        promptLayout="stack"
+        promptLayout={mindarHomeCentered && showHeroExamplePrompts ? "wrap" : "stack"}
         selectedFactoryId={selectedFactoryKind}
         onFactorySelect={handleFactorySelect}
-        examplePrompts={showHeroExamplePrompts ? undefined : isNoteChat ? undefined : examplePrompts}
+        examplePrompts={footerExamplePrompts?.length ? footerExamplePrompts : undefined}
         onExampleSelect={
-          showHeroExamplePrompts ? undefined : isNoteChat ? undefined : (prompt) => runWithAuth(() => setInput(prompt))
+          footerExamplePrompts?.length
+            ? (prompt) => runWithAuth(() => setInput(prompt))
+            : undefined
         }
         composer={composer}
       />
@@ -1196,32 +843,131 @@ export function AgentChat({
   )
 
   return (
-    <div className="relative flex h-full flex-col bg-white dark:bg-zinc-950 font-sans dark:bg-zinc-950">
+    <div className={cn("relative flex h-full flex-col font-sans", mx.pageBg)}>
       {/* Header */}
-      {embedded ? (
-        suppressEmbeddedHeader ? null : (
-          <div className="flex shrink-0 items-center gap-3 border-b border-stone-200/90 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="w-10 shrink-0" aria-hidden />
-            <AgentContactAvatar agent={agent} size={40} />
-            <div className="min-w-0 flex-1">
-              <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{agent.name}</h3>
-              <p className="min-w-0 truncate text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
-                  <AgentMultiRoleBlurb profile={agentProfile} variant="header" />
-                ) : (
-                  agentProfile?.tagline ?? agent.description
-                )}
-              </p>
-            </div>
-            <MindChatHeaderActions
-              newChatAccent={false}
-              onNewChat={() => runWithAuth(startNewChat)}
-              onOpenHistory={() => runWithAuth(() => setQaHistoryOpen(true))}
-            />
+      {embedded || tabRoot ? (
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-3 bg-white px-4 py-3 dark:bg-zinc-900",
+            tabRoot || ((isRecordingNoteChat || isTextNoteChat) && showModalClose)
+              ? ""
+              : cn("border-b", mx.shellHairlineSubtle)
+          )}
+        >
+          {tabRoot ? (
+            <>
+              {onOpenSidebar ? (
+                <button
+                  type="button"
+                  onClick={() => runWithAuth(onOpenSidebar)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-700 transition-colors hover:bg-stone-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  aria-label="Open menu"
+                >
+                  <Menu className="h-5 w-5" strokeWidth={1.75} />
+                </button>
+              ) : (
+                <div className="h-10 w-10 shrink-0" aria-hidden />
+              )}
+              <div className="min-w-0 flex-1 text-center">
+                <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Mindar</h3>
+              </div>
+              <div className="h-10 w-10 shrink-0" aria-hidden />
+            </>
+          ) : isTextNoteChat && showModalClose ? (
+            <>
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <MindarLogo variant="inline" className="!h-7 !max-w-[92px]" priority />
+              </div>
+              <button
+                type="button"
+                onClick={() => toast.message("More", { description: "Chat settings (demo)." })}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"
+                aria-label="More options"
+              >
+                <MoreHorizontal className="h-5 w-5" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"
+                aria-label="Close chat"
+              >
+                <X className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+            </>
+          ) : isRecordingNoteChat && showModalClose ? (
+            <>
+              <button
+                type="button"
+                onClick={() => runWithAuth(startNewChat)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"
+                aria-label="Clear chat"
+              >
+                <Trash2 className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+              <h3 className="min-w-0 flex-1 text-center text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                Ask Mindar
+              </h3>
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"
+                aria-label="Close chat"
+              >
+                <X className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+            </>
+          ) : (
+            <>
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br text-xl",
+              isMindarAgent || hasKbGrounding || isNoteChat ? "from-zinc-500 to-stone-600" : agent.color
+            )}
+          >
+            {isMindarAgent || hasKbGrounding || isNoteChat ? (
+              <MindarLogo variant="avatar" className="!h-[70%] !w-[90%]" />
+            ) : showRemoteAvatar ? (
+              <img src={avatar} alt="" className="h-full w-full rounded-xl object-cover" />
+            ) : (
+              avatar || "·"
+            )}
           </div>
-        )
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{chatHeaderTitle}</h3>
+            <p className="min-w-0 truncate text-xs font-medium text-zinc-600 dark:text-zinc-400">
+              {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
+                <AgentMultiRoleBlurb profile={agentProfile} variant="header" />
+              ) : (
+                headerSubtitle
+              )}
+            </p>
+          </div>
+          <MindChatHeaderActions
+            newChatAccent={false}
+            onNewChat={() => runWithAuth(startNewChat)}
+            onOpenHistory={() => runWithAuth(() => setQaHistoryOpen(true))}
+          />
+          {showModalClose ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"
+              aria-label="Close chat"
+            >
+              <X className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+          ) : null}
+            </>
+          )}
+        </div>
       ) : (
-        <div className="grid shrink-0 grid-cols-[2.75rem_1fr_auto] items-center gap-1 border-b border-stone-200/90 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900">
+        <div
+          className={cn(
+            "grid shrink-0 grid-cols-[2.75rem_1fr_auto] items-center gap-1 border-b bg-white px-3 py-2.5 dark:bg-zinc-900",
+            mx.shellHairlineSubtle
+          )}
+        >
           <button
             type="button"
             onClick={onBack}
@@ -1232,13 +978,13 @@ export function AgentChat({
           </button>
           <div className="min-w-0 px-1 text-center">
             <h3 className="truncate text-[16px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {agent.name}
+              {chatHeaderTitle}
             </h3>
             <p className="min-w-0 truncate px-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
               {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
                 <AgentMultiRoleBlurb profile={agentProfile} variant="header" />
               ) : (
-                agentProfile?.tagline ?? "Content generated by AI"
+                headerSubtitle ?? "Content generated by AI"
               )}
             </p>
           </div>
@@ -1251,75 +997,173 @@ export function AgentChat({
         </div>
       )}
 
-      {entryHint && !showNoteWritingPrompts ? (
-        <div className="shrink-0 border-b border-zinc-200/90 bg-zinc-50/95 px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/60">
+      {entryHint && !hasKbGrounding && !isNoteChat ? (
+        <div
+          className={cn(
+            "shrink-0 border-b bg-zinc-50/95 px-4 py-2.5 dark:bg-zinc-900/60",
+            mx.shellHairlineSubtle
+          )}
+        >
           <p className="text-[13px] leading-snug text-zinc-700 dark:text-zinc-300">{entryHint}</p>
         </div>
       ) : null}
 
       {messages.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col">
+          {mindarHomeCentered ? (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1">
+              <div className="flex w-full max-w-2xl -translate-y-8 flex-col items-center sm:-translate-y-10">
+                <div className="relative flex flex-col items-center" aria-label="Mindar">
+                  <div
+                    className="pointer-events-none absolute left-1/2 top-1/2 h-[min(260px,68vw)] w-[min(260px,68vw)] -translate-x-1/2 -translate-y-[46%] rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--mind-blue)_11%,transparent)_0%,color-mix(in_oklch,var(--mind-blue)_4%,transparent)_42%,transparent_72%)] dark:bg-[radial-gradient(circle,color-mix(in_oklch,var(--mind-blue)_13%,transparent)_0%,color-mix(in_oklch,var(--mind-blue)_5%,transparent)_42%,transparent_72%)]"
+                    aria-hidden
+                  />
+                  <MindarLogo
+                    variant="hero"
+                    className="relative z-[1] !h-11 !max-w-[188px] sm:!h-12 sm:!max-w-[208px]"
+                    priority
+                  />
+                </div>
+                <p className={cn("relative z-[1] mt-3 text-center", mx.typeHeroSubtitle)}>
+                  What can I help you with?
+                </p>
+                <div className="relative z-[1] mt-6 w-full max-w-2xl">{chatFooter}</div>
+              </div>
+            </div>
+          ) : (
+            <>
           <div
             className={cn(
-              "scrollbar-hide min-h-0 flex-1 overflow-y-auto pb-3",
-              showNoteWritingPrompts ? "px-4 pt-4" : "px-5 pt-6"
+              "scrollbar-hide flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-3",
+              isRecordingNoteChat || isTextNoteChat ? "pt-4" : "pt-6"
             )}
           >
-            {showNoteWritingPrompts ? (
-              <div className="flex w-full flex-col">
-                <h3 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                  Quick questions
-                </h3>
-                <p className="mt-1 mb-4 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                  {noteTitle
-                    ? `Grounded on “${noteTitle}” — pick a prompt or type below.`
-                    : "Grounded on this note — pick a prompt or type below."}
-                </p>
-                <AgentExamplePromptRail
-                  layout="stack"
-                  prompts={noteWritingPrompts}
-                  onSelect={(prompt) => runWithAuth(() => setInput(prompt))}
-                  className="w-full"
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <AgentContactAvatar agent={agent} size={80} className="mb-3" />
-                <h3 className="mb-1 text-center text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-                  Hi, I&apos;m {agent.name}
-                </h3>
-                {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
-                  <AgentMultiRoleBlurb profile={agentProfile} variant="hero" className="mt-3" />
-                ) : entryHint ? (
-                  <p className="max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                    {entryHint}
+            <div
+              className={cn(
+                "flex w-full flex-col",
+                isRecordingNoteChat || isTextNoteChat ? "items-stretch" : "items-center"
+              )}
+            >
+              {hasKbGrounding ? (
+                <>
+                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-mind/10 text-mind ring-1 ring-mind/15">
+                    <Sparkles className="h-7 w-7" strokeWidth={1.75} aria-hidden />
+                  </div>
+                  <h3 className="mb-1 max-w-[320px] text-center text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                    {scopeLabel}
+                  </h3>
+                  <p className={cn("mt-2 max-w-[300px] text-center", mx.typeBodySecondary)}>
+                    Questions are grounded in this library&apos;s sources — no setup required.
                   </p>
-                ) : agentProfile ? (
-                  <p className="max-w-[280px] text-center text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                    {agentProfile.tagline}
-                  </p>
-                ) : null}
-                {showHeroExamplePrompts ? (
-                  <>
-                    {embedded ? (
-                      <h2 className="mb-5 text-center text-[22px] font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-[26px]">
-                        What can I help you with?
-                      </h2>
-                    ) : null}
+                  {quickQuestionItems.length > 0 ? (
                     <AgentExamplePromptRail
-                      layout={embedded ? "wrap" : "stack"}
-                      prompts={examplePrompts}
-                      onSelect={(prompt) => runWithAuth(() => setInput(prompt))}
-                      className={cn("w-full", embedded ? "max-w-3xl" : "mt-4 max-w-md")}
+                      layout="stack"
+                      prompts={quickQuestionItems}
+                      onSelect={submitQuickQuestion}
+                      className="mt-5 w-full max-w-md self-stretch"
                     />
-                  </>
-                ) : null}
-              </div>
-            )}
+                  ) : null}
+                </>
+              ) : isRecordingNoteChat ? (
+                <div className="flex w-full max-w-md flex-col self-stretch">
+                  <NoteRecordingChatSuggestionCards
+                    suggestions={RECORDING_NOTE_CHAT_SUGGESTIONS}
+                    onSelect={(prompt) => runWithAuth(() => submitUserQuery(prompt))}
+                  />
+                </div>
+              ) : isTextNoteChat ? (
+                <div className="flex w-full flex-col self-stretch">
+                  <p className="text-[15px] leading-relaxed text-zinc-800 dark:text-zinc-200">
+                    {entryHint ?? "Hi, I'm Mindar — ask me to read your notes, answer questions, or turn ideas into deliverables."}
+                  </p>
+                  <div className="mt-4 w-full">
+                    <AgentExamplePromptRail
+                      layout="stack"
+                      tone="note"
+                      prompts={noteQuickPrompts}
+                      onSelect={(prompt) => runWithAuth(() => submitUserQuery(prompt))}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              ) : isNoteChat ? (
+                <>
+                  <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-stone-200/90">
+                    <MindarLogo variant="avatar" className="!h-[70%] !w-[90%]" />
+                  </div>
+                  <p className={cn("max-w-[320px] text-center", mx.typeBody)}>
+                    {entryHint ?? "Hi, I'm Mindar — ask me to read your notes, answer questions, or turn ideas into deliverables."}
+                  </p>
+                  <div className="mt-4 w-full max-w-md">
+                    <AgentExamplePromptRail
+                      layout="stack"
+                      tone="note"
+                      prompts={noteQuickPrompts}
+                      onSelect={(prompt) => runWithAuth(() => submitUserQuery(prompt))}
+                      className="w-full"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    className={cn(
+                      "mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-4xl",
+                      agent.color
+                    )}
+                  >
+                    {showRemoteAvatar ? (
+                      <img src={avatar} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      avatar || "·"
+                    )}
+                  </div>
+                  <h3 className="mb-1 text-center text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                    Hi, I&apos;m {agent.name}
+                  </h3>
+                  {agentProfile?.multiRole && agentProfile.teamRoles?.length ? (
+                    <AgentMultiRoleBlurb profile={agentProfile} variant="hero" className="mt-3" />
+                  ) : entryHint ? (
+                    <p className={cn("max-w-[280px] text-center", mx.typeBodySecondary)}>
+                      {entryHint}
+                    </p>
+                  ) : agentProfile ? (
+                    <p className={cn("max-w-[280px] text-center", mx.typeBodySecondary)}>
+                      {agentProfile.tagline}
+                    </p>
+                  ) : null}
+                  {showHeroExamplePrompts ? (
+                <>
+                  {embedded || tabRoot ? (
+                    <h2 className="mb-5 text-center text-[22px] font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 sm:text-[26px]">
+                      What can I help you with?
+                    </h2>
+                  ) : null}
+                  <AgentExamplePromptRail
+                    layout={embedded || tabRoot ? "wrap" : "stack"}
+                    prompts={examplePrompts}
+                    onSelect={(prompt) => runWithAuth(() => setInput(prompt))}
+                    className={cn(
+                      "w-full",
+                      embedded || tabRoot ? "max-w-3xl" : "mt-4 max-w-md"
+                    )}
+                  />
+                </>
+                  ) : null}
+                </>
+              )}
+            </div>
           </div>
-          <div className="shrink-0 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 dark:bg-zinc-950">
+          <div
+            className={cn(
+              "shrink-0 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+              inConversation ? cn("pt-2.5", mx.chatFooterBar) : "bg-white pt-3 dark:bg-zinc-950"
+            )}
+          >
             {chatFooter}
           </div>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -1332,61 +1176,48 @@ export function AgentChat({
                         "rounded-2xl px-4 py-3",
                         msg.role === "user"
                           ? "rounded-br-md bg-zinc-600 text-white"
-                          : "rounded-bl-md border border-stone-200/90 bg-white text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                          : "rounded-bl-md border border-black/[0.06] bg-white text-zinc-800 dark:border-white/[0.08] dark:bg-zinc-900 dark:text-zinc-100"
                       )}
                     >
                       <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
                     </div>
                     {msg.role === "ai" && msg.content ? (
-                      <>
-                        <MindChatMessageActions
-                          locale={locale}
-                          variant={isLibraryChat || isNoteChat ? "library" : "default"}
-                          feedback={messageFeedback[msg.id] ?? null}
-                          onRegenerate={() => runWithAuth(() => regenerateMessage(msg.id))}
-                          onSaveToLibrary={() => openSaveToLibrarySheet(msg.content)}
-                          onThumbsUp={() =>
-                            runWithAuth(() => {
-                              toggleMessageFeedback(msg.id, "up")
-                              toast.success("Thanks", { description: "Marked as helpful." })
-                            })
-                          }
-                          onThumbsDown={() =>
-                            runWithAuth(() => {
-                              toggleMessageFeedback(msg.id, "down")
-                              toast.message("Noted", { description: "We will improve replies (demo)." })
-                            })
-                          }
-                          onShare={() => runWithAuth(() => shareAiReply(msg.content))}
-                          onCopy={() =>
-                            runWithAuth(() => {
-                              void navigator.clipboard?.writeText(msg.content).then(
-                                () => toast.message("Copied"),
-                                () => toast.message("Copy", { description: msg.content.slice(0, 120) })
-                              )
-                            })
-                          }
-                          onEdit={() =>
-                            runWithAuth(() =>
-                              toast.message("Edit", {
-                                description: "Demo: continue editing this reply in a note.",
-                              })
+                      <MindChatMessageActions
+                        feedback={messageFeedback[msg.id] ?? null}
+                        onRegenerate={() => runWithAuth(() => regenerateMessage(msg.id))}
+                        onSaveToLibrary={() => openSaveToLibrarySheet(msg.content)}
+                        onThumbsUp={() =>
+                          runWithAuth(() => {
+                            toggleMessageFeedback(msg.id, "up")
+                            toast.success("Thanks", { description: "Marked as helpful." })
+                          })
+                        }
+                        onThumbsDown={() =>
+                          runWithAuth(() => {
+                            toggleMessageFeedback(msg.id, "down")
+                            toast.message("Noted", { description: "We will improve replies (demo)." })
+                          })
+                        }
+                        onCopy={() =>
+                          runWithAuth(() => {
+                            void navigator.clipboard?.writeText(msg.content).then(
+                              () => toast.message("Copied"),
+                              () => toast.message("Copy", { description: msg.content.slice(0, 120) })
                             )
-                          }
-                        />
-                        {msg.id === lastAiMessageId && followUpPrompts.length > 0 ? (
-                          <AgentFollowUpPromptRail
-                            prompts={followUpPrompts}
-                            onSelect={(prompt) => runWithAuth(() => sendUserQuery(prompt))}
-                          />
-                        ) : null}
-                      </>
+                          })
+                        }
+                      />
                     ) : null}
                   </div>
                 </div>
             ))}
           </div>
-          <div className="shrink-0 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 dark:bg-zinc-950">
+          <div
+            className={cn(
+              "shrink-0 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+              inConversation ? cn("pt-2.5", mx.chatFooterBar) : "bg-white pt-3 dark:bg-zinc-950"
+            )}
+          >
             {chatFooter}
           </div>
         </>
@@ -1401,17 +1232,17 @@ export function AgentChat({
         locale="en-US"
       />
 
-      {!isNoteChat ? (
+      {!isNoteChat || isRecordingNoteChat ? (
         <ContentFactoryModals
           open={factoryModal}
           onClose={() => setFactoryModal(null)}
-          libraryName={isLibraryChat ? factoryLibraryLabel || undefined : undefined}
+          libraryName={hasKbGrounding ? factoryLibraryLabel || undefined : undefined}
           modalDensity="compact"
           onGenerateSubmit={handleFactoryGenerateSubmit}
         />
       ) : null}
 
-      {isLibraryChat && saveToLibrarySheet ? (
+      {saveToLibrarySheet ? (
         <MindSaveToLibrarySheet
           open
           title="Add to library"

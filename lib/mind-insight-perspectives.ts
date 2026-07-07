@@ -37,7 +37,7 @@ export type InsightPerspectiveCategory = {
 const defaultInsight: InsightPerspective = {
   id: "default",
   title: "Default insight",
-  author: "Mind",
+  author: "Mindar",
   description: "Uncover hidden thinking patterns and deeper themes across your notes.",
   rangeLabel: "All notes",
   icon: Network,
@@ -62,7 +62,7 @@ export const MIND_FEATURED_INSIGHT_PERSPECTIVES: InsightPerspective[] = [
   {
     id: "reverse-thinking",
     title: "Reverse thinking",
-    author: "Mind",
+    author: "Mindar",
     description: "Stress-test assumptions in your notes using Munger-style inversion.",
     rangeLabel: "Last year",
     icon: Undo2,
@@ -84,7 +84,7 @@ export const MIND_FEATURED_INSIGHT_PERSPECTIVES: InsightPerspective[] = [
   {
     id: "mbti",
     title: "Knowledge processing style",
-    author: "Mind",
+    author: "Mindar",
     description:
       "MBTI-inspired read of how you acquire, connect, and turn notes into usable knowledge—not a personality test.",
     rangeLabel: "All notes",
@@ -103,7 +103,7 @@ export const MIND_INSIGHT_GALLERY_CATEGORIES: InsightPerspectiveCategory[] = [
       {
         id: "daily-affirmation",
         title: "Daily affirmation",
-        author: "Mind",
+        author: "Mindar",
         description: "Find small wins in your diary worth celebrating; encourage steady growth.",
         rangeLabel: "Last day",
         icon: Sun,
@@ -113,7 +113,7 @@ export const MIND_INSIGHT_GALLERY_CATEGORIES: InsightPerspectiveCategory[] = [
       {
         id: "action-guide",
         title: "Action guide",
-        author: "Mind",
+        author: "Mindar",
         description: "Turn confusion and hesitation in notes into concrete next steps.",
         rangeLabel: "Last year",
         icon: Lightbulb,
@@ -129,7 +129,7 @@ export const MIND_INSIGHT_GALLERY_CATEGORIES: InsightPerspectiveCategory[] = [
       {
         id: "meaning-radar",
         title: "Meaning radar",
-        author: "Mind",
+        author: "Mindar",
         description: "Map sources and gaps of meaning in your notes; locate core motivation.",
         rangeLabel: "Last 6 months",
         icon: Radar,
@@ -139,7 +139,7 @@ export const MIND_INSIGHT_GALLERY_CATEGORIES: InsightPerspectiveCategory[] = [
       {
         id: "key-figures",
         title: "Key figures",
-        author: "Mind",
+        author: "Mindar",
         description: "Discover recurring people in your notes and their impact on you.",
         rangeLabel: "Last 3 months",
         icon: Users,
@@ -165,7 +165,7 @@ export const MIND_INSIGHT_GALLERY_CATEGORIES: InsightPerspectiveCategory[] = [
       {
         id: "main-contradiction",
         title: "Main contradiction",
-        author: "Mind",
+        author: "Mindar",
         description: "Identify the primary tension in your thinking using a contradiction lens.",
         rangeLabel: "Last 3 months",
         icon: CircleDot,
@@ -191,7 +191,7 @@ export const MIND_INSIGHT_GALLERY_CATEGORIES: InsightPerspectiveCategory[] = [
       {
         id: "aristotle",
         title: "Aristotle",
-        author: "Mind",
+        author: "Mindar",
         description: "Deconstruct notes with first principles—essence, cause, and purpose.",
         rangeLabel: "All notes",
         icon: Atom,

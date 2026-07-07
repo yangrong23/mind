@@ -1,110 +1,145 @@
 "use client"
 
-import { Share2, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
+import { MindarLogoImg } from "@/components/mind-v2/mindar-logo"
+import { ShareCardTimelineMini } from "@/components/mind-v2/share-card-timeline-mini"
 import type { MindShareCardModel } from "@/lib/mind-share-payload"
+import type { ActivityTimelineDay } from "@/lib/mock-activity-timeline"
 
 export type MindViralShareCardProps = {
   card: MindShareCardModel
   displayName: string
-  /** When set, the card is tappable and shows a share affordance */
-  onShare?: () => void
+  /** Show full excerpt without clamping — for share preview sheet */
+  fullPreview?: boolean
+  /** Same diary data as Me home — keeps share timeline in sync */
+  timelineDays?: ActivityTimelineDay[]
   className?: string
 }
 
-export function MindViralShareCard({ card, displayName, onShare, className }: MindViralShareCardProps) {
-  const Wrapper = onShare ? "button" : "div"
-  const isInsight = card.variant === "insight" || card.variant === "timeline"
+function showsTimelineMini(variant: MindShareCardModel["variant"]) {
+  return variant === "stats" || variant === "timeline" || variant === "daily"
+}
+
+export function MindViralShareCard({
+  card,
+  displayName,
+  fullPreview = false,
+  timelineDays,
+  className,
+}: MindViralShareCardProps) {
+  const withTimeline = showsTimelineMini(card.variant)
+  const headline = card.headline?.trim()
+  const hookIsHero = Boolean(card.hook?.trim()) && !headline
 
   return (
-    <Wrapper
-      type={onShare ? "button" : undefined}
-      onClick={onShare}
+    <div
       className={cn(
-        "group relative w-full overflow-hidden rounded-[1.35rem] border border-stone-200/90 text-left shadow-[0_12px_40px_-16px_rgba(15,23,42,0.14),0_4px_16px_-8px_rgba(56,189,248,0.12)]",
-        "transition-transform active:scale-[0.99]",
-        "bg-[#0a1530] text-white",
-        onShare && "cursor-pointer",
+        "relative w-full overflow-visible rounded-[1.25rem] border border-[#E9ECEF] bg-white",
+        mx.elevatedShadow,
+        "dark:border-zinc-700/90 dark:bg-zinc-900",
         className
       )}
     >
       <span
-        className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-mind/15 blur-2xl dark:bg-mind/20"
+        className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-mind/10 blur-2xl dark:bg-mind/15"
         aria-hidden
       />
       <span
-        className="pointer-events-none absolute -bottom-14 -left-8 h-36 w-36 rounded-full bg-stone-100/80 blur-2xl dark:bg-zinc-800/60"
-        aria-hidden
-      />
-      <span
-        className={cn(
-          "pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-mind/35 to-transparent",
-          isInsight && "via-mind/45"
-        )}
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-mind/25 to-transparent"
         aria-hidden
       />
 
-      <div className="relative px-5 pb-5 pt-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/85 ring-1 ring-mind/15 shadow-sm dark:bg-zinc-900/80 dark:ring-mind/25">
-              <Sparkles className="h-4 w-4 text-mind" strokeWidth={2} aria-hidden />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-mind/90">{card.eyebrow}</span>
-          </div>
-          {onShare ? (
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-mind ring-1 ring-stone-200/80 transition-colors group-hover:bg-mind/10 dark:bg-zinc-900/70 dark:ring-zinc-700">
-              <Share2 className="h-4 w-4" strokeWidth={2} aria-hidden />
-            </span>
-          ) : null}
+      <div className="relative px-5 pb-4 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <MindarLogoImg
+            variant="inline"
+            className={cn(hookIsHero ? "!h-[28px] !max-w-[160px]" : "!h-[20px] !max-w-[112px]")}
+          />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-mind/90">
+            {card.eyebrow}
+          </span>
         </div>
 
         {card.hook ? (
-          <p className="mt-4 text-[13px] font-medium leading-snug text-mind/90 dark:text-mind/80">{card.hook}</p>
+          <p
+            className={cn(
+              "text-zinc-800 dark:text-zinc-200",
+              hookIsHero
+                ? "mt-4 text-[17px] font-semibold leading-[1.45] tracking-[-0.02em]"
+                : "mt-3 text-[13px] font-medium leading-[1.5] text-zinc-700 dark:text-zinc-300",
+              withTimeline && !hookIsHero && "max-w-[92%]"
+            )}
+          >
+            {card.hook}
+          </p>
         ) : null}
 
-        <p className="mt-2 whitespace-pre-line text-[22px] font-bold leading-[1.18] tracking-tight text-zinc-900 dark:text-zinc-50">
-          {card.headline}
-        </p>
+        {withTimeline ? (
+          <div className={cn("overflow-visible", hookIsHero ? "mt-4" : "mt-3")}>
+            <ShareCardTimelineMini days={timelineDays} />
+          </div>
+        ) : null}
+
+        {headline ? (
+          <p
+            className={cn(
+              "whitespace-pre-line text-[18px] font-semibold leading-[1.25] tracking-[-0.02em] text-zinc-900 dark:text-zinc-50",
+              withTimeline ? "mt-3" : "mt-2.5"
+            )}
+          >
+            {headline}
+          </p>
+        ) : null}
 
         {card.excerpt ? (
-          <div className="mt-3.5 rounded-2xl border border-white/70 bg-white/60 p-3.5 backdrop-blur-sm dark:border-zinc-700/50 dark:bg-zinc-900/50">
-            <p className="line-clamp-4 text-[13px] leading-[1.65] text-zinc-700 dark:text-zinc-300">{card.excerpt}</p>
+          <div className="mt-2.5 rounded-xl border border-stone-100 bg-stone-50/80 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <p
+              className={cn(
+                "text-[12px] leading-[1.6] text-zinc-600 dark:text-zinc-400",
+                !fullPreview && "line-clamp-3"
+              )}
+            >
+              {card.excerpt}
+            </p>
           </div>
         ) : null}
 
         {card.bullets && card.bullets.length > 0 ? (
-          <ul className="mt-3 space-y-1.5">
-            {card.bullets.slice(0, 3).map((item) => (
+          <ul className="mt-2.5 space-y-1.5">
+            {card.bullets.slice(0, fullPreview ? 6 : 3).map((item) => (
               <li key={item} className="flex gap-2 text-[12px] leading-snug text-zinc-600 dark:text-zinc-400">
                 <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-mind" aria-hidden />
-                <span className="line-clamp-2">{item}</span>
+                <span className={cn(!fullPreview && "line-clamp-2")}>{item}</span>
               </li>
             ))}
           </ul>
         ) : null}
 
-        <div className="mt-3.5 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {card.chips.map((chip) => (
             <span
               key={chip}
-              className="rounded-full bg-white/75 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-zinc-600 ring-1 ring-stone-200/70 dark:bg-zinc-900/60 dark:text-zinc-300 dark:ring-zinc-700"
+              className="rounded-full bg-stone-50 px-2.5 py-1 text-[10px] font-medium tabular-nums text-zinc-600 ring-1 ring-stone-200/70 dark:bg-zinc-900/60 dark:text-zinc-300 dark:ring-zinc-700"
             >
               {chip}
             </span>
           ))}
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-stone-200/80 pt-4 dark:border-zinc-800">
+        <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-stone-200/80 pt-3.5 dark:border-zinc-800">
           <div className="min-w-0">
             <p className="truncate text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">{displayName}</p>
-            <p className="text-[10px] text-zinc-500">{onShare ? "Tap to share" : "Shared from Mind"}</p>
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-500">
+              Shared from Mindar
+            </p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-[9px] font-bold leading-tight tracking-wide text-white dark:bg-zinc-100 dark:text-zinc-900">
-            Mind
-          </div>
+          <MindarLogoImg
+            variant="inline"
+            className={cn(hookIsHero ? "!h-[20px] !max-w-[112px]" : "!h-[17px] !max-w-[96px]", "opacity-90")}
+          />
         </div>
       </div>
-    </Wrapper>
+    </div>
   )
 }

@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import { ChevronRight, CreditCard, Download, Plus, Receipt, Trash2, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import {
   SettingsGroup,
   SettingsLinkRow,
@@ -53,12 +54,12 @@ const meMobileGlassCard =
 
 function MeMobileSectionTitle({ children }: { children: ReactNode }) {
   return (
-    <p className={cn("mb-2 px-0.5 text-[12px] font-semibold", "text-[#1a1a1a] dark:text-zinc-100")}>{children}</p>
+    <p className={cn("mb-2 px-0.5 text-[12px] font-semibold", mx.shellInk)}>{children}</p>
   )
 }
 
 function MeMobileSectionHint({ children }: { children: ReactNode }) {
-  return <p className={cn("mb-3 text-[12px] leading-relaxed", "text-[#787671] dark:text-zinc-400")}>{children}</p>
+  return <p className={cn("mb-3 text-[12px] leading-relaxed", mx.shellMuted)}>{children}</p>
 }
 
 const BRAND_LABEL: Record<PaymentBrand, string> = {
@@ -217,7 +218,7 @@ export function MeCreditsPlansScreen({
     return (
       <SettingsScreenShell title="Payment methods" onBack={() => setScreen("main")} zClass="z-50">
         <MeMobileSectionHint>
-          Cards are stored with your billing provider. Mind never stores full card numbers on device.
+          Cards are stored with your billing provider. Mindar never stores full card numbers on device.
         </MeMobileSectionHint>
 
         <PaymentMethodsList
@@ -232,7 +233,7 @@ export function MeCreditsPlansScreen({
           onClick={() => setScreen("add-payment")}
           className={cn(
             "mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white/60 py-3 text-[13px] font-semibold text-zinc-800 shadow-sm backdrop-blur-sm transition-colors hover:bg-white/90 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-100",
-            "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
+            mx.brandFocusRing
           )}
         >
           <Plus className="h-4 w-4" />
@@ -304,7 +305,7 @@ export function MeCreditsPlansScreen({
         <button
           type="button"
           onClick={handleSavePaymentMethod}
-          className={cn("w-full rounded-xl py-3 text-[15px] font-semibold transition-colors", "mind-btn rounded-lg")}
+          className={cn("w-full rounded-xl py-3 text-[15px] font-semibold transition-colors", mx.brandCta)}
         >
           Save payment method
         </button>
@@ -361,7 +362,7 @@ export function MeCreditsPlansScreen({
         </button>
       }
     >
-      <div className={cn("min-w-0 max-w-full space-y-4", "bg-[#fafaf9] dark:bg-zinc-950")}>
+      <div className={cn("min-w-0 max-w-full space-y-4", mx.shellCanvas)}>
         <BalanceCard stats={stats} currentPlanName={currentPlan?.name} />
         <MembershipComparisonSection
           plans={membershipPlans}
@@ -387,7 +388,7 @@ function BalanceCard({
   return (
     <div className={cn(meMobileGlassCard, "min-w-0 overflow-hidden p-4")}>
       <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
-        <span className={cn("shrink-0 text-[12px] font-medium", "text-[#787671] dark:text-zinc-400")}>Available balance</span>
+        <span className={cn("shrink-0 text-[12px] font-medium", mx.shellMuted)}>Available balance</span>
         {currentPlanName ? (
           <span className="max-w-[45%] shrink-0 truncate rounded-md bg-mind/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-mind">
             {currentPlanName}
@@ -395,12 +396,12 @@ function BalanceCard({
         ) : null}
       </div>
       <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-        <span className={cn("text-[26px] font-bold leading-none tracking-tight tabular-nums", "text-[#1a1a1a] dark:text-zinc-100")}>
+        <span className={cn("text-[26px] font-bold leading-none tracking-tight tabular-nums", mx.shellInk)}>
           {stats.creditsRemaining.toLocaleString("en-US")}
         </span>
-        <span className={cn("text-[14px] font-semibold", "text-[#787671] dark:text-zinc-400")}>credits</span>
+        <span className={cn("text-[14px] font-semibold", mx.shellMuted)}>credits</span>
       </div>
-      <p className={cn("mt-2.5 text-[12px] leading-snug tabular-nums", "text-[#787671] dark:text-zinc-400")}>
+      <p className={cn("mt-2.5 text-[12px] leading-snug tabular-nums", mx.shellMuted)}>
         {stats.creditsMonthlyAllowance.toLocaleString("en-US")} included this cycle · resets monthly
       </p>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-200/90 dark:bg-zinc-700">
@@ -438,7 +439,7 @@ function MembershipPlanCard({
       )}
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
-        <p className={cn("min-w-0 truncate text-[15px] font-bold", isHighlight ? "text-mind" : "text-[#1a1a1a] dark:text-zinc-100")}>
+        <p className={cn("min-w-0 truncate text-[15px] font-bold", isHighlight ? "text-mind" : mx.shellInk)}>
           {plan.name}
         </p>
         {isCurrent ? (
@@ -447,9 +448,9 @@ function MembershipPlanCard({
           </span>
         ) : null}
       </div>
-      <p className={cn("mt-2 text-[18px] font-semibold tabular-nums", "text-[#1a1a1a] dark:text-zinc-100")}>{plan.priceLabel}</p>
-      <p className={cn("mt-1 text-[12px]", "text-[#787671] dark:text-zinc-400")}>{plan.monthlyCreditsLabel} credits / month</p>
-      <p className={cn("mt-2 line-clamp-2 text-[12px] leading-snug", "text-[#787671] dark:text-zinc-400")}>{plan.blurb}</p>
+      <p className={cn("mt-2 text-[18px] font-semibold tabular-nums", mx.shellInk)}>{plan.priceLabel}</p>
+      <p className={cn("mt-1 text-[12px]", mx.shellMuted)}>{plan.monthlyCreditsLabel} credits / month</p>
+      <p className={cn("mt-2 line-clamp-2 text-[12px] leading-snug", mx.shellMuted)}>{plan.blurb}</p>
     </button>
   )
 }
@@ -487,7 +488,7 @@ function MembershipComparisonSection({
       </div>
 
       <div className={cn(meMobileGlassCard, "mt-4 min-w-0 overflow-hidden p-4")}>
-        <p className={cn("text-[12px] font-semibold", "text-[#1a1a1a] dark:text-zinc-100")}>{selectedPlan.name} · benefits</p>
+        <p className={cn("text-[12px] font-semibold", mx.shellInk)}>{selectedPlan.name} · benefits</p>
         <ul className="mt-3 space-y-0">
           {MEMBERSHIP_BENEFIT_ROWS.map((row) => {
             const value = membershipBenefitValue(row, selectedPlan.id)
@@ -497,11 +498,11 @@ function MembershipComparisonSection({
                 key={row.id}
                 className="grid grid-cols-1 gap-0.5 border-b border-stone-100/90 py-2.5 last:border-0 dark:border-zinc-800/80"
               >
-                <span className={cn("min-w-0 text-[12px] leading-snug", "text-[#787671] dark:text-zinc-400")}>{row.label}</span>
+                <span className={cn("min-w-0 text-[12px] leading-snug", mx.shellMuted)}>{row.label}</span>
                 <span
                   className={cn(
                     "min-w-0 text-[12px] font-medium leading-snug",
-                    isDash ? "text-zinc-300 dark:text-zinc-600" : selectedPlan.highlight ? "text-mind" : "text-[#1a1a1a] dark:text-zinc-100"
+                    isDash ? "text-zinc-300 dark:text-zinc-600" : selectedPlan.highlight ? "text-mind" : mx.shellInk
                   )}
                 >
                   {value}
@@ -519,7 +520,7 @@ function MembershipComparisonSection({
           onChange={(e) => setTermsAccepted(e.target.checked)}
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 accent-mind"
         />
-        <span className={cn("min-w-0 text-[11px] leading-relaxed", "text-[#787671] dark:text-zinc-400")}>
+        <span className={cn("min-w-0 text-[11px] leading-relaxed", mx.shellMuted)}>
           I agree to the membership terms and auto-renewal policy (demo).
         </span>
       </label>
@@ -532,8 +533,8 @@ function MembershipComparisonSection({
           "mt-3 w-full min-w-0 rounded-xl px-3 py-3.5 text-center text-[15px] font-semibold leading-snug transition-colors",
           isCurrent || !termsAccepted
             ? "cursor-default bg-stone-200/90 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500"
-            : "mind-btn rounded-lg",
-          "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
+            : mx.brandCta,
+          mx.brandFocusRing
         )}
       >
         {isCurrent ? (
@@ -549,7 +550,7 @@ function MembershipComparisonSection({
       <p
         className={cn(
           "mt-4 flex min-w-0 items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed",
-          "text-[#a4a097] dark:text-zinc-500"
+          mx.shellIcon
         )}
       >
         <Zap className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mind" aria-hidden />
@@ -578,13 +579,13 @@ function PaymentMethodsList({
           "border-dashed p-6 text-center"
         )}
       >
-        <CreditCard className={cn("mx-auto h-8 w-8", "text-[#a4a097] dark:text-zinc-500")} />
-        <p className={cn("mt-2 text-[14px] font-medium", "text-[#1a1a1a] dark:text-zinc-100")}>No cards on file</p>
-        <p className={cn("mt-1 text-[12px]", "text-[#787671] dark:text-zinc-400")}>Add a payment method to subscribe.</p>
+        <CreditCard className={cn("mx-auto h-8 w-8", mx.shellIcon)} />
+        <p className={cn("mt-2 text-[14px] font-medium", mx.shellInk)}>No cards on file</p>
+        <p className={cn("mt-1 text-[12px]", mx.shellMuted)}>Add a payment method to subscribe.</p>
         <button
           type="button"
           onClick={onAdd}
-          className={cn("mt-4 rounded-xl px-4 py-2.5 text-[13px] font-semibold", "mind-btn rounded-lg")}
+          className={cn("mt-4 rounded-xl px-4 py-2.5 text-[13px] font-semibold", mx.brandCta)}
         >
           Add card
         </button>
@@ -621,8 +622,8 @@ function PaymentMethodCard({
   return (
     <div className={cn(meMobileGlassCard, "min-w-0 overflow-hidden p-4")}>
       <div className="flex min-w-0 items-start gap-3">
-        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", "bg-[#f0eeec] dark:bg-zinc-800")}>
-          <CreditCard className={cn("h-5 w-5", "text-zinc-600 dark:text-zinc-300")} />
+        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", mx.settingsIconWell)}>
+          <CreditCard className={cn("h-5 w-5", mx.settingsIconInk)} />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -668,8 +669,8 @@ function InvoiceCard({ invoice }: { invoice: BillingInvoice }) {
   return (
     <div className={cn(meMobileGlassCard, "min-w-0 overflow-hidden p-4")}>
       <div className="flex min-w-0 items-start gap-3">
-        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", "bg-[#f0eeec] dark:bg-zinc-800")}>
-          <Receipt className={cn("h-4 w-4", "text-zinc-600 dark:text-zinc-300")} />
+        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", mx.settingsIconWell)}>
+          <Receipt className={cn("h-4 w-4", mx.settingsIconInk)} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 text-[15px] font-medium leading-snug text-zinc-900 dark:text-zinc-100">
@@ -697,5 +698,50 @@ function InvoiceCard({ invoice }: { invoice: BillingInvoice }) {
         </button>
       </div>
     </div>
+  )
+}
+
+type CreditsUsageEntry = {
+  id: string
+  date: string
+  task: string
+  credits: number
+}
+
+const MOCK_CREDITS_USAGE: CreditsUsageEntry[] = [
+  { id: "u1", date: "Today · 2:14 PM", task: "Knowledge Q&A", credits: -120 },
+  { id: "u2", date: "Today · 11:02 AM", task: "Audio summary", credits: -340 },
+  { id: "u3", date: "Yesterday · 6:48 PM", task: "Agent task delivery", credits: -580 },
+  { id: "u4", date: "Yesterday · 9:15 AM", task: "Note chat", credits: -45 },
+  { id: "u5", date: "Mar 24 · 4:30 PM", task: "Slide deck generation", credits: -920 },
+  { id: "u6", date: "Mar 23 · 10:08 AM", task: "Transcription", credits: -210 },
+  { id: "u7", date: "Mar 22 · 8:55 PM", task: "Knowledge Q&A", credits: -95 },
+]
+
+/** Credits consumption ledger — opened from Me tab footer, not shown on home. */
+export function MeCreditsUsageScreen({ onClose }: { onClose: () => void }) {
+  return (
+    <SettingsScreenShell title="Credits usage" onBack={onClose} zClass="z-[52]">
+      <MeMobileSectionHint>Task-level consumption for this billing cycle.</MeMobileSectionHint>
+      <div className="space-y-2">
+        {MOCK_CREDITS_USAGE.map((entry) => (
+          <div
+            key={entry.id}
+            className={cn(
+              meMobileGlassCard,
+              "flex items-center justify-between gap-3 px-4 py-3.5"
+            )}
+          >
+            <div className="min-w-0">
+              <p className="text-[14px] font-medium text-zinc-900 dark:text-zinc-100">{entry.task}</p>
+              <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">{entry.date}</p>
+            </div>
+            <span className="shrink-0 text-[14px] font-semibold tabular-nums text-zinc-700 dark:text-zinc-200">
+              {entry.credits.toLocaleString("en-US")}
+            </span>
+          </div>
+        ))}
+      </div>
+    </SettingsScreenShell>
   )
 }

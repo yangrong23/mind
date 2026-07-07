@@ -1,19 +1,26 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { agentFactoryTone } from "@/lib/factory-tone-classes"
-import { FACTORY_CARD_RADIUS, FACTORY_ICON_RADIUS } from "@/components/mind-v2/factory-card-shape"
+import { mx } from "@/lib/medrix-design-tokens"
+import {
+  FACTORY_CARD_RADIUS,
+  FACTORY_FIELD_RADIUS,
+  FACTORY_ICON_RADIUS,
+} from "@/components/mind-v2/factory-card-shape"
 import type {
   FactoryGenerationSettings,
   FactoryModalKind,
 } from "@/components/mind-v2/content-factory-modals"
 import {
-  StudioOutputArchiveRow,
-  StudioOutputListRow,
-  studioOutputVisual,
-} from "@/components/mind-v2/studio-output-row"
-import { Presentation } from "lucide-react"
-import { toast } from "sonner"
+  FilePlus2,
+  Volume2,
+  Layers,
+  HelpCircle,
+  BarChart3,
+  Presentation,
+  FolderInput,
+  Check,
+} from "lucide-react"
 
 export type FactoryJobStatus = "generating" | "complete" | "failed"
 
@@ -61,6 +68,8 @@ export function factorySettingsLeadMeta(
   return null
 }
 
+const PASTEL_SHELLS = mx.studioJobShell
+
 /** Demo history (reference data; Studio feed is driven by live `userJobs`). */
 export const FACTORY_MEDIA_SEED: FactoryJob[] = [
   {
@@ -93,10 +102,23 @@ export const FACTORY_MEDIA_SEED: FactoryJob[] = [
   },
 ]
 
-/** @deprecated Prefer `StudioOutputKindIcon` — kept for legacy call sites. */
 export function iconForFactoryKind(kind: FactoryModalKind) {
-  const { Icon, icon } = studioOutputVisual(kind)
-  return <Icon className={cn("h-5 w-5", icon)} strokeWidth={1.85} />
+  switch (kind) {
+    case "report":
+      return <FilePlus2 className="h-5 w-5" strokeWidth={1.75} />
+    case "audio":
+      return <Volume2 className="h-5 w-5" strokeWidth={1.75} />
+    case "flashcards":
+      return <Layers className="h-5 w-5" strokeWidth={1.75} />
+    case "quiz":
+      return <HelpCircle className="h-5 w-5" strokeWidth={1.75} />
+    case "infographic":
+      return <BarChart3 className="h-5 w-5" strokeWidth={1.75} />
+    case "slides":
+      return <Presentation className="h-5 w-5" strokeWidth={1.75} />
+    default:
+      return <FilePlus2 className="h-5 w-5" strokeWidth={1.75} />
+  }
 }
 
 export function mockTitleForFactoryKind(kind: FactoryModalKind): string {
@@ -149,8 +171,6 @@ export interface StudioFactoryJobsInlineProps {
   archiveTargetLabel?: string
   /** Job ids already archived (hide repeat CTA). */
   archivedJobIds?: ReadonlySet<string> | string[]
-  /** When false, completed rows render in `WebStudioOutputsPanel` instead */
-  showCompletedOutputs?: boolean
 }
 
 /**
@@ -166,15 +186,10 @@ export function StudioFactoryJobsInline({
   onArchiveToLibrary,
   archiveTargetLabel,
   archivedJobIds,
-  showCompletedOutputs = true,
 }: StudioFactoryJobsInlineProps) {
   const generating = userJobs.filter((j) => j.status === "generating")
   const completed = userJobs.filter((j) => j.status === "complete")
-  const showFeed =
-    showQuotaBanner ||
-    generating.length > 0 ||
-    (showCompletedOutputs && completed.length > 0) ||
-    toastFailedJobId
+  const showFeed = showQuotaBanner || generating.length > 0 || completed.length > 0 || toastFailedJobId
 
   const archivedSet =
     archivedJobIds == null
@@ -190,16 +205,16 @@ export function StudioFactoryJobsInline({
   return (
     <div className={cn("relative", toastFailedJobId ? "pb-16" : "")}>
       {showQuotaBanner ? (
-        <div className={cn("mb-4", "rounded-2xl border border-stone-200/90 bg-stone-50/95 p-4 shadow-sm shadow-stone-900/[0.04] dark:border-zinc-700 dark:bg-zinc-900/90")}>
+        <div className={cn("mb-4", mx.studioQuotaBanner)}>
           <div className="flex gap-3">
             <div
               className={cn(
                 "flex h-11 w-11 shrink-0 items-center justify-center",
                 FACTORY_ICON_RADIUS,
-                agentFactoryTone("slides").well
+                mx.factoryTone.slides.well
               )}
             >
-              <span className={cn(agentFactoryTone("slides").icon, "[&>svg]:h-5 [&>svg]:w-5")}>
+              <span className={cn(mx.factoryTone.slides.icon, "[&>svg]:h-5 [&>svg]:w-5")}>
                 <Presentation className="h-5 w-5" strokeWidth={1.75} />
               </span>
             </div>
@@ -210,7 +225,7 @@ export function StudioFactoryJobsInline({
               </p>
               <button
                 type="button"
-                className={cn("mt-2 text-[13px] font-semibold", "text-mind", "hover:text-mind/90")}
+                className={cn("mt-2 text-[13px] font-semibold", mx.accentBlue, mx.accentBlueHover)}
                 onClick={onDismissQuotaBanner}
               >
                 Upgrade now
@@ -221,70 +236,77 @@ export function StudioFactoryJobsInline({
       ) : null}
 
       {generating.length > 0 ? (
-        <ul className="mb-3 space-y-0.5">
-          {generating.map((job) => (
-            <li key={job.id}>
-              <StudioOutputListRow
-                kind={job.kind}
-                title="Generating…"
-                meta={factoryKindShortLabel(job.kind)}
-                subtitle="Check back in a few minutes"
-                trailing={
-                  <span className="mr-1 inline-flex h-2 w-2 animate-pulse rounded-full bg-mind/70" aria-hidden />
-                }
-              />
-            </li>
-          ))}
+        <ul className="mb-4 space-y-2.5">
+          {generating.map((job, idx) => {
+            const tc = mx.factoryTone[job.kind]
+            const shell = PASTEL_SHELLS[idx % PASTEL_SHELLS.length]
+            return (
+              <li key={job.id} className={cn("flex items-center gap-3 px-3.5 py-3.5 shadow-sm shadow-stone-900/[0.03]", FACTORY_CARD_RADIUS, shell)}>
+                <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center bg-white/80", FACTORY_ICON_RADIUS, tc.icon)}>
+                  {iconForFactoryKind(job.kind)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium text-zinc-900">Generating…</p>
+                  <p className="mt-0.5 text-[13px] text-zinc-600">Check back in a few minutes.</p>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       ) : null}
 
-      {showCompletedOutputs && completed.length > 0 ? (
-        <section className="mt-1" aria-label="Studio outputs">
-          <ul className="space-y-0.5">
+      {completed.length > 0 ? (
+        <div className={cn("overflow-hidden border border-stone-200/90 bg-white dark:border-zinc-800 dark:bg-zinc-900", FACTORY_CARD_RADIUS)}>
+          <h2 className="border-b border-stone-100 px-3 py-2.5 text-[12px] font-semibold uppercase tracking-wide text-zinc-500">
+            Generated media
+          </h2>
+          <ul className="divide-y divide-stone-100 px-0">
             {completed.map((job) => {
+              const tc = mx.factoryTone[job.kind]
               const archived = isArchived(job.id)
               return (
-                <li
-                  key={job.id}
-                  className="overflow-hidden rounded-xl transition-colors hover:bg-zinc-900/[0.02]"
-                >
-                  <StudioOutputListRow
-                    kind={job.kind}
-                    title={job.title ?? mockTitleForFactoryKind(job.kind)}
-                    meta={job.meta}
-                    onClick={() =>
-                      toast.message(job.title ?? "Studio output", {
-                        description: `${factoryKindShortLabel(job.kind)} (demo preview)`,
-                      })
-                    }
-                    onPlayClick={
-                      job.kind === "audio"
-                        ? () =>
-                            toast.message("Play audio", {
-                              description: "Demo — opens the generated briefing player.",
-                            })
-                        : undefined
-                    }
-                    onMenuClick={() =>
-                      toast.message("Actions", {
-                        description: "Rename, share, or delete this output (demo).",
-                      })
-                    }
-                  />
+                <li key={job.id}>
+                  <div className="flex items-start gap-3 px-3 py-3.5">
+                    <div className={cn("mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center", FACTORY_ICON_RADIUS, tc.well)}>
+                      <span className={cn(tc.icon, "[&>svg]:h-[1.15rem] [&>svg]:w-[1.15rem]")}>{iconForFactoryKind(job.kind)}</span>
+                    </div>
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="text-[15px] font-medium leading-snug text-zinc-900">{job.title}</p>
+                      {job.meta ? <p className="mt-1 text-[12px] text-zinc-500">{job.meta}</p> : null}
+                    </div>
+                  </div>
                   {onArchiveToLibrary ? (
-                    <StudioOutputArchiveRow
-                      archived={archived}
-                      archiveLabel={
-                        archiveTargetLabel ? `Archive to “${archiveTargetLabel}”` : "Archive to library"
-                      }
-                      onArchive={() => onArchiveToLibrary(job)}
-                    />
+                    <div className="flex items-center justify-end gap-2 border-t border-stone-100/90 bg-stone-50/40 px-3 py-2 dark:bg-zinc-900/40">
+                      {archived ? (
+                        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 dark:text-zinc-400">
+                          <Check className="h-3.5 w-3.5 text-mind dark:text-mind/38" strokeWidth={2.5} aria-hidden />
+                          In Hub
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onArchiveToLibrary(job)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-semibold transition-colors",
+                            FACTORY_FIELD_RADIUS,
+                            mx.accentBlue,
+                            mx.accentBlueHover,
+                            "hover:bg-mind/90 dark:hover:bg-mind/40"
+                          )}
+                        >
+                          <FolderInput className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
+                          {archiveTargetLabel
+                            ? `Archive to “${archiveTargetLabel}”`
+                            : "Archive to library"}
+                        </button>
+                      )}
+                    </div>
                   ) : null}
                 </li>
               )
             })}
           </ul>
-        </section>
+        </div>
       ) : null}
 
       {toastFailedJobId ? (

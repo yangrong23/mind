@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { MindChatThinking } from "@/components/mind-v2/mind-chat-thinking"
 import { cn } from "@/lib/utils"
-import { knowledgeBaseIconForTitle } from "@/components/mind-v2/knowledge-base-icon"
+import { mx } from "@/lib/medrix-design-tokens"
+import { SocialShareRow } from "./social-share-row"
 import {
   ChevronLeft,
   Share2,
@@ -14,19 +15,14 @@ import {
   ChevronDown,
   X,
   Check,
-  Clock,
   Sparkles,
   FileText,
   MessageSquare,
   Plus,
-  Library,
   Link2,
   Copy,
   Flag,
   Mic,
-  RefreshCw,
-  User,
-  Trash2,
   FolderInput,
   Pencil,
   ImageIcon,
@@ -41,32 +37,32 @@ import {
   Quote,
   Scale,
 } from "lucide-react"
-import { SmartSearchIcon } from "@/components/ui/smart-search-icon"
 import { CreateFolderSheet } from "./create-folder-sheet"
-import { SocialShareRow } from "./social-share-row"
+import { NoteFolderPickerSheet } from "./note-folder-picker-sheet"
+import { NoteShareLibrarySheet, NoteSaveToLibraryBar } from "./note-share-library-sheet"
+import { NoteRecordingActionsSheet } from "./note-recording-actions-sheet"
+import { NoteGenerationSheet, type NoteGenerationMode } from "./note-generation-sheet"
+import {
+  NoteFindReplaceBar,
+  findMatchIndices,
+  replaceMatchAt,
+  renderHighlightedText,
+  getActiveBlockMatchIndex,
+} from "./note-find-replace-bar"
 import { MindChatComposer } from "@/components/mind-v2/mind-chat-composer"
-import { NoteAskPromptRail } from "@/components/mind-v2/note-ask-prompt-rail"
+import { NoteAiChatOverlay } from "@/components/mind-v2/note-ai-assist"
+import type { FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
+import type { KnowledgeBase } from "@/lib/mock-knowledge-bases"
 import {
   NOTE_ASK_PROMPTS,
   type NoteAskPromptId,
-  type NoteAskPromptItem,
 } from "@/lib/note-ask-prompts"
 import type { Note } from "@/lib/note-types"
+import { buildNoteChatLaunchContext } from "@/lib/note-chat-context"
 import { isNoteAwaitingGenerate } from "@/lib/note-status"
 import { toast } from "sonner"
 import type { NoteFolder } from "@/lib/note-folders"
 import type { KBCategory } from "@/lib/mock-knowledge-bases"
-
-const knowledgeBases = [
-  { id: 2, name: "Tech docs", category: "Team", count: 89, recent: true, color: "from-zinc-500 to-stone-600", description: "Playbooks and internal docs" },
-  { id: 3, name: "Meeting notes", category: "Personal", count: 234, recent: false, color: "from-stone-500 to-stone-700", description: "Calls and standups" },
-  { id: 4, name: "User research", category: "Team", count: 67, recent: false, color: "from-zinc-500 to-zinc-600", description: "Interviews and insights" },
-]
-
-const recommendedKBs = [
-  { id: 1, name: "Product library", category: "Personal", count: 156, match: 95, reason: "Matches product requirements discussion", description: "Specs and PRDs", color: "from-zinc-400 to-stone-600" },
-  { id: 2, name: "Tech docs", category: "Team", count: 89, match: 72, reason: "Contains implementation notes", description: "Playbooks and internal docs", color: "from-zinc-500 to-stone-600" },
-]
 
 export type MovedLibraryMeta = {
   name: string
@@ -78,26 +74,36 @@ export type MovedLibraryMeta = {
 interface NoteDetailProps {
   note?: Note | null
   onBack: () => void
+  folders?: NoteFolder[]
   /** After a successful move, opens the destination library for a continuous Notes → Library flow */
   onMovedToLibrary?: (kb: MovedLibraryMeta) => void
+  /** Assign note to an existing folder */
+  onAssignNoteToFolder?: (noteId: number, folderId: string) => void
   /** Create a new folder and assign the current note to it (folder color/name on Notes home) */
   onAssignNoteToNewFolder?: (noteId: number, folder: NoteFolder) => void
   /** Move current note to trash and leave detail */
   onTrashNote?: (noteId: number) => void
   /** After user taps Generate on a synced-but-unprocessed recording */
   onNoteAnalyzed?: (noteId: number, patch: Partial<Note>) => void
+  requireAuthThen?: (run: () => void) => void
+  onNavigateToKnowledge?: (factoryKind?: FactoryModalKind) => void
 }
 
 const GENERATION_MS = 4200
 
-function playerDurationLabels(duration?: string) {
-  if (!duration || duration === "0:00") return { elapsed: "00:00:00", total: "00:00:54" }
-  if (/min/i.test(duration)) return { elapsed: "00:00:00", total: "00:23:45" }
-  if (/^\d+:\d{2}$/.test(duration)) {
+function playerDurationLabels(duration?: string, pct = 0) {
+  let totalSec = 54
+  if (duration && /min/i.test(duration)) {
+    const m = parseInt(duration)
+    totalSec = (isNaN(m) ? 23 : m) * 60
+  } else if (duration && /^\d+:\d{2}$/.test(duration)) {
     const [m, s] = duration.split(":")
-    return { elapsed: "00:00:00", total: `00:${String(m).padStart(2, "0")}:${s}` }
+    totalSec = Number(m) * 60 + Number(s)
   }
-  return { elapsed: "00:00:00", total: "00:00:54" }
+  const elapsedSec = Math.floor(Math.max(0, Math.min(1, pct)) * totalSec)
+  const fmt = (n: number) => String(n).padStart(2, "0")
+  const fmtTime = (sec: number) => `00:${fmt(Math.floor(sec / 60))}:${fmt(sec % 60)}`
+  return { elapsed: fmtTime(elapsedSec), total: fmtTime(totalSec) }
 }
 
 function noteCapturedHeading(note: Note | null | undefined) {
@@ -122,25 +128,6 @@ function NoteGenerationEmpty({
       <Icon className="h-16 w-16 text-stone-200" strokeWidth={1.25} aria-hidden />
       <p className="mt-6 text-[17px] font-medium text-zinc-400">Notes can be generated</p>
       <p className="mt-2 max-w-[240px] text-[14px] leading-relaxed text-zinc-400">{hint}</p>
-    </div>
-  )
-}
-
-function NoteGenerateBar({ onGenerate, disabled }: { onGenerate: () => void; disabled?: boolean }) {
-  return (
-    <div className="border-t border-stone-100 bg-white px-4 pb-4 pt-3">
-      <button
-        type="button"
-        onClick={onGenerate}
-        disabled={disabled}
-        className={cn(
-          "flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-900 py-4 text-[17px] font-semibold shadow-lg shadow-zinc-900/20 transition-opacity",
-          disabled && "pointer-events-none opacity-60"
-        )}
-      >
-        <Sparkles className="h-5 w-5 shrink-0 text-mind/38" strokeWidth={2} aria-hidden />
-        <span className="bg-gradient-to-r from-zinc-200 via-zinc-300 to-zinc-400 bg-clip-text text-transparent">Generate</span>
-      </button>
     </div>
   )
 }
@@ -170,7 +157,7 @@ const RECORDING_MARKS = [
 
 const MIND_INSIGHT_CARDS = [
   {
-    title: "Can Mind sync with your calendar or task apps?",
+    title: "Can Mindar sync with your calendar or task apps?",
     desc: "Based on this note, block time for a short review and sync next steps to your usual task list.",
   },
   {
@@ -563,10 +550,14 @@ function TemplateCreateCard({ onClick }: { onClick: () => void }) {
 export function NoteDetail({
   note,
   onBack,
+  folders = [],
   onMovedToLibrary,
+  onAssignNoteToFolder,
   onAssignNoteToNewFolder,
   onTrashNote,
   onNoteAnalyzed,
+  requireAuthThen,
+  onNavigateToKnowledge,
 }: NoteDetailProps) {
   /** Source = transcript / raw; Note = summary and marks */
   const [segment, setSegment] = useState<"source" | "note">("note")
@@ -576,10 +567,16 @@ export function NoteDetail({
   const [markExpand, setMarkExpand] = useState<Record<number, boolean>>({})
   const [isPlaying, setIsPlaying] = useState(false)
   const [playheadPct, setPlayheadPct] = useState(0.32)
-  const [showKBSheet, setShowKBSheet] = useState(false)
+  const [showRecordingActionsSheet, setShowRecordingActionsSheet] = useState(false)
+  const [showNoteShareSheet, setShowNoteShareSheet] = useState(false)
+  const [noteSharePresentation, setNoteSharePresentation] = useState<"save" | "share">("save")
+  const [removeFromMemosOnSave, setRemoveFromMemosOnSave] = useState(true)
+  const [savePromptDismissed, setSavePromptDismissed] = useState(false)
+  const [showFolderPicker, setShowFolderPicker] = useState(false)
+  const [folderPickerMode, setFolderPickerMode] = useState<"generate" | "assign">("assign")
+  const [createFolderFromPicker, setCreateFolderFromPicker] = useState(false)
   const [showCreateFolderSheet, setShowCreateFolderSheet] = useState(false)
-  /** Share icon: export / copy / share link */
-  const [showShareOptions, setShowShareOptions] = useState(false)
+  /** Share link modal (legacy deep link options) */
   const [showShareLinkModal, setShowShareLinkModal] = useState(false)
   const [shareLinkStep, setShareLinkStep] = useState<"options" | "social">("options")
   const [shareLinkPick, setShareLinkPick] = useState({
@@ -588,8 +585,17 @@ export function NoteDetail({
     marks: true,
     summary: false,
   })
-  /** More menu: note utilities */
-  const [showToolsMenu, setShowToolsMenu] = useState(false)
+  const [showFindReplace, setShowFindReplace] = useState(false)
+  const [findQuery, setFindQuery] = useState("")
+  const [replaceQuery, setReplaceQuery] = useState("")
+  const [findMatchIndex, setFindMatchIndex] = useState(0)
+  const [transcriptBlocks, setTranscriptBlocks] = useState(() =>
+    TRANSCRIPT_BLOCKS.map((b) => ({ t: b.t, text: b.text }))
+  )
+  const [summaryOverview, setSummaryOverview] = useState(SUMMARY_OVERVIEW)
+  const [markBodies, setMarkBodies] = useState(() =>
+    RECORDING_MARKS.map((m) => ({ t: m.t, title: m.title, body: m.body }))
+  )
   const [showCreateTemplateSheet, setShowCreateTemplateSheet] = useState(false)
   const [showTemplateConfirm, setShowTemplateConfirm] = useState(false)
   const [templateDraftName, setTemplateDraftName] = useState("")
@@ -598,89 +604,198 @@ export function NoteDetail({
     []
   )
   const [templateLanguage, setTemplateLanguage] = useState("Auto")
-  const [selectedKB, setSelectedKB] = useState<number | null>(null)
-  const [isTransferring, setIsTransferring] = useState(false)
-  const [transferComplete, setTransferComplete] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<{id: string, name: string, desc: string} | null>(null)
   const [showTemplatePage, setShowTemplatePage] = useState(false)
   const [templateTab, setTemplateTab] = useState<"mine" | "recommend" | "explore">("mine")
-  const [askDraft, setAskDraft] = useState("")
-  const [noteVoiceOn, setNoteVoiceOn] = useState(false)
   const [generated, setGenerated] = useState(() => !note || !isNoteAwaitingGenerate(note))
   const [isGenerating, setIsGenerating] = useState(false)
   const [thinkingPhase, setThinkingPhase] = useState(0)
+  const [generationMode, setGenerationMode] = useState<NoteGenerationMode>("auto")
+  const [autoLabelSpeakers, setAutoLabelSpeakers] = useState(false)
+  const [audioLanguage, setAudioLanguage] = useState("Simplified Chinese · Mandarin")
+  const [aiModel, setAiModel] = useState("Auto")
+  const [showAgentChat, setShowAgentChat] = useState(false)
+  const [chatInitialPrompt, setChatInitialPrompt] = useState<string | undefined>()
 
   const needsManualGenerate = note != null && isNoteAwaitingGenerate(note) && !generated
   const showGenerationThinking = needsManualGenerate && isGenerating
   const showGenerationEmpty = needsManualGenerate && !isGenerating
   const contentReady = !needsManualGenerate
-  const playerTimes = playerDurationLabels(note?.duration)
+  const playerTimes = playerDurationLabels(note?.duration, playheadPct)
 
   const openMoveToLibrary = () => {
-    setShowToolsMenu(false)
-    setShowShareOptions(false)
-    setShowKBSheet(true)
+    if (!contentReady) {
+      toast.message("Not ready yet", {
+        description: "Generate your note before saving to a library.",
+      })
+      return
+    }
+    setNoteSharePresentation("save")
+    setShowNoteShareSheet(true)
+  }
+
+  const openShareSheet = () => {
+    setNoteSharePresentation("share")
+    setShowNoteShareSheet(true)
+  }
+
+  const showSaveToLibraryPrompt = contentReady && !savePromptDismissed
+
+  useEffect(() => {
+    setSavePromptDismissed(false)
+    setRemoveFromMemosOnSave(true)
+    setShowFindReplace(false)
+    setFindQuery("")
+    setReplaceQuery("")
+    setFindMatchIndex(0)
+    setTranscriptBlocks(TRANSCRIPT_BLOCKS.map((b) => ({ t: b.t, text: b.text })))
+    setSummaryOverview(SUMMARY_OVERVIEW)
+    setMarkBodies(RECORDING_MARKS.map((m) => ({ t: m.t, title: m.title, body: m.body })))
+  }, [note?.id])
+
+  const searchableText = useMemo(() => {
+    if (segment === "source") return transcriptBlocks.map((b) => b.text).join("\n")
+    if (noteSub === "marks") return markBodies.map((m) => m.body).join("\n")
+    return summaryOverview
+  }, [segment, noteSub, transcriptBlocks, markBodies, summaryOverview])
+
+  const findMatchStarts = useMemo(
+    () => findMatchIndices(searchableText, findQuery),
+    [searchableText, findQuery]
+  )
+
+  useEffect(() => {
+    setFindMatchIndex(0)
+  }, [findQuery, segment, noteSub])
+
+  useEffect(() => {
+    if (findMatchStarts.length === 0) {
+      setFindMatchIndex(0)
+      return
+    }
+    setFindMatchIndex((i) => Math.min(i, findMatchStarts.length - 1))
+  }, [findMatchStarts.length])
+
+  const openAssignFolderPicker = (mode: "generate" | "assign") => {
+    setShowNoteShareSheet(false)
+    setFolderPickerMode(mode)
+    setShowFolderPicker(true)
   }
 
   const openCreateFolderSheet = () => {
-    setShowToolsMenu(false)
-    setShowShareOptions(false)
+    setShowNoteShareSheet(false)
+    setCreateFolderFromPicker(false)
     setShowCreateFolderSheet(true)
   }
 
-  const submitAskAboutNote = (text?: string) => {
-    const q = (text ?? askDraft).trim()
-    if (!q) {
-      toast.error("Enter a question")
-      return
+  const completeFolderSelection = (folderId: string) => {
+    if (!note) return
+    onAssignNoteToFolder?.(note.id, folderId)
+    setShowFolderPicker(false)
+    if (folderPickerMode === "generate") {
+      setThinkingPhase(0)
+      setIsGenerating(true)
+      toast.message("Generating…", {
+        description: selectedTemplate?.name ? `Template: ${selectedTemplate.name}` : "Processing your recording",
+      })
+    } else {
+      toast.success("Saved to folder")
     }
-    toast.success("Sent to AI", { description: q.length > 120 ? `${q.slice(0, 120)}…` : q })
-    setAskDraft("")
   }
 
-  const handleAskPromptPick = (item: NoteAskPromptItem) => {
-    setSummaryInsightView(item.id)
-    setAskDraft(item.prompt)
+  const handleMoveNoteToLibrary = (kb: KnowledgeBase, options: { removeFromMemos: boolean }) => {
+    setShowNoteShareSheet(false)
+    setSavePromptDismissed(true)
+    onMovedToLibrary?.({
+      name: kb.name,
+      color: kb.color,
+      description: kb.description,
+      category: kb.category,
+    })
+    if (options.removeFromMemos && note) {
+      onTrashNote?.(note.id)
+    }
+    toast.success(`Saved to ${kb.name}`, {
+      description: options.removeFromMemos
+        ? "Removed from Memos — find it in Library."
+        : "A copy is now in your library.",
+    })
+  }
+
+  const openNoteChat = (initialPrompt?: string) => {
+    if (!note) return
+    const run = () => {
+      setChatInitialPrompt(initialPrompt?.trim() || undefined)
+      setShowAgentChat(true)
+    }
+    if (requireAuthThen) requireAuthThen(run)
+    else run()
   }
 
   const closeAllOverlays = () => {
-    setShowShareOptions(false)
+    setShowAgentChat(false)
+    setChatInitialPrompt(undefined)
+    setShowNoteShareSheet(false)
     setShowShareLinkModal(false)
     setShareLinkStep("options")
-    setShowToolsMenu(false)
+    setShowFindReplace(false)
     setShowCreateTemplateSheet(false)
     setShowTemplateConfirm(false)
+    setShowFolderPicker(false)
+    setShowRecordingActionsSheet(false)
   }
 
-  const handleTransfer = () => {
-    if (!selectedKB) return
-    const kbMeta =
-      knowledgeBases.find((k) => k.id === selectedKB) ??
-      recommendedKBs.find((k) => k.id === selectedKB)
-    if (!kbMeta) return
-    setIsTransferring(true)
-    setTimeout(() => {
-      setIsTransferring(false)
-      setTransferComplete(true)
-      setTimeout(() => {
-        onMovedToLibrary?.({
-          name: kbMeta.name,
-          color: kbMeta.color,
-          description: "description" in kbMeta ? kbMeta.description : undefined,
-          category: kbMeta.category === "Personal" ? "mine" : "team",
-        })
-        setShowKBSheet(false)
-        setTransferComplete(false)
-        setSelectedKB(null)
-      }, 900)
-    }, 1200)
+  function replaceInJoinedItems<T extends { text?: string; body?: string }>(
+    items: T[],
+    field: "text" | "body",
+    matchStart: number,
+    findLen: number,
+    replacement: string
+  ): T[] {
+    let pos = 0
+    const next = items.map((item) => ({ ...item }))
+    for (let i = 0; i < next.length; i++) {
+      const chunk = next[i][field] ?? ""
+      const chunkEnd = pos + chunk.length
+      if (matchStart < chunkEnd) {
+        const localStart = matchStart - pos
+        next[i] = {
+          ...next[i],
+          [field]: replaceMatchAt(chunk, localStart, findLen, replacement),
+        }
+        return next
+      }
+      pos = chunkEnd + (i < next.length - 1 ? 1 : 0)
+    }
+    return next
+  }
+
+  const handleReplaceCurrentMatch = () => {
+    const q = findQuery.trim()
+    if (!q || findMatchStarts.length === 0) return
+    const matchStart = findMatchStarts[findMatchIndex] ?? findMatchStarts[0]
+    if (segment === "source") {
+      setTranscriptBlocks((prev) => replaceInJoinedItems(prev, "text", matchStart, q.length, replaceQuery))
+    } else if (noteSub === "marks") {
+      setMarkBodies((prev) => replaceInJoinedItems(prev, "body", matchStart, q.length, replaceQuery))
+    } else {
+      setSummaryOverview((prev) => replaceMatchAt(prev, matchStart, q.length, replaceQuery))
+    }
+    toast.message("Replaced", { description: "Updated the current match." })
+  }
+
+  const handleMoveRecordingToTrash = () => {
+    if (!note) return
+    onTrashNote?.(note.id)
+    toast.success("Moved to trash")
+    onBack()
   }
 
   useEffect(() => {
     setGenerated(note == null || !isNoteAwaitingGenerate(note))
     setIsGenerating(false)
     setThinkingPhase(0)
-    if (note != null && isNoteAwaitingGenerate(note)) setSegment("source")
+    if (note != null && isNoteAwaitingGenerate(note)) setSegment("note")
   }, [note?.id, note?.status])
 
   useEffect(() => {
@@ -700,6 +815,8 @@ export function NoteDetail({
         })
       }
       toast.success("Generation complete", { description: "Transcript and summary are ready." })
+      setSavePromptDismissed(false)
+      setSegment("note")
     }, GENERATION_MS)
     return () => {
       window.clearInterval(phaseId)
@@ -709,8 +826,49 @@ export function NoteDetail({
 
   const handleStartGeneration = () => {
     if (!needsManualGenerate || isGenerating) return
-    setThinkingPhase(0)
-    setIsGenerating(true)
+    if (generationMode === "auto") {
+      setSelectedTemplate({
+        id: "smart-summary",
+        name: "Smart summary",
+        desc: "Adaptive summaries across contexts",
+      })
+      setThinkingPhase(0)
+      setIsGenerating(true)
+      toast.message("Auto-generating…", {
+        description: "Mindar is matching transcript and summary (demo).",
+      })
+      return
+    }
+    if (!selectedTemplate) {
+      toast.error("Choose a template", {
+        description: "Pick a summary template under Custom generate.",
+      })
+      setShowTemplatePage(true)
+      return
+    }
+    setShowTemplatePage(false)
+    openAssignFolderPicker("generate")
+  }
+
+  const cycleAudioLanguage = () => {
+    const options = ["Auto", "English · US", "Simplified Chinese · Mandarin", "Japanese"]
+    setAudioLanguage((current) => {
+      const i = options.indexOf(current)
+      return options[(i + 1) % options.length] ?? options[0]
+    })
+  }
+
+  const cycleAiModel = () => {
+    const options = ["Auto", "Mindar Fast", "Mindar Pro"]
+    setAiModel((current) => {
+      const i = options.indexOf(current)
+      return options[(i + 1) % options.length] ?? options[0]
+    })
+  }
+
+  const openCustomTemplatePicker = () => {
+    setGenerationMode("custom")
+    setShowTemplatePage(true)
   }
 
   useEffect(() => {
@@ -760,34 +918,28 @@ export function NoteDetail({
             onClick={() => setSegment("note")}
             className={cn(
               "relative pb-1 tracking-tight transition-colors",
-              segment === "note" ? "text-[18px] font-semibold text-zinc-900" : "text-[17px] font-medium text-zinc-400 hover:text-zinc-600"
+              segment === "note" ? "text-[16px] font-semibold text-zinc-900" : "text-[15px] font-medium text-zinc-400 hover:text-zinc-600"
             )}
           >
             Note
           </button>
         </div>
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+        <div className="relative flex shrink-0 items-center gap-0.5">
           <button
             type="button"
-            onClick={() => {
-              setShowToolsMenu(false)
-              setShowShareOptions(true)
-            }}
+            onClick={openMoveToLibrary}
             className="rounded-full p-2 hover:bg-stone-100"
-            aria-label="Share"
+            aria-label="Move to library"
           >
-            <Share2 className="h-5 w-5 text-zinc-600" strokeWidth={1.75} />
+            <FolderInput className="h-5 w-5 text-zinc-600" strokeWidth={1.75} aria-hidden />
           </button>
           <button
             type="button"
-            onClick={() => {
-              setShowShareOptions(false)
-              setShowToolsMenu((v) => !v)
-            }}
+            onClick={() => setShowRecordingActionsSheet(true)}
             className="rounded-full p-2 hover:bg-stone-100"
-            aria-label="More"
+            aria-label="More options"
           >
-            <MoreHorizontal className="h-5 w-5 text-zinc-600" strokeWidth={1.75} />
+            <MoreHorizontal className="h-5 w-5 text-zinc-600" strokeWidth={1.75} aria-hidden />
           </button>
         </div>
       </div>
@@ -816,6 +968,18 @@ export function NoteDetail({
                 )
               })}
             </div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.001}
+              value={playheadPct}
+              onChange={(e) => setPlayheadPct(Number(e.target.value))}
+              onMouseDown={() => setIsPlaying(false)}
+              onTouchStart={() => setIsPlaying(false)}
+              className="mb-3 w-full cursor-pointer accent-zinc-500"
+              aria-label="Audio progress"
+            />
             <div className="mb-4 flex items-center justify-between text-sm tabular-nums">
               <span className="font-medium text-zinc-700">{playerTimes.elapsed}</span>
               <span className="text-zinc-400">{playerTimes.total}</span>
@@ -866,16 +1030,27 @@ export function NoteDetail({
                 <NoteGenerationEmpty hint="Transcript will appear here after generation" icon={MessageSquare} />
               ) : (
               <div className="space-y-6">
-                {TRANSCRIPT_BLOCKS.map((block, i) => (
+                {transcriptBlocks.map((block, i) => (
                   <div key={i} className="space-y-1.5">
                     <span className="text-[12px] tabular-nums text-zinc-400">{block.t}</span>
                     <p
                       className={cn(
-                        "break-words text-[17px] leading-[1.65] tracking-[-0.01em] transition-colors duration-200",
+                        "break-words text-[15px] leading-[1.65] tracking-[-0.01em] transition-colors duration-200",
                         i === activeTranscriptIdx ? "font-normal text-zinc-900" : "text-zinc-500"
                       )}
                     >
-                      {block.text}
+                      {segment === "source" && showFindReplace && findQuery.trim()
+                        ? renderHighlightedText(
+                            block.text,
+                            findQuery,
+                            getActiveBlockMatchIndex(
+                              transcriptBlocks.map((b) => b.text),
+                              i,
+                              findMatchIndex,
+                              findQuery
+                            )
+                          )
+                        : block.text}
                     </p>
                   </div>
                 ))}
@@ -895,7 +1070,7 @@ export function NoteDetail({
               type="button"
               onClick={() => setNoteSub("marks")}
               className={cn(
-                "flex items-center gap-0.5 py-3.5 text-[14px] font-medium tracking-tight transition-colors",
+                "flex items-center gap-0.5 py-3.5 text-[15px] font-medium tracking-tight transition-colors",
                 noteSub === "marks" ? "font-semibold text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
               )}
             >
@@ -906,7 +1081,7 @@ export function NoteDetail({
                 type="button"
                 onClick={() => setNoteSub("summary")}
                 className={cn(
-                  "flex items-center gap-0.5 py-3.5 text-[14px] font-medium tracking-tight transition-colors",
+                  "flex items-center gap-0.5 py-3.5 text-[15px] font-medium tracking-tight transition-colors",
                   noteSub === "summary" ? "font-semibold text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
                 )}
               >
@@ -941,25 +1116,36 @@ export function NoteDetail({
               <p className="text-center text-[12px] leading-relaxed text-zinc-400">
                 AI-generated content for reference only
               </p>
-              <h1 className="mt-5 break-words text-[22px] font-semibold tracking-tight text-zinc-900">Recording marks</h1>
+              <h1 className="mt-5 break-words text-[20px] font-semibold tracking-tight text-zinc-900">Recording marks</h1>
               <div className="mt-6 space-y-5">
-                {RECORDING_MARKS.map((m, idx) => (
+                {markBodies.map((m, idx) => (
                   <article
                     key={idx}
                     className="rounded-2xl border border-stone-200/90 bg-gradient-to-b from-white to-stone-50/80 p-4 shadow-sm"
                   >
                     <div className="flex items-center gap-2 text-zinc-500">
                       <Flag className="h-4 w-4 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
-                      <span className="text-[13px] tabular-nums">{m.t}</span>
+                      <span className="text-[12px] tabular-nums">{m.t}</span>
                     </div>
-                    <h2 className="mt-2 break-words text-[16px] font-semibold leading-snug text-zinc-900">{m.title}</h2>
+                    <h2 className="mt-2 break-words text-[15px] font-semibold leading-snug text-zinc-900">{m.title}</h2>
                     <p
                       className={cn(
-                        "mt-2 break-words text-[15px] leading-relaxed text-zinc-600",
+                        "mt-2 break-words text-[15px] leading-[1.65] text-zinc-600",
                         markExpand[idx] ? "" : "line-clamp-3"
                       )}
                     >
-                      {m.body}
+                      {segment === "note" && noteSub === "marks" && showFindReplace && findQuery.trim()
+                        ? renderHighlightedText(
+                            m.body,
+                            findQuery,
+                            getActiveBlockMatchIndex(
+                              markBodies.map((item) => item.body),
+                              idx,
+                              findMatchIndex,
+                              findQuery
+                            )
+                          )
+                        : m.body}
                     </p>
                     <button
                       type="button"
@@ -997,15 +1183,15 @@ export function NoteDetail({
                 )
               ) : (
                 <div className="space-y-5 sm:space-y-6">
-              <p className="text-center text-[11px] leading-relaxed text-zinc-400 sm:text-[12px]">
+              <p className="text-center text-[12px] leading-relaxed text-zinc-400">
                 AI-generated content for reference only
               </p>
 
               <header className="min-w-0 space-y-2 sm:space-y-2.5">
-                <h1 className="break-words text-[20px] font-semibold leading-snug tracking-tight text-zinc-900 sm:text-[22px] sm:leading-tight">
+                <h1 className="break-words text-[20px] font-semibold leading-snug tracking-tight text-zinc-900">
                   Product requirements discussion
                 </h1>
-                <p className="text-[13px] text-zinc-500 sm:text-[14px]">Jan 15, 2024 · 2:32 PM · 23 min</p>
+                <p className="text-[15px] text-zinc-500">Jan 15, 2024 · 2:32 PM · 23 min</p>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {["Meeting", "Product", "Knowledge"].map((tag) => (
                     <span
@@ -1019,30 +1205,32 @@ export function NoteDetail({
               </header>
 
               <section className="min-w-0 space-y-2 sm:space-y-2.5">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 sm:text-[12px]">Overview</h2>
-                <p className="min-w-0 break-words text-[14px] leading-[1.62] text-zinc-800 sm:text-[15px] sm:leading-[1.65]">
-                  {SUMMARY_OVERVIEW}
+                <h2 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-400">Overview</h2>
+                <p className="min-w-0 break-words text-[15px] leading-[1.65] text-zinc-800">
+                  {segment === "note" && noteSub === "summary" && showFindReplace && findQuery.trim()
+                    ? renderHighlightedText(summaryOverview, findQuery, findMatchIndex)
+                    : summaryOverview}
                 </p>
               </section>
 
               <section className="min-w-0 space-y-2 rounded-2xl border border-stone-200/90 bg-white p-3 shadow-sm shadow-stone-900/[0.04] sm:space-y-2.5 sm:p-3.5">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-[14px] font-semibold text-zinc-900 sm:text-[15px]">Mind map</h3>
+                  <h3 className="text-[15px] font-semibold text-zinc-900">Mind map</h3>
                   <button type="button" className="rounded-lg p-1.5 text-zinc-400 hover:bg-stone-100" aria-label="Expand">
                     <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} />
                   </button>
                 </div>
-                <p className="min-w-0 break-words text-[12px] leading-relaxed text-zinc-500 sm:text-[13px]">Thanks for using Mind—enjoy exploring.</p>
+                <p className="min-w-0 break-words text-[15px] leading-[1.65] text-zinc-500">Thanks for using Mindar—enjoy exploring.</p>
                 <div className="-mx-1 overflow-x-auto pb-0.5 pt-0.5">
                   <div className="flex min-w-max items-stretch gap-1.5 px-1 sm:gap-2">
                     <span className="shrink-0 self-center rounded-xl bg-stone-100 px-2.5 py-2 text-[11px] font-semibold leading-snug text-mind sm:px-3 sm:py-2.5 sm:text-[12px]">
-                      How to use Mind?
+                      How to use Mindar?
                     </span>
                     {[
                       { label: "Recording", bg: "bg-stone-100 text-mind" },
                       { label: "Multimodal input", bg: "bg-stone-100 text-mind" },
                       { label: "Files UI", bg: "bg-stone-100 text-mind" },
-                      { label: "Ask Mind", bg: "bg-stone-100 text-mind" },
+                      { label: "Ask Mindar", bg: "bg-stone-100 text-mind" },
                       { label: "Export & share", bg: "bg-stone-100 text-mind" },
                     ].map((b) => (
                       <span
@@ -1058,6 +1246,15 @@ export function NoteDetail({
                   </div>
                 </div>
               </section>
+
+              {showSaveToLibraryPrompt ? (
+                <NoteSaveToLibraryBar
+                  removeFromMemos={removeFromMemosOnSave}
+                  onRemoveFromMemosChange={setRemoveFromMemosOnSave}
+                  onChooseLibrary={openMoveToLibrary}
+                  onDismiss={() => setSavePromptDismissed(true)}
+                />
+              ) : null}
 
               <div className="flex min-w-0 gap-2 sm:gap-3">
                 <button
@@ -1085,9 +1282,9 @@ export function NoteDetail({
               </div>
 
               <section className="min-w-0 space-y-2 sm:space-y-2.5">
-                <h3 className="flex items-center gap-1.5 text-[14px] font-semibold text-zinc-900 sm:gap-2 sm:text-[15px]">
+                <h3 className="flex items-center gap-1.5 text-[15px] font-semibold text-zinc-900 sm:gap-2">
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-mind sm:h-4 sm:w-4" strokeWidth={2} aria-hidden />
-                  Mind insights
+                  Mindar insights
                 </h3>
                 <div className="space-y-2 sm:space-y-2.5">
                   {MIND_INSIGHT_CARDS.map((card) => (
@@ -1101,8 +1298,8 @@ export function NoteDetail({
                       }
                       className="flex w-full min-w-0 flex-col rounded-xl border border-stone-200/90 bg-stone-50/60 p-3 text-left transition-colors hover:border-stone-300 hover:bg-stone-50 sm:p-3.5"
                     >
-                      <span className="break-words text-[14px] font-medium leading-snug text-zinc-900 sm:text-[15px]">{card.title}</span>
-                      <span className="mt-1 line-clamp-2 break-words text-[12px] leading-relaxed text-zinc-600 sm:mt-1.5 sm:text-[13px]">{card.desc}</span>
+                      <span className="break-words text-[15px] font-medium leading-snug text-zinc-900">{card.title}</span>
+                      <span className="mt-1 line-clamp-2 break-words text-[15px] leading-[1.65] text-zinc-600 sm:mt-1.5">{card.desc}</span>
                     </button>
                   ))}
                 </div>
@@ -1114,133 +1311,73 @@ export function NoteDetail({
         </div>
       )}
 
-      {/* More (…) dropdown */}
-      {showToolsMenu && (
-        <div className="absolute inset-0 z-[46]">
-          <button
-            type="button"
-            className="absolute inset-0 min-h-[120px] bg-transparent"
-            aria-label="Close menu"
-            onClick={() => setShowToolsMenu(false)}
-          />
-          <div
-            role="menu"
-            className="absolute right-3 top-[56px] z-[47] w-[min(280px,calc(100%-24px))] overflow-hidden rounded-xl border border-stone-200/95 bg-white py-1 shadow-xl shadow-stone-900/12"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={openMoveToLibrary}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
-            >
-              <Library className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
-              Add to knowledge library
-            </button>
-            {note != null && onAssignNoteToNewFolder != null && (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={openCreateFolderSheet}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
-              >
-                <FolderInput className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
-                Save to folder
-              </button>
-            )}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setShowToolsMenu(false)
-                toast.message("Find and replace", { description: "Full-text find and replace is coming soon (demo)." })
-              }}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
-            >
-              <SmartSearchIcon className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
-              Find and replace
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setShowToolsMenu(false)
-                toast.promise(
-                  new Promise((r) => setTimeout(r, 900)),
-                  {
-                    loading: "Re-transcribing…",
-                    success: "Transcription updated (demo)",
-                    error: "Transcription failed",
-                  }
-                )
-              }}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-900 hover:bg-stone-50"
-            >
-              <RefreshCw className="h-5 w-5 shrink-0 text-zinc-500" strokeWidth={1.5} />
-              Re-transcribe
-            </button>
-            <div
-              className="flex w-full cursor-not-allowed items-center gap-3 px-4 py-3 text-left text-[15px] text-zinc-400"
-              aria-disabled
-            >
-              <User className="h-5 w-5 shrink-0 text-zinc-300" strokeWidth={1.5} />
-              Name speakers
-            </div>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setShowToolsMenu(false)
-                if (note) {
-                  onTrashNote?.(note.id)
-                  toast.success("Moved to trash")
-                } else {
-                  toast.message("Nothing to delete", { description: "No note is attached to this screen." })
-                }
-              }}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[15px] font-medium text-red-600 hover:bg-red-50/80"
-            >
-              <Trash2 className="h-5 w-5 shrink-0 text-red-500" strokeWidth={1.5} />
-              Move to trash
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Bottom bar */}
       {needsManualGenerate ? (
         showGenerationEmpty ? (
-          <NoteGenerateBar onGenerate={handleStartGeneration} />
+          <>
+            <div className="pointer-events-none absolute inset-0 z-[44] bg-black/25" aria-hidden />
+            <NoteGenerationSheet
+              mode={generationMode}
+              onModeChange={setGenerationMode}
+              templateLabel={selectedTemplate?.name}
+              onPickTemplate={openCustomTemplatePicker}
+              autoLabelSpeakers={autoLabelSpeakers}
+              onAutoLabelSpeakersChange={setAutoLabelSpeakers}
+              audioLanguage={audioLanguage}
+              onPickAudioLanguage={cycleAudioLanguage}
+              aiModel={aiModel}
+              onPickAiModel={cycleAiModel}
+              onGenerate={handleStartGeneration}
+              generateDisabled={generationMode === "custom" && !selectedTemplate}
+            />
+          </>
         ) : (
           <div className="h-2 shrink-0 bg-white" aria-hidden />
         )
+      ) : showFindReplace ? (
+        <NoteFindReplaceBar
+          findQuery={findQuery}
+          onFindQueryChange={setFindQuery}
+          replaceQuery={replaceQuery}
+          onReplaceQueryChange={setReplaceQuery}
+          matchIndex={findMatchIndex}
+          matchCount={findMatchStarts.length}
+          onPrevMatch={() =>
+            setFindMatchIndex((i) =>
+              findMatchStarts.length === 0 ? 0 : (i - 1 + findMatchStarts.length) % findMatchStarts.length
+            )
+          }
+          onNextMatch={() =>
+            setFindMatchIndex((i) =>
+              findMatchStarts.length === 0 ? 0 : (i + 1) % findMatchStarts.length
+            )
+          }
+          onReplace={handleReplaceCurrentMatch}
+          onClose={() => setShowFindReplace(false)}
+        />
       ) : (
       <div className="shrink-0 border-t border-stone-100 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-        <NoteAskPromptRail activeId={summaryInsightView} onSelect={handleAskPromptPick} />
         <div className="relative p-3 pt-1">
-          <span className="absolute left-6 top-1 z-10 -translate-y-1/2 rounded bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-mind dark:bg-zinc-800">
+          <span className="absolute left-6 top-1 z-10 -translate-y-1/2 rounded border border-stone-200/90 bg-stone-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">
             Beta
           </span>
-          <MindChatComposer
-            variant="thread"
-            className="max-w-none"
-            value={askDraft}
-            onChange={setAskDraft}
-            onSubmit={() => submitAskAboutNote()}
-            placeholder="Ask about this note…"
-            voiceOn={noteVoiceOn}
-            onVoiceToggle={() => {
-              setNoteVoiceOn((prev) => {
-                const next = !prev
-                toast.message(next ? "Voice input" : "Voice input off", {
-                  description: next ? "Demo: tap again to stop." : "Demo: no audio sent.",
-                })
-                return next
-              })
-            }}
-            onUploadClick={() =>
-              toast.message("Upload file", { description: "Demo — pick a file from your device." })
-            }
-          />
+          <div className="rounded-[22px] bg-gradient-to-r from-violet-400/90 via-fuchsia-300/80 to-teal-400/90 p-[1.5px]">
+            <div className="overflow-hidden rounded-[20.5px] bg-white dark:bg-zinc-950">
+              <MindChatComposer
+                variant="thread"
+                className="max-w-none !rounded-none !border-0"
+                value=""
+                onChange={() => {}}
+                onSubmit={() => openNoteChat()}
+                readOnly
+                onActivate={() => openNoteChat()}
+                placeholder="Ask about this recording"
+                onVoiceToggle={() => openNoteChat()}
+                onUploadClick={() => openNoteChat()}
+                ariaLabel="Ask Mindar about this recording"
+              />
+            </div>
+          </div>
         </div>
       </div>
       )}
@@ -1550,17 +1687,21 @@ export function NoteDetail({
             <button
               type="button"
               onClick={() => {
-                if (selectedTemplate) {
-                  setShowCreateTemplateSheet(false)
-                  setShowTemplateConfirm(false)
-                  setShowTemplatePage(false)
+                if (!selectedTemplate) {
+                  toast.error("Choose a template")
+                  return
                 }
+                setGenerationMode("custom")
+                setShowCreateTemplateSheet(false)
+                setShowTemplateConfirm(false)
+                setShowTemplatePage(false)
+                openAssignFolderPicker("generate")
               }}
               disabled={!selectedTemplate}
               className={cn(
                 "w-full rounded-xl py-4 text-base font-medium transition-colors",
                 selectedTemplate
-                  ? cn("text-white", "mind-btn rounded-lg")
+                  ? cn("text-white", mx.brandCta)
                   : "bg-stone-200 text-zinc-400"
               )}
             >
@@ -1714,125 +1855,6 @@ export function NoteDetail({
         </div>
       )}
 
-      {/* Share & export sheet */}
-      {showShareOptions && (
-        <div className="absolute inset-0 z-[45]">
-          <button
-            type="button"
-            className="absolute inset-0 bg-zinc-900/25 backdrop-blur-[2px]"
-            aria-label="Close menu"
-            onClick={() => setShowShareOptions(false)}
-          />
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[1.25rem] max-h-[88vh] flex flex-col shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.15)] animate-in slide-in-from-bottom duration-300">
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 rounded-full bg-zinc-200" />
-            </div>
-            <div className="px-5 pb-1 flex items-center justify-between border-b border-zinc-100">
-              <span className="text-base font-semibold text-zinc-900">Share & export</span>
-              <button
-                type="button"
-                onClick={() => setShowShareOptions(false)}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 text-zinc-500"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" strokeWidth={1.75} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4 pb-8">
-              <div className="mb-5">
-                <h3 className="text-[13px] font-semibold text-zinc-900 mb-2">Share</h3>
-                <div className="flex flex-col gap-1.5">
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => {
-                      setShareLinkStep("options")
-                      setShareLinkPick({
-                        recording: false,
-                        transcript: false,
-                        marks: true,
-                        summary: false,
-                      })
-                      setShowShareOptions(false)
-                      setShowShareLinkModal(true)
-                    }}
-                  >
-                    <Link2 className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Share link</span>
-                    <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-5">
-                <h3 className="text-[13px] font-semibold text-zinc-900 mb-2">Copy to clipboard</h3>
-                <div className="flex flex-col gap-1.5">
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowShareOptions(false)}
-                  >
-                    <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Transcript</span>
-                    <Copy className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowShareOptions(false)}
-                  >
-                    <Flag className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Marks</span>
-                    <Copy className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowShareOptions(false)}
-                  >
-                    <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Note</span>
-                    <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-2">
-                <h3 className="text-[13px] font-semibold text-zinc-900 mb-2">Export file</h3>
-                <div className="flex flex-col gap-1.5">
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowShareOptions(false)}
-                  >
-                    <Mic className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Recording</span>
-                    <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowShareOptions(false)}
-                  >
-                    <FileText className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Transcript</span>
-                    <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  </button>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-zinc-50/90 active:bg-zinc-100/80 transition-colors"
-                    onClick={() => setShowShareOptions(false)}
-                  >
-                    <Flag className="w-5 h-5 text-zinc-500 shrink-0" strokeWidth={1.5} />
-                    <span className="flex-1 text-[15px] text-zinc-900">Marks</span>
-                    <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" strokeWidth={1.75} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Share link: scope + copy / then international social */}
       {showShareLinkModal && (
@@ -1952,7 +1974,7 @@ export function NoteDetail({
                     Opens the platform’s share page in a new tab (X, Facebook, WhatsApp, LinkedIn, and more).
                   </p>
                   <SocialShareRow
-                    title={note?.title || "Mind note"}
+                    title={note?.title || "Mindar note"}
                     body={(() => {
                       const shareUrl = `https://mind.app/s/n/${note?.id ?? 0}`
                       const labels: Record<keyof typeof shareLinkPick, string> = {
@@ -1988,195 +2010,96 @@ export function NoteDetail({
         </div>
       )}
 
-      {/* Library picker */}
-      {showKBSheet && (
-        <div className="absolute inset-0 z-50">
-          <div 
-            className="absolute inset-0 bg-zinc-900/25 backdrop-blur-sm"
-            onClick={() => !isTransferring && setShowKBSheet(false)}
-          />
-          
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[70%] flex flex-col animate-in slide-in-from-bottom duration-300">
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 bg-stone-300 rounded-full" />
-            </div>
-            
-            <div className="px-5 pb-4 flex items-center justify-between border-b border-stone-100">
-              <h3 className="text-lg font-semibold text-zinc-900">Choose library</h3>
-              <button 
-                onClick={() => !isTransferring && setShowKBSheet(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100"
-              >
-                <X className="w-5 h-5 text-zinc-500" />
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {/* Suggested */}
-              <div className="flex items-center gap-2 text-sm mb-3">
-                <Sparkles className="w-4 h-4 text-zinc-500" />
-                <span className="text-zinc-900 font-medium">Suggested</span>
-                <span className="text-xs text-zinc-400">Matched from content</span>
-              </div>
-              <div className="space-y-2 mb-6">
-                {recommendedKBs.map((kb) => {
-                  const KbIcon = knowledgeBaseIconForTitle(kb.name, kb.reason)
-                  return (
-                  <button
-                    key={`rec-${kb.id}`}
-                    onClick={() => setSelectedKB(kb.id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
-                      selectedKB === kb.id
-                        ? "border-zinc-500 bg-zinc-50/60"
-                        : "border-stone-200 bg-white dark:bg-zinc-950 hover:border-zinc-200/80"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center",
-                      kb.color
-                    )}>
-                      <KbIcon className="w-5 h-5 text-white" strokeWidth={2} aria-hidden />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-zinc-900">{kb.name}</span>
-                        <span className="px-1.5 py-0.5 bg-stone-200/90 text-zinc-700 text-[10px] rounded font-medium">{kb.match}% match</span>
-                      </div>
-                      <div className="text-xs text-zinc-500">{kb.reason}</div>
-                    </div>
-                    {selectedKB === kb.id && (
-                      <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </button>
-                  )
-                })}
-              </div>
+      <NoteShareLibrarySheet
+        open={showNoteShareSheet}
+        onClose={() => setShowNoteShareSheet(false)}
+        noteTitle={note?.title ?? "Untitled note"}
+        notePreview={summaryOverview}
+        noteId={note?.id}
+        presentation={noteSharePresentation}
+        removeFromMemos={removeFromMemosOnSave}
+        onRemoveFromMemosChange={setRemoveFromMemosOnSave}
+        onSaveToLibrary={handleMoveNoteToLibrary}
+      />
 
-              {/* Recent */}
-              <div className="flex items-center gap-2 text-sm text-zinc-500 mb-3">
-                <Clock className="w-4 h-4" />
-                <span>Recent</span>
-              </div>
-              <div className="space-y-2 mb-6">
-                {knowledgeBases.filter(kb => kb.recent).map((kb) => {
-                  const KbIcon = knowledgeBaseIconForTitle(kb.name, kb.category)
-                  return (
-                  <button
-                    key={kb.id}
-                    onClick={() => setSelectedKB(kb.id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
-                      selectedKB === kb.id
-                        ? "border-zinc-500 bg-zinc-50/40"
-                        : "border-stone-100 hover:border-zinc-200/60"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center",
-                      kb.color
-                    )}>
-                      <KbIcon className="w-5 h-5 text-white" strokeWidth={2} aria-hidden />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="font-medium text-zinc-900">{kb.name}</div>
-                      <div className="text-xs text-zinc-500">{kb.category} · {kb.count} items</div>
-                    </div>
-                    {selectedKB === kb.id && (
-                      <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </button>
-                  )
-                })}
-              </div>
+      <NoteRecordingActionsSheet
+        open={showRecordingActionsSheet}
+        onClose={() => setShowRecordingActionsSheet(false)}
+        onMoveToFolder={() => openAssignFolderPicker("assign")}
+        onShareLink={() => {
+          setShareLinkStep("options")
+          setShowShareLinkModal(true)
+        }}
+        onCopyLink={() => {
+          const shareUrl = `https://mind.app/s/n/${note?.id ?? 0}`
+          void navigator.clipboard?.writeText(shareUrl).then(
+            () => toast.success("Link copied"),
+            () => toast.message("Copy link", { description: shareUrl })
+          )
+        }}
+        onExportLongImage={() =>
+          toast.message("Long image", { description: "Generating shareable image (demo)." })
+        }
+        onExportPdf={() => toast.message("Export PDF", { description: "Preparing PDF export (demo)." })}
+        onFindReplace={() => {
+          setSegment("source")
+          setShowFindReplace(true)
+        }}
+        onRetranscribe={() => {
+          toast.message("Retranscribing", {
+            description: "Queued a fresh pass over the audio (demo).",
+          })
+        }}
+        onNameSpeaker={() => {
+          setAutoLabelSpeakers(true)
+          toast.message("Name speakers", {
+            description: "Turn on speaker labels in the next generate pass (demo).",
+          })
+        }}
+        onMoveToTrash={handleMoveRecordingToTrash}
+      />
 
-              <div className="text-sm text-zinc-500 mb-3">All libraries</div>
-              <div className="space-y-2">
-                {knowledgeBases.filter(kb => !kb.recent).map((kb) => {
-                  const KbIcon = knowledgeBaseIconForTitle(kb.name, kb.category)
-                  return (
-                  <button
-                    key={kb.id}
-                    onClick={() => setSelectedKB(kb.id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
-                      selectedKB === kb.id
-                        ? "border-zinc-500 bg-zinc-50/40"
-                        : "border-stone-100 hover:border-zinc-200/60"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center",
-                      kb.color
-                    )}>
-                      <KbIcon className="w-5 h-5 text-white" strokeWidth={2} aria-hidden />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="font-medium text-zinc-900">{kb.name}</div>
-                      <div className="text-xs text-zinc-500">{kb.category} · {kb.count} items</div>
-                    </div>
-                    {selectedKB === kb.id && (
-                      <div className="w-6 h-6 rounded-full bg-zinc-500 flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </button>
-                  )
-                })}
-              </div>
-            </div>
-            
-            <div className="p-5 border-t border-stone-100 flex gap-3">
-              <button
-                onClick={() => setShowKBSheet(false)}
-                disabled={isTransferring}
-                className="flex-1 py-3 rounded-xl border border-stone-200 text-zinc-700 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleTransfer}
-                disabled={!selectedKB || isTransferring}
-                className={cn(
-                  "flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2",
-                  selectedKB && !transferComplete
-                    ? "bg-zinc-500 text-white hover:bg-zinc-600"
-                    : transferComplete
-                    ? "bg-zinc-600 text-white"
-                    : "bg-stone-200 text-zinc-400"
-                )}
-              >
-                {isTransferring ? (
-                  <span className="flex items-center gap-2">
-                    <span className="flex gap-1" aria-hidden>
-                      <span className="w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse [animation-delay:150ms]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-white/50 animate-pulse [animation-delay:300ms]" />
-                    </span>
-                    Moving to library…
-                  </span>
-                ) : transferComplete ? (
-                  <>
-                    <Check className="w-5 h-5" />
-                    Done
-                  </>
-                ) : (
-                  "Confirm move"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <NoteAiChatOverlay
+        open={showAgentChat}
+        variant="recording"
+        onClose={() => {
+          setShowAgentChat(false)
+          setChatInitialPrompt(undefined)
+        }}
+        context={
+          showAgentChat && note
+            ? buildNoteChatLaunchContext(note, chatInitialPrompt)
+            : null
+        }
+        requireAuthThen={requireAuthThen}
+        onNavigateToKnowledge={onNavigateToKnowledge}
+      />
+
+      <NoteFolderPickerSheet
+        open={showFolderPicker}
+        onClose={() => setShowFolderPicker(false)}
+        folders={folders}
+        onSelectFolder={completeFolderSelection}
+        onCreateFolder={() => {
+          setCreateFolderFromPicker(true)
+          setShowCreateFolderSheet(true)
+        }}
+        title={folderPickerMode === "generate" ? "Choose a folder" : "Save to folder"}
+        subtitle={
+          folderPickerMode === "generate" && selectedTemplate
+            ? `Then generate with “${selectedTemplate.name}”`
+            : undefined
+        }
+      />
+
 
       {showCreateFolderSheet && note != null && onAssignNoteToNewFolder && (
         <CreateFolderSheet
           open={showCreateFolderSheet}
-          onClose={() => setShowCreateFolderSheet(false)}
+          onClose={() => {
+            setShowCreateFolderSheet(false)
+            setCreateFolderFromPicker(false)
+          }}
           onCreate={(payload) => {
             const id = `folder-${Date.now()}`
             onAssignNoteToNewFolder(note.id, {
@@ -2185,9 +2108,17 @@ export function NoteDetail({
               color: payload.color,
               iconKey: payload.iconKey,
             })
+            setShowCreateFolderSheet(false)
+            if (createFolderFromPicker) {
+              completeFolderSelection(id)
+              setCreateFolderFromPicker(false)
+            } else {
+              toast.success("Folder created")
+            }
           }}
         />
       )}
+
     </div>
   )
 }

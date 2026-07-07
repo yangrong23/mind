@@ -91,7 +91,7 @@
 
 | 功能 | 行为 | 实现状态 | 后端依赖 |
 |------|------|----------|----------|
-| 设备卡片 | Mind Recorder、SN、电量/存储/固件静态展示 | Mock | 设备 telemetry（9） |
+| 设备卡片 | Mindar Recorder、SN、电量/存储/固件静态展示 | Mock | 设备 telemetry（9） |
 | 连接 / 断开 | 切换 `isDeviceConnected` | 本地 | 真实蓝牙由客户端 SDK |
 | Sync now | 按钮无请求 | 占位 | 同步游标（9） |
 
@@ -106,7 +106,7 @@
 | 关闭 | `onClose` → 回 Tab | 已接 | — |
 | 计时 | 每秒递增，暂停时停止 | 本地 | 录音时长元数据（6） |
 | 波形 | 随机高度动画 | 视觉 mock | 真实波形可选（6） |
-| 设备条 | Mind Recorder + Connected 静态 | Mock | 设备通道（9） |
+| 设备条 | Mindar Recorder + Connected 静态 | Mock | 设备通道（9） |
 | 实时转写区 | 按 `duration` 切换预设句子 + 关键词标签 | Mock | 流式 ASR（10） |
 | Mark | 书签记录当前秒 | 本地 state | 时间戳与笔记绑定（10） |
 | Pause / Resume | 暂停计时与波形 | 本地 | 采集控制 |

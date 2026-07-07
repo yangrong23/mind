@@ -49,7 +49,7 @@ function Row({
 export function MindHardwareDetail({
   open,
   onBack,
-  deviceName = "Mind Note Pro",
+  deviceName = "Mindar Note Pro",
   batteryPercent,
   onDisconnect,
 }: MindHardwareDetailProps) {
@@ -103,29 +103,6 @@ export function MindHardwareDetail({
             value="v1.4"
             action
             onClick={() => toast.message("Firmware", { description: "Check for updates (demo)." })}
-          />
-        </div>
-
-        <div className="mt-2 border-y border-zinc-100/90 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="px-4 pb-1 pt-3 text-[16px] font-semibold text-zinc-900 dark:text-zinc-50">Recording</p>
-          <Row
-            label="Live capture"
-            action
-            onClick={() => toast.message("Live capture", { description: "Recording mode settings (demo)." })}
-          />
-          <Row
-            label="Phone call capture"
-            action
-            onClick={() => toast.message("Phone call", { description: "Call recording setup (demo)." })}
-          />
-        </div>
-
-        <div className="mt-2 border-y border-zinc-100/90 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="px-4 pb-1 pt-3 text-[16px] font-semibold text-zinc-900 dark:text-zinc-50">Transfer</p>
-          <Row
-            label="Transfer to Mind app"
-            action
-            onClick={() => toast.message("Transfer", { description: "Sync files to this device (demo)." })}
           />
         </div>
 

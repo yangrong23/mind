@@ -3,18 +3,18 @@
 import { cn } from "@/lib/utils"
 import type { FactoryModalKind } from "@/components/mind-v2/content-factory-modals"
 import {
-  MINDAR_FACTORY_ITEMS,
-  MINDAR_FACTORY_RAIL_CARD_WIDTH,
-  MINDAR_FACTORY_RAIL_CARD_WIDTH_COMPACT,
-  MindarFactoryCard,
-} from "@/components/mind-v2/mindar-factory-card"
+  MINDER_FACTORY_ITEMS,
+  MINDER_FACTORY_RAIL_CARD_WIDTH,
+  MINDER_FACTORY_RAIL_CARD_WIDTH_COMPACT,
+  MinderFactoryCard,
+} from "@/components/mind-v2/minder-factory-card"
 
 export type FactoryRailItem = {
   id: FactoryModalKind
   label: string
 }
 
-export const CHAT_FACTORY_RAIL_ITEMS: FactoryRailItem[] = MINDAR_FACTORY_ITEMS.map((item) => ({
+export const CHAT_FACTORY_RAIL_ITEMS: FactoryRailItem[] = MINDER_FACTORY_ITEMS.map((item) => ({
   id: item.id,
   label: item.label,
 }))
@@ -23,8 +23,8 @@ export type MindChatFactoryRailProps = {
   onSelect: (id: FactoryRailItem["id"]) => void
   selectedId?: FactoryModalKind | null
   className?: string
-  /** Shorter chips for tight footers (e.g. KB article detail) */
-  density?: "default" | "compact"
+  /** Shorter chips for tight footers; `tight` = GenFlow-style pills above composer in thread */
+  density?: "default" | "compact" | "tight"
   /**
    * `grid` — agent home under composer: names visible, 3×2 even grid aligned to input width.
    * `scroll` — horizontal chips in chat footers.
@@ -38,9 +38,9 @@ export function resolveFactoryRailSelection(id: FactoryRailItem["id"]): FactoryM
   return id
 }
 
-const RAIL_ICON_BY_ID = Object.fromEntries(MINDAR_FACTORY_ITEMS.map((item) => [item.id, item.icon])) as Record<
+const RAIL_ICON_BY_ID = Object.fromEntries(MINDER_FACTORY_ITEMS.map((item) => [item.id, item.icon])) as Record<
   FactoryRailItem["id"],
-  (typeof MINDAR_FACTORY_ITEMS)[number]["icon"]
+  (typeof MINDER_FACTORY_ITEMS)[number]["icon"]
 >
 
 export function MindChatFactoryRail({
@@ -50,16 +50,18 @@ export function MindChatFactoryRail({
   density = "default",
   layout = "scroll",
   railStyle = "card",
-}: MindChatFactoryRailProps) {
-  const compact = density === "compact"
+  items = CHAT_FACTORY_RAIL_ITEMS,
+}: MindChatFactoryRailProps & { items?: FactoryRailItem[] }) {
+  const compact = density === "compact" || density === "tight"
+  const tight = density === "tight"
   const isGrid = layout === "grid"
   const isPill = !isGrid && railStyle === "pill"
   const isInline = !isGrid && railStyle === "inline"
 
-  const cards = CHAT_FACTORY_RAIL_ITEMS.map((item) => {
+  const cards = items.map((item) => {
     const Icon = RAIL_ICON_BY_ID[item.id]
     return (
-      <MindarFactoryCard
+      <MinderFactoryCard
         key={item.id}
         variant="rail"
         railLayout={isGrid ? "grid" : "scroll"}
@@ -76,8 +78,8 @@ export function MindChatFactoryRail({
             : isPill || isInline
               ? "shrink-0"
               : compact
-                ? MINDAR_FACTORY_RAIL_CARD_WIDTH_COMPACT
-                : MINDAR_FACTORY_RAIL_CARD_WIDTH
+                ? MINDER_FACTORY_RAIL_CARD_WIDTH_COMPACT
+                : MINDER_FACTORY_RAIL_CARD_WIDTH
         }
       />
     )
@@ -92,7 +94,15 @@ export function MindChatFactoryRail({
             : cn(
                 "scrollbar-hide flex overflow-x-auto",
                 isInline ? "gap-0.5 py-0" : "px-0.5",
-                isPill ? "gap-1.5 pb-0.5 pt-0" : isInline ? "" : compact ? "gap-1 pb-1 pt-0" : "gap-1.5 pb-1.5 pt-0.5"
+                isPill
+                  ? tight
+                    ? "gap-1.5 pb-0.5 pt-0"
+                    : "gap-1.5 pb-1 pt-0"
+                  : isInline
+                    ? ""
+                    : compact
+                      ? "gap-1 pb-1 pt-0"
+                      : "gap-1.5 pb-1.5 pt-0.5"
               )
         )}
         role="toolbar"

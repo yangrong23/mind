@@ -12,7 +12,7 @@ const appFont = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Mind — Intelligent knowledge workspace',
+  title: 'Mindar — Intelligent knowledge workspace',
   description: 'Voice capture · Knowledge graph · Agent collaboration',
   generator: 'v0.app',
   icons: {
@@ -26,8 +26,8 @@ export const metadata: Metadata = {
         media: '(prefers-color-scheme: dark)',
       },
       {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: '/mindar-logo.png',
+        type: 'image/png',
       },
     ],
     apple: '/apple-icon.png',

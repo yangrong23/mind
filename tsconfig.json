@@ -36,8 +36,6 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "external-web-bundle",
-    "mind-api-frontend"
+    "node_modules"
   ]
 }

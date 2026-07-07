@@ -15,7 +15,7 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
   const [duration, setDuration] = useState(0)
   const [bookmarks, setBookmarks] = useState<number[]>([])
   const [waveformData, setWaveformData] = useState<number[]>(Array(50).fill(0.2))
-  const [isDeviceConnected, setIsDeviceConnected] = useState(true)
+  const [isDeviceConnected, setIsDeviceConnected] = useState(false)
   const [showDeviceSheet, setShowDeviceSheet] = useState(false)
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export function RecordingPage({ onStop, onClose }: RecordingPageProps) {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-medium text-white">Mind Recorder</span>
+                <span className="text-sm font-medium text-white">Mindar Recorder</span>
                 <span className="rounded bg-zinc-500 px-1.5 py-0.5 text-[10px] text-white">
                   {isDeviceConnected ? "Connected" : "Disconnected"}
                 </span>

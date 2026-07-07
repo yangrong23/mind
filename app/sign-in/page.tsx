@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { MindAuthWeb, type MindAuthResult } from "@/components/mind-v2/mind-auth-web"
-import {
-  PENDING_ONBOARDING_SESSION_KEY,
-  readOnboardingComplete,
-} from "@/lib/web-library-onboarding"
+import { MindAuthScreens } from "@/components/mind-v2/mind-auth-screens"
 
 const DEMO_AUTH_SESSION_KEY = "mind-v2-demo-auth"
 
@@ -17,7 +13,7 @@ export default function SignInPage() {
   useEffect(() => {
     try {
       if (sessionStorage.getItem(DEMO_AUTH_SESSION_KEY) === "1") {
-        router.replace("/web")
+        router.replace("/")
         return
       }
     } catch {
@@ -26,21 +22,22 @@ export default function SignInPage() {
     setReady(true)
   }, [router])
 
-  function handleAuthenticated(result?: MindAuthResult) {
+  function handleAuthenticated() {
     try {
       sessionStorage.setItem(DEMO_AUTH_SESSION_KEY, "1")
-      if (result?.isNewSignup && !readOnboardingComplete()) {
-        sessionStorage.setItem(PENDING_ONBOARDING_SESSION_KEY, "1")
-      }
     } catch {
       /* ignore */
     }
-    router.replace("/web")
+    router.replace("/")
   }
 
   if (!ready) {
-    return <div className="min-h-screen bg-[#f5f5f4]" aria-hidden />
+    return <div className="min-h-screen bg-[var(--mind-page-bg)]" aria-hidden />
   }
 
-  return <MindAuthWeb authIntent="signup" onAuthenticated={handleAuthenticated} />
+  return (
+    <div className="flex min-h-screen flex-col bg-[var(--mind-page-bg)]">
+      <MindAuthScreens onAuthenticated={handleAuthenticated} />
+    </div>
+  )
 }

@@ -16,7 +16,6 @@ export type KbAgentSuggestionInput = {
   coverVariant?: LibraryCoverVariant
   isPublicKb?: boolean
   recommendedQuestions?: string[]
-  exampleQuestions?: string[]
 }
 
 function truncateLabel(text: string, max = 42) {
@@ -92,15 +91,6 @@ const GENERIC_PUBLIC: KbAgentSuggestion[] = [
 ]
 
 export function getKbAgentSuggestions(input: KbAgentSuggestionInput): KbAgentSuggestion[] {
-  const fromPublisher = input.exampleQuestions?.filter(Boolean).slice(0, 4)
-  if (fromPublisher?.length) {
-    return fromPublisher.map((q, i) => ({
-      id: `pub-${i}`,
-      label: truncateLabel(q),
-      prompt: q,
-    }))
-  }
-
   const fromTeam = input.recommendedQuestions?.filter(Boolean).slice(0, 4)
   if (fromTeam?.length) {
     return fromTeam.map((q, i) => ({

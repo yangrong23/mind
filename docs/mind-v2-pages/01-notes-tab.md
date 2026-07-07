@@ -83,7 +83,7 @@
 | `duration` | string? | 如 `16 min` |
 | `preview` | string | 摘要一行 |
 | `status` | enum | pending / analyzed / transferred |
-| `source` | string? | 如 Mind Recorder |
+| `source` | string? | 如 Mindar Recorder |
 | `highlightCount` | number? | 高亮条数 |
 | `folderId` | string? | 文件夹 ID |
 | `archived` | boolean | 是否归档 |

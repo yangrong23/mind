@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sync this repo (Mindar web UI root) → MedrixAI/ui-demo, branch ui-init
+# Sync this repo (Minder web UI root) → MedrixAI/ui-demo, branch ui-init
 # Prereq: SSH key with push access to git@github.com:MedrixAI/ui-demo.git
 # Usage: from repo root —  ./scripts/sync-to-ui-demo.sh [path-to-ui-demo-clone]
 set -euo pipefail
@@ -36,6 +36,6 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
-git commit -m "Sync full Mindar web UI from local workspace ($(date -u +%Y-%m-%d))."
+git commit -m "Sync full Minder web UI from local workspace ($(date -u +%Y-%m-%d))."
 git push origin ui-init
 echo "Done. See: https://github.com/MedrixAI/ui-demo/tree/ui-init"

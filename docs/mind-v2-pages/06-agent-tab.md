@@ -84,10 +84,10 @@
 
 | # | 方法 | 路径 | 说明 |
 |---|------|------|------|
-| 3.1 | `POST` | `/api/v1/mindar/quick-send` | 首页发送：创建 session + 首条消息 + 排队回复 |
+| 3.1 | `POST` | `/api/v1/minder/quick-send` | 首页发送：创建 session + 首条消息 + 排队回复 |
 | 3.2 | `POST` | `/api/v1/chat/sessions` | 或显式创建会话后跳转 `agent-chat` |
 
-**`POST mindar/quick-send` 请求**
+**`POST minder/quick-send` 请求**
 
 ```json
 {
@@ -106,8 +106,8 @@
 | # | 方法 | 路径 | 说明 |
 |---|------|------|------|
 | 4.1 | `GET` | `/api/v1/libraries?scope=agent-pick` | KB 多选 Sheet 列表 |
-| 4.2 | `PUT` | `/api/v1/users/me/mindar-library-scope` | 持久化 `libraryLinkMode` + `pickedKbIds` |
-| 4.3 | `GET` | `/api/v1/users/me/mindar-library-scope` | 读取 linkSummary 展示 |
+| 4.2 | `PUT` | `/api/v1/users/me/minder-library-scope` | 持久化 `libraryLinkMode` + `pickedKbIds` |
+| 4.3 | `GET` | `/api/v1/users/me/minder-library-scope` | 读取 linkSummary 展示 |
 
 ### 5. 附件上传（`+`）
 
@@ -127,7 +127,7 @@
 
 | # | 方法 | 路径 | 说明 |
 |---|------|------|------|
-| 7.1 | `POST` | `/api/v1/mindar/factory/handoff` | `openStudioWithKind`：带库范围创建工厂任务 |
+| 7.1 | `POST` | `/api/v1/minder/factory/handoff` | `openStudioWithKind`：带库范围创建工厂任务 |
 | 7.2 | 见 `05` §6 | 工厂任务 CRUD |
 
 **handoff 请求**：`{ "factoryKind", "libraryLinkMode", "pickedLibraryIds", "settings?" }`

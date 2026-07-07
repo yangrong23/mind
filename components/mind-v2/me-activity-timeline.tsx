@@ -1,41 +1,17 @@
 "use client"
 
-import { useEffect, useId, useMemo, useState, type CSSProperties } from "react"
-import { ArrowRight, ChevronRight, Share2, Sparkles } from "lucide-react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
+import { ArrowRight, ChevronRight, Share2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import {
-  activityHeatmapCellClass,
-  activityHeatmapCellClassTiny,
-  activityTimelineDotClass,
-} from "@/lib/activity-heatmap-classes"
-import { web } from "@/components/mind-v2/web-design"
-import { HubItemThumb } from "@/components/mind-v2/mind-media-art"
-import { hubItemKindFromLabel } from "@/lib/product-media"
+import { mx, mxHeatmapCell, mxHeatmapCellTiny } from "@/lib/medrix-design-tokens"
 import {
   buildActivityTimelineDay,
-  getTodayTimelineDay,
   groupTimelineByMonth,
+  groupTimelineByYear,
   type ActivityTimelineDay,
 } from "@/lib/mock-activity-timeline"
-import {
-  daysInMonth,
-  daysInYear,
-  monthGroupsFromDays,
-  type DiaryPeriod,
-  uniqueYearsFromDays,
-} from "@/lib/me-diary-period"
-import {
-  MeDiaryDayTimeline,
-  MeDiaryMonthTimeline,
-  MeDiaryPeriodTabs,
-  MeDiaryYearTimeline,
-} from "@/components/mind-v2/me-diary-period-nav"
 import { buildDayTimelineBrief } from "@/lib/daily-brief-content"
 import { DailyBriefView } from "@/components/mind-v2/daily-brief-view"
-import { DAILY_REVIEW_HEADLINE } from "@/components/mind-v2/me-daily-review"
-
-const DIARY_DAY_SCROLLER_MAX = 14
-const DIARY_MONTH_DAY_PREVIEW = 5
 
 export type MeActivityTimelineProps = {
   days: ActivityTimelineDay[]
@@ -43,14 +19,10 @@ export type MeActivityTimelineProps = {
   initialActivity: number
   onClose: () => void
   onShare?: (day: ActivityTimelineDay) => void
+  onOutputFileClick?: (file: { id: string; title: string; kindLabel: string }) => void
   displayName?: string
-  webLayout?: boolean
-  /** `overlay` — mobile sheet; `page` — web full main column */
-  presentation?: "overlay" | "page"
   /** Mobile: open full day list first; day detail after tapping a row */
   listFirst?: boolean
-  /** Web: list row opens a dedicated day route instead of inline detail */
-  onNavigateToDay?: (day: ActivityTimelineDay) => void
   getUploads?: (isoDate: string, activity: number) => {
     id: string
     title: string
@@ -94,32 +66,45 @@ function TimelineTitleBubble({
   return (
     <div
       key={`bubble-${day.id}-${activeIdx}`}
-      className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 flex w-max max-w-[min(188px,68vw)] -translate-x-1/2 flex-col items-center"
+      className={cn(
+        "pointer-events-none absolute bottom-full left-1/2 z-30 flex w-max -translate-x-1/2 flex-col items-center",
+        compact ? "mb-1 max-w-[min(140px,62vw)]" : "mb-1.5 max-w-[min(188px,68vw)]"
+      )}
     >
       <div className="animate-[me-timeline-bubble-float_3s_ease-in-out_infinite]">
         <div
           className={cn(
-            "relative overflow-hidden rounded-[1.1rem] px-3.5 py-2",
-            "border border-sky-200/60 bg-white/95",
-            "backdrop-blur-md dark:border-sky-500/25 dark:bg-zinc-900/92",
+            "relative overflow-hidden",
+            compact ? "rounded-[0.85rem] px-2.5 py-1.5" : "rounded-[1.1rem] px-3.5 py-2",
+            "border border-sky-200/70 bg-white/95 shadow-[0_10px_32px_-8px_rgba(56,189,248,0.45),0_4px_14px_rgba(15,23,42,0.08)]",
+            "backdrop-blur-md dark:border-sky-500/25 dark:bg-zinc-900/92 dark:shadow-[0_12px_36px_-10px_rgba(56,189,248,0.35)]",
             "animate-[me-timeline-title-bubble_2.8s_cubic-bezier(0.22,1,0.36,1)_forwards]"
           )}
         >
         <span
-          className="pointer-events-none absolute -left-3 -top-3 h-10 w-10 rounded-full bg-sky-300/20 blur-md"
+          className={cn(
+            "pointer-events-none absolute rounded-full bg-sky-300/25 blur-md",
+            compact ? "-left-2 -top-2 h-7 w-7" : "-left-3 -top-3 h-10 w-10"
+          )}
           aria-hidden
         />
         <span
-          className="pointer-events-none absolute -right-2 bottom-0 h-8 w-8 rounded-full bg-blue-300/15 blur-md"
+          className={cn(
+            "pointer-events-none absolute rounded-full bg-teal-300/20 blur-md",
+            compact ? "-right-1 bottom-0 h-5 w-5" : "-right-2 bottom-0 h-8 w-8"
+          )}
           aria-hidden
         />
         <span
-          className="absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/70 to-transparent"
+          className={cn(
+            "absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-sky-300/80 to-transparent",
+            compact && "inset-x-2"
+          )}
           aria-hidden
         />
         <p
           className={cn(
-            "relative text-center font-semibold tracking-[0.06em] text-mind/90 dark:text-mind-muted/90",
+            "relative text-center font-semibold tracking-[0.06em] text-sky-600/90 dark:text-sky-300/90",
             compact ? "text-[8px]" : "text-[10px]"
           )}
         >
@@ -127,8 +112,8 @@ function TimelineTitleBubble({
         </p>
         <p
           className={cn(
-            "relative mt-0.5 line-clamp-2 text-center font-semibold text-zinc-800 dark:text-zinc-50",
-            compact ? "text-[9px] leading-[1.3]" : "text-[11px] leading-[1.35]"
+            "relative mt-0.5 line-clamp-2 text-center font-semibold leading-[1.35] text-zinc-800 dark:text-zinc-50",
+            compact ? "text-[9px]" : "text-[11px]"
           )}
         >
           {day.title}
@@ -136,11 +121,19 @@ function TimelineTitleBubble({
         </div>
       </div>
       <span
-        className="relative -mt-px flex h-2.5 w-2.5 items-center justify-center"
+        className={cn(
+          "relative -mt-px flex items-center justify-center",
+          compact ? "h-2 w-2" : "h-2.5 w-2.5"
+        )}
         aria-hidden
       >
-        <span className="absolute h-2.5 w-2.5 rotate-45 rounded-[2px] border border-sky-200/70 bg-white/95 dark:border-sky-500/30 dark:bg-zinc-900/95" />
-        <span className="h-1 w-1 rounded-full bg-sky-400/70 blur-[1px]" />
+        <span
+          className={cn(
+            "absolute rotate-45 rounded-[2px] border border-sky-200/80 bg-white/95 shadow-sm dark:border-sky-500/30 dark:bg-zinc-900/95",
+            compact ? "h-2 w-2" : "h-2.5 w-2.5"
+          )}
+        />
+        <span className="h-1 w-1 rounded-full bg-sky-400/80 blur-[1px]" />
       </span>
     </div>
   )
@@ -153,9 +146,12 @@ export function MeTimelineHeatmapGrid({
   cols = 7,
   onSelectDay,
   sequentialTitles = false,
+  showTitleBubbles = true,
+  bare = false,
   size = "md",
-  embed = false,
-  fullWidth = false,
+  selectedDayId,
+  onFlowActiveDayChange,
+  squareGrid = false,
   className,
 }: {
   days: ActivityTimelineDay[]
@@ -163,16 +159,25 @@ export function MeTimelineHeatmapGrid({
   cols?: number
   onSelectDay?: (day: ActivityTimelineDay) => void
   sequentialTitles?: boolean
-  size?: "xs" | "sm" | "md" | "lg"
-  embed?: boolean
-  /** Me web left panel — use full column width instead of narrow embed strip */
-  fullWidth?: boolean
+  /** Floating title bubbles on grid cells — off when summary strip is shown above */
+  showTitleBubbles?: boolean
+  /** Skip outer card chrome when nested inside MeActivityFlowCard */
+  bare?: boolean
+  size?: "md" | "lg" | "compact" | "xs" | "xxs" | "micro"
+  /** Highlights the cell for this day id */
+  selectedDayId?: string
+  /** Fired when sequential bubble cycle advances to a new day */
+  onFlowActiveDayChange?: (day: ActivityTimelineDay) => void
+  /** Force equal rows/cols so the full heatmap reads as a square */
+  squareGrid?: boolean
   className?: string
 }) {
+  const effectiveCellCount = squareGrid ? cols * cols : cellCount
   const gridDays = useMemo(
-    () => [...days.slice(0, cellCount)].reverse(),
-    [days, cellCount]
+    () => [...days.slice(0, effectiveCellCount)].reverse(),
+    [days, effectiveCellCount]
   )
+  const contentRows = Math.max(1, Math.ceil(gridDays.length / cols))
 
   const bubbleEligibleIndices = useMemo(
     () =>
@@ -197,79 +202,128 @@ export function MeTimelineHeatmapGrid({
   }, [sequentialTitles, bubbleEligibleIndices.length])
 
   const activeGridIndex = bubbleEligibleIndices[activeSlot] ?? -1
+  const flowActiveDay = activeGridIndex >= 0 ? gridDays[activeGridIndex] ?? null : null
 
-  const compactGrid = embed || size !== "lg"
+  useEffect(() => {
+    if (sequentialTitles && flowActiveDay && onFlowActiveDayChange) {
+      onFlowActiveDayChange(flowActiveDay)
+    }
+  }, [sequentialTitles, flowActiveDay, onFlowActiveDayChange])
+
   const cellPx =
     size === "lg"
-      ? "min-h-[14px]"
-      : size === "md"
-        ? "min-h-[11px]"
-        : size === "sm"
-          ? "min-h-[8px]"
-          : size === "xs"
-            ? "min-h-[5px]"
-            : "min-h-[8px]"
-  const gridGap =
-    size === "lg"
-      ? "gap-[3px]"
-      : size === "md"
-        ? "gap-[2px]"
+      ? "min-h-[32px]"
+      : size === "compact"
+        ? "min-h-[18px]"
         : size === "xs"
-          ? "gap-[1px]"
-          : "gap-[1.5px]"
-  const cellRound =
-    size === "lg" ? "rounded-[4px]" : size === "xs" ? "rounded-[1.5px]" : "rounded-[2px]"
-  const cellClassFn = compactGrid ? activityHeatmapCellClassTiny : activityHeatmapCellClass
-  const bubbleCompact = compactGrid
+          ? "min-h-[10px]"
+          : size === "xxs" || size === "micro"
+            ? ""
+            : "min-h-[26px]"
+  const gridGap =
+    size === "micro"
+      ? "gap-px"
+      : size === "xxs"
+        ? "gap-[1.5px]"
+        : size === "xs"
+          ? "gap-[2px]"
+          : size === "compact"
+            ? "gap-[3px]"
+            : "gap-[5px]"
+  const cellRadius =
+    size === "micro"
+      ? "rounded-[1px]"
+      : size === "xxs" || size === "xs"
+        ? "rounded-[2px]"
+        : size === "compact"
+          ? "rounded-[4px]"
+          : "rounded-[5px]"
+  const isDense = size === "compact" || size === "xs" || size === "xxs" || size === "micro"
 
   return (
     <div
       className={cn(
-        "relative overflow-visible transition-shadow duration-500",
-        embed
-          ? "rounded-xl bg-gradient-to-b from-sky-50/30 via-white to-stone-50/50 px-2 pb-2 pt-1.5"
-          : "rounded-xl border border-stone-200/80 bg-gradient-to-b from-white to-stone-50/80 dark:border-zinc-700/90 dark:from-zinc-900 dark:to-zinc-950/80",
-        sequentialTitles && !embed ? "px-3 pb-3 pt-2" : embed ? "" : "p-3",
+        !bare && mx.elevatedCard,
+        "relative overflow-visible",
+        !bare &&
+          (sequentialTitles
+            ? size === "compact" || size === "xs" || size === "xxs" || size === "micro"
+              ? "px-2 pb-2 pt-1.5"
+              : "px-3 pb-3 pt-2"
+            : size === "compact" || size === "xs" || size === "xxs" || size === "micro"
+              ? "p-2"
+              : "p-3"),
+        bare && "p-0",
         className
       )}
     >
       <div
         className={cn(
-          "pointer-events-none absolute rounded-full blur-2xl",
-          embed ? "-right-2 top-0 h-8 w-8 bg-sky-200/20" : "-right-6 top-0 h-20 w-20 bg-sky-200/15"
+          "pointer-events-none absolute rounded-full bg-mind/10 blur-2xl",
+          isDense ? "-right-4 top-0 h-16 w-16" : "-right-6 top-0 h-24 w-24"
         )}
         aria-hidden
       />
       <div
+        className={cn("relative", squareGrid && "aspect-square w-full")}
+        style={squareGrid ? { aspectRatio: `${cols} / ${contentRows}` } : undefined}
+      >
+      <div
         className={cn(
-          compactGrid &&
-            !fullWidth &&
-            (size === "xs"
-              ? "mx-auto w-[42%] min-w-[4rem] max-w-[5.25rem]"
-              : "mx-auto w-1/2 min-w-[6.5rem] max-w-[11rem]"),
-          fullWidth && "w-full max-w-[320px]",
           "relative grid overflow-visible",
+          squareGrid && "h-full w-full",
           gridGap
         )}
-        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+        style={{
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+          ...(squareGrid ? { gridTemplateRows: `repeat(${contentRows}, minmax(0, 1fr))` } : {}),
+        }}
       >
         {gridDays.map((day, i) => {
           const canBubble = sequentialTitles && isBubbleEligibleIndex(i, cols)
-          const isActive = canBubble && i === activeGridIndex
+          const isAutoActive = canBubble && i === activeGridIndex
+          const isSelected = selectedDayId != null && day.id === selectedDayId
+          const cellShapeClass = squareGrid ? "h-full w-full min-h-0 min-w-0" : "aspect-square w-full"
           const blockClass = cn(
-            cellClassFn(day.activity),
-            "aspect-square w-full transition-all duration-300",
-            cellRound,
+            (size === "xxs" || size === "micro" ? mxHeatmapCellTiny : mxHeatmapCell)(day.activity),
+            cellShapeClass,
+            (size === "xxs" || size === "micro") && "min-w-0",
+            "transition-all duration-200",
+            cellRadius,
             cellPx,
-            embed && onSelectDay && "hover:scale-[1.05] hover:z-[1]",
-            isActive &&
-              "relative z-[2] scale-[1.06] animate-[me-timeline-cell-pop_0.75s_ease-out] !bg-mind/38"
+            isSelected &&
+              cn(
+                "relative z-[2] ring-2 ring-zinc-500/80 ring-offset-1 ring-offset-white dark:ring-zinc-400 dark:ring-offset-zinc-900",
+                isDense && "ring-1 ring-offset-[0.5px]",
+                size === "micro" && "ring-1"
+              ),
+            isAutoActive &&
+              !isSelected &&
+              cn(
+                "relative z-[2] animate-[me-timeline-cell-pop_0.75s_ease-out] ring-2 ring-sky-300/60 ring-offset-1 ring-offset-white dark:ring-offset-zinc-900",
+                isDense && "ring-1 ring-offset-[0.5px]"
+              )
           )
+          const glow =
+            isAutoActive && !isSelected ? (
+              <span
+                className={cn(
+                  "pointer-events-none absolute inset-0 ring-1 ring-mind/30 animate-[me-timeline-cell-glow_2.8s_ease-in-out_infinite]",
+                  cellRadius
+                )}
+                aria-hidden
+              />
+            ) : null
+
           const cellBody = (
-            <div className="relative aspect-square w-full">
-              <div className={cn("h-full w-full", blockClass)} />
-              {isActive ? (
-                <TimelineTitleBubble day={day} activeIdx={activeSlot} compact={bubbleCompact} />
+            <div className={cn("relative", squareGrid ? "h-full w-full" : "aspect-square w-full")}>
+              <div className={cn("h-full w-full", blockClass)}>{glow}</div>
+              {isAutoActive && !isSelected && showTitleBubbles ? (
+                <TimelineTitleBubble
+                  day={day}
+                  activeIdx={activeSlot}
+                  compact={isDense}
+                />
               ) : null}
             </div>
           )
@@ -280,7 +334,11 @@ export function MeTimelineHeatmapGrid({
                 key={day.id}
                 type="button"
                 onClick={() => onSelectDay(day)}
-                className="relative w-full rounded-[4px] focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-300/50"
+                className={cn(
+                  "relative w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-mind/50",
+                  squareGrid && "h-full min-h-0",
+                  cellRadius
+                )}
                 aria-label={`${day.homeDateLabel}: ${day.title}`}
               >
                 {cellBody}
@@ -289,11 +347,12 @@ export function MeTimelineHeatmapGrid({
           }
 
           return (
-            <div key={day.id} className="relative w-full">
+            <div key={day.id} className={cn("relative w-full", squareGrid && "h-full min-h-0")}>
               {cellBody}
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )
@@ -301,102 +360,38 @@ export function MeTimelineHeatmapGrid({
 
 const FLOW_ROW_H = 56
 const FLOW_CANVAS_W = 320
-/** Left-aligned spine — gentle S-curve, smoothed by dense Catmull–Rom samples */
-const FLOW_BASE_X = 54
-const FLOW_AMPLITUDE_PRIMARY = 13
-const FLOW_AMPLITUDE_SECONDARY = 4
-const FLOW_FREQ_PRIMARY = 0.88
-const FLOW_FREQ_SECONDARY = 1.72
-/** Samples per row for the visible stroke (higher = silkier curve) */
-const FLOW_STROKE_SAMPLES_PER_ROW = 12
-/** Lower divisor = longer Bézier handles = rounder stroke */
-const FLOW_STROKE_TENSION = 2.85
+/** Fixed left spine — straight vertical line */
+const STRAIGHT_SPINE_X = 28
 
 type FlowPoint = { x: number; y: number }
 
-function flowXAt(index: number): number {
-  const phase = index * FLOW_FREQ_PRIMARY + 0.35
-  const ripple = index * FLOW_FREQ_SECONDARY + 1.05
-  const x =
-    FLOW_BASE_X +
-    FLOW_AMPLITUDE_PRIMARY * Math.sin(phase) +
-    FLOW_AMPLITUDE_SECONDARY * Math.sin(ripple)
-  return Math.max(28, Math.min(FLOW_CANVAS_W - 28, x))
-}
-
-/** One knot per day — dots and labels anchor here. */
-function buildFlowPoints(count: number): FlowPoint[] {
+function buildStraightSpinePoints(count: number): FlowPoint[] {
   if (count <= 0) return []
   return Array.from({ length: count }, (_, i) => ({
-    x: flowXAt(i),
+    x: STRAIGHT_SPINE_X,
     y: FLOW_ROW_H / 2 + i * FLOW_ROW_H,
   }))
 }
 
-/** Dense samples along the continuous wave — stroke only, not day knots. */
-function buildFlowStrokeSamples(knotCount: number): FlowPoint[] {
-  if (knotCount <= 0) return []
-  if (knotCount === 1) return buildFlowPoints(1)
-
-  const maxI = knotCount - 1
-  const step = 1 / FLOW_STROKE_SAMPLES_PER_ROW
-  const samples: FlowPoint[] = []
-
-  for (let i = 0; i < maxI; i += step) {
-    samples.push({
-      x: flowXAt(i),
-      y: FLOW_ROW_H / 2 + i * FLOW_ROW_H,
-    })
+function buildStraightSpinePath(count: number): string {
+  if (count <= 0) return ""
+  const points = buildStraightSpinePoints(count)
+  if (points.length === 1) {
+    const p = points[0]
+    return `M ${p.x} ${p.y} L ${p.x} ${p.y + 10}`
   }
-
-  const endY = FLOW_ROW_H / 2 + maxI * FLOW_ROW_H
-  const last = samples[samples.length - 1]
-  if (!last || last.y < endY - 0.5) {
-    samples.push({ x: flowXAt(maxI), y: endY })
-  } else {
-    last.x = flowXAt(maxI)
-    last.y = endY
-  }
-
-  return samples
-}
-
-/** Catmull–Rom → cubic Bézier through dense stroke samples. */
-function buildFlowCurvePath(points: FlowPoint[]) {
-  const n = points.length
-  if (n === 0) return ""
-  if (n === 1) return `M ${points[0].x} ${points[0].y}`
-  if (n === 2) {
-    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`
-  }
-
-  const k = FLOW_STROKE_TENSION
-  let d = `M ${points[0].x} ${points[0].y}`
-  for (let i = 0; i < n - 1; i++) {
-    const p0 = points[Math.max(0, i - 1)]
-    const p1 = points[i]
-    const p2 = points[i + 1]
-    const p3 = points[Math.min(n - 1, i + 2)]
-    const c1x = p1.x + (p2.x - p0.x) / k
-    const c1y = p1.y + (p2.y - p0.y) / k
-    const c2x = p2.x - (p3.x - p1.x) / k
-    const c2y = p2.y - (p3.y - p1.y) / k
-    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`
-  }
-  return d
-}
-
-function buildFlowStrokePath(knotCount: number): string {
-  return buildFlowCurvePath(buildFlowStrokeSamples(knotCount))
+  const first = points[0]
+  const last = points[points.length - 1]
+  return `M ${first.x} ${first.y} L ${last.x} ${last.y}`
 }
 
 const DOT_LABEL_GAP = 14
 
-function flowDotLeftPercent(x: number) {
+function spineDotLeftPercent(x: number) {
   return `${(x / FLOW_CANVAS_W) * 100}%`
 }
 
-function TimelineFlowNode({
+function TimelineStraightNode({
   prominent,
   style,
 }: {
@@ -411,123 +406,45 @@ function TimelineFlowNode({
     >
       <span
         className={cn(
-          "absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-400/15",
-          prominent ? "h-[22px] w-[22px]" : "h-[18px] w-[18px]"
+          "absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-200/80 dark:bg-zinc-700/55",
+          prominent ? "h-[18px] w-[18px]" : "h-[14px] w-[14px]"
         )}
       />
       <span
         className={cn(
-          "absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-500",
-          prominent ? "h-3.5 w-3.5" : "h-3 w-3"
+          "absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-400 ring-[2px] ring-white dark:bg-zinc-500 dark:ring-zinc-900",
+          prominent ? "h-2.5 w-2.5" : "h-2 w-2"
         )}
       />
     </span>
   )
 }
 
-/** Web + Me home — vertical spine with date, title, and preview; tap → day detail */
-export function MeTimelineLinearDayList({
-  days,
-  onSelectDay,
-  className,
-}: {
-  days: ActivityTimelineDay[]
-  onSelectDay?: (day: ActivityTimelineDay) => void
-  className?: string
-}) {
-  if (days.length === 0) {
-    return (
-      <p className={cn("py-8 text-center text-[13px] text-zinc-500", className)}>
-        No capture days yet.
-      </p>
-    )
-  }
-
-  return (
-    <div className={cn("relative", className)}>
-      <div
-        className="pointer-events-none absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-mind/35 via-mind/15 to-transparent"
-        aria-hidden
-      />
-      <ul className="relative">
-        {days.map((day) => {
-          const row = (
-            <>
-              <span
-                className="relative z-[1] mt-2.5 flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full bg-white ring-2 ring-mind/30 dark:bg-zinc-950 dark:ring-mind/40"
-                aria-hidden
-              >
-                <span className={cn("h-2 w-2 rounded-full", activityTimelineDotClass(day.activity))} />
-              </span>
-              <div className="min-w-0 flex-1 pb-3.5 pt-0.5">
-                <span className="text-[11px] font-medium tabular-nums text-zinc-400 dark:text-zinc-500">
-                  {day.homeDateLabel}
-                  <span className="mx-1.5 text-zinc-300 dark:text-zinc-600">·</span>
-                  {day.weekdayLabel}
-                </span>
-                <p className="mt-0.5 text-[14px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
-                  {day.title}
-                </p>
-                {day.previewLine ? (
-                  <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                    {day.previewLine}
-                  </p>
-                ) : null}
-              </div>
-              {onSelectDay ? (
-                <ChevronRight
-                  className="mt-3 h-4 w-4 shrink-0 text-zinc-300 transition-colors group-hover:text-zinc-500 dark:text-zinc-600"
-                  strokeWidth={2}
-                  aria-hidden
-                />
-              ) : null}
-            </>
-          )
-
-          if (onSelectDay) {
-            return (
-              <li key={day.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelectDay(day)}
-                  className="group flex w-full gap-3 rounded-xl py-1 pl-0 pr-1 text-left transition-colors hover:bg-sky-50/70 active:bg-sky-50/90 dark:hover:bg-sky-950/25"
-                  aria-label={`${day.homeDateLabel}: ${day.title}`}
-                >
-                  {row}
-                </button>
-              </li>
-            )
-          }
-
-          return (
-            <li key={day.id} className="flex gap-3 py-1 pl-0 pr-1">
-              {row}
-            </li>
-          )
-        })}
-      </ul>
-    </div>
-  )
+export type TimelineListItem = {
+  id: string
+  dateLabel: string
+  title: string
 }
 
-/** Mobile — curve spine with per-row nodes aligned to titles */
-export function MeTimelineVerticalDayList({
-  days,
-  onSelectDay,
+/** Vertical straight-spine timeline — shared by day / month / year views */
+export function MeTimelineVerticalList({
+  items,
+  selectedId,
+  onSelectItem,
   className,
 }: {
-  days: ActivityTimelineDay[]
-  onSelectDay?: (day: ActivityTimelineDay) => void
+  items: TimelineListItem[]
+  selectedId?: string
+  onSelectItem?: (item: TimelineListItem) => void
   className?: string
 }) {
-  const flowUid = useId().replace(/:/g, "")
-  const points = useMemo(() => buildFlowPoints(days.length), [days.length])
-  const curvePath = useMemo(() => buildFlowStrokePath(days.length), [days.length])
-  const canvasH = days.length * FLOW_ROW_H
+  const points = useMemo(() => buildStraightSpinePoints(items.length), [items.length])
+  const spinePath = useMemo(() => buildStraightSpinePath(items.length), [items.length])
+  const canvasH = items.length * FLOW_ROW_H
 
   return (
     <div className={cn("relative overflow-visible", className)}>
-      <div className="relative mx-auto w-full max-w-[min(100%,440px)]">
+      <div className="relative w-full">
         <svg
           className="pointer-events-none absolute inset-x-0 top-0 z-0 w-full"
           style={{ height: canvasH }}
@@ -535,70 +452,77 @@ export function MeTimelineVerticalDayList({
           preserveAspectRatio="none"
           aria-hidden
         >
-          <defs>
-            <linearGradient id={`${flowUid}-grad`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="rgb(139 92 246 / 0.5)" />
-              <stop offset="55%" stopColor="rgb(124 58 237 / 0.75)" />
-              <stop offset="100%" stopColor="rgb(99 102 241 / 0.4)" />
-            </linearGradient>
-          </defs>
-          {days.length > 1 ? (
-            <>
-              <path
-                d={curvePath}
-                fill="none"
-                stroke="rgb(139 92 246 / 0.1)"
-                strokeWidth="10"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d={curvePath}
-                fill="none"
-                stroke={`url(#${flowUid}-grad)`}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </>
+          {items.length > 1 ? (
+            <path
+              d={spinePath}
+              fill="none"
+              stroke="rgb(161 161 170 / 0.45)"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              className="dark:stroke-zinc-600/55"
+            />
           ) : null}
         </svg>
 
         <div className="relative z-[1]">
-          {days.map((day, i) => {
+          {items.map((item, i) => {
             const p = points[i]
             if (!p) return null
-            const dotLeft = flowDotLeftPercent(p.x)
+            const isSelected = selectedId === item.id
+            const dotLeft = spineDotLeftPercent(p.x)
             const labelStart = `calc(${dotLeft} + ${DOT_LABEL_GAP}px)`
 
             const rowInner = (
               <>
-                <TimelineFlowNode prominent={i === 0} style={{ left: dotLeft }} />
+                <TimelineStraightNode prominent={isSelected} style={{ left: dotLeft }} />
                 <div
                   className="pointer-events-none absolute top-1/2 flex min-w-0 -translate-y-1/2 items-center gap-2 pr-1 text-left"
                   style={{ left: labelStart, right: 0 }}
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-medium tabular-nums text-zinc-400 dark:text-zinc-500">
-                      {day.homeDateLabel}
+                    <span
+                      className={cn(
+                        "block text-[10px] font-medium tabular-nums",
+                        isSelected ? "text-mind dark:text-mind/80" : "text-zinc-400 dark:text-zinc-500"
+                      )}
+                    >
+                      {item.dateLabel}
                     </span>
-                    <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-zinc-800 dark:text-zinc-100">
-                      {day.title}
+                    <p
+                      className={cn(
+                        "mt-0.5 line-clamp-2 text-[12px] font-semibold leading-snug",
+                        isSelected ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-700 dark:text-zinc-200"
+                      )}
+                    >
+                      {item.title}
                     </p>
                   </div>
+                  {onSelectItem ? (
+                    <ChevronRight
+                      className="h-4 w-4 shrink-0 text-zinc-300 dark:text-zinc-600"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                  ) : null}
                 </div>
               </>
             )
 
-            if (onSelectDay) {
+            if (onSelectItem) {
               return (
                 <button
-                  key={day.id}
+                  key={item.id}
                   type="button"
-                  onClick={() => onSelectDay(day)}
-                  className="relative block w-full rounded-xl text-left transition-colors hover:bg-sky-50/50 active:bg-sky-50/70 dark:hover:bg-sky-950/25"
+                  onClick={() => onSelectItem(item)}
+                  className={cn(
+                    "relative block w-full rounded-lg text-left transition-colors",
+                    isSelected
+                      ? "bg-stone-100/95 dark:bg-zinc-800/70"
+                      : "hover:bg-stone-50/80 active:bg-stone-100/80 dark:hover:bg-zinc-900/40"
+                  )}
                   style={{ height: FLOW_ROW_H }}
-                  aria-label={`${day.homeDateLabel}: ${day.title}`}
+                  aria-label={`${item.dateLabel}: ${item.title}`}
+                  aria-current={isSelected ? "true" : undefined}
                 >
                   {rowInner}
                 </button>
@@ -606,7 +530,7 @@ export function MeTimelineVerticalDayList({
             }
 
             return (
-              <div key={day.id} className="relative w-full" style={{ height: FLOW_ROW_H }}>
+              <div key={item.id} className="relative w-full" style={{ height: FLOW_ROW_H }}>
                 {rowInner}
               </div>
             )
@@ -617,355 +541,445 @@ export function MeTimelineVerticalDayList({
   )
 }
 
-/** Me home — linear preview; tap a day → detail */
-export function MeActivityDiaryPreview({
+/** Level 2 — straight spine with per-row nodes aligned to day titles */
+export function MeTimelineVerticalDayList({
   days,
-  onOpenDiary,
-  onOpenDay,
-  previewCount = 6,
+  selectedId,
+  onSelectDay,
   className,
 }: {
   days: ActivityTimelineDay[]
-  onOpenDiary: () => void
-  onOpenDay: (day: ActivityTimelineDay) => void
-  /** @deprecated Grid removed — kept for call-site compat */
-  gridCells?: number
-  previewCount?: number
+  selectedId?: string
+  onSelectDay?: (day: ActivityTimelineDay) => void
   className?: string
 }) {
-  const previewDays = days.slice(0, previewCount)
-
-  return (
-    <div className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between gap-2 px-0.5">
-        <div>
-          <p className="text-[12px] font-semibold text-zinc-800 dark:text-zinc-200">Daily diary</p>
-          <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Tap a day for the full log</p>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenDiary}
-          className="shrink-0 text-[11px] font-medium text-mind hover:underline"
-        >
-          See all
-        </button>
-      </div>
-      <MeTimelineLinearDayList days={previewDays} onSelectDay={onOpenDay} />
-    </div>
-  )
-}
-
-/** Embedded diary list — settings card on web */
-export function MeDiaryTimelineEmbed({
-  days,
-  onOpenDiary,
-  onOpenDay,
-  previewCount = 8,
-  className,
-}: {
-  days: ActivityTimelineDay[]
-  onOpenDiary: () => void
-  onOpenDay: (day: ActivityTimelineDay) => void
-  /** @deprecated */
-  gridCells?: number
-  /** @deprecated */
-  size?: "xs" | "sm" | "md" | "lg"
-  previewCount?: number
-  className?: string
-}) {
-  return (
-    <div className={cn("space-y-3", className)}>
-      <MeTimelineLinearDayList days={days.slice(0, previewCount)} onSelectDay={onOpenDay} />
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[11px] text-zinc-400">Each row is one day — open for captures & summary</p>
-        <button
-          type="button"
-          onClick={onOpenDiary}
-          className="text-[12px] font-semibold text-mind transition-colors hover:text-mind/80"
-        >
-          See all
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/** Web Me — diary with day / month / year scope (compact preview, not full expand) */
-export function MeDiaryTimelinePanel({
-  days,
-  onOpenDiary,
-  onOpenDay,
-  onOpenDailyReview,
-  className,
-}: {
-  days: ActivityTimelineDay[]
-  onOpenDiary: () => void
-  onOpenDay: (day: ActivityTimelineDay) => void
-  onOpenDailyReview?: () => void
-  /** @deprecated Grid removed */
-  gridCells?: number
-  /** @deprecated Use period tabs instead of full list */
-  previewCount?: number
-  className?: string
-}) {
-  const todayDay = useMemo(() => getTodayTimelineDay(days), [days])
-  const monthGroups = useMemo(() => monthGroupsFromDays(days), [days])
-  const years = useMemo(() => uniqueYearsFromDays(days), [days])
-
-  const [period, setPeriod] = useState<DiaryPeriod>("day")
-  const [selectedDay, setSelectedDay] = useState<ActivityTimelineDay>(todayDay)
-  const [selectedMonthKey, setSelectedMonthKey] = useState(
-    monthGroups[0]?.monthKey ?? todayDay.monthKey
-  )
-  const [selectedYear, setSelectedYear] = useState(
-    () => new Date(todayDay.isoDate + "T12:00:00").getFullYear()
-  )
-
-  const monthOptions = useMemo(
+  const items = useMemo<TimelineListItem[]>(
     () =>
-      monthGroups.map((g) => ({
-        monthKey: g.monthKey,
-        monthLabel: g.monthLabel,
-        count: g.days.filter((d) => d.activity > 0).length,
+      days.map((day) => ({
+        id: day.id,
+        dateLabel: day.homeDateLabel,
+        title: day.title,
+      })),
+    [days]
+  )
+
+  return (
+    <MeTimelineVerticalList
+      items={items}
+      selectedId={selectedId}
+      className={className}
+      onSelectItem={
+        onSelectDay
+          ? (item) => {
+              const day = days.find((d) => d.id === item.id)
+              if (day) onSelectDay(day)
+            }
+          : undefined
+      }
+    />
+  )
+}
+
+type TimelineGranularity = "day" | "month" | "year"
+
+function TimelineGranularityTabs({
+  value,
+  onChange,
+}: {
+  value: TimelineGranularity
+  onChange: (next: TimelineGranularity) => void
+}) {
+  return (
+    <div className="mb-3 flex rounded-lg bg-stone-100/90 p-0.5 dark:bg-zinc-800/80">
+      {(
+        [
+          { id: "day" as const, label: "Daily" },
+          { id: "month" as const, label: "Monthly" },
+          { id: "year" as const, label: "Yearly" },
+        ] as const
+      ).map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onChange(tab.id)}
+          className={cn(
+            "flex-1 rounded-md py-1.5 text-[12px] font-medium transition-colors",
+            value === tab.id
+              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
+              : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          )}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function MeTimelineMonthList({
+  monthGroups,
+  selectedMonthKey,
+  onSelectMonth,
+  className,
+}: {
+  monthGroups: ReturnType<typeof groupTimelineByMonth>
+  selectedMonthKey?: string
+  onSelectMonth: (monthKey: string) => void
+  className?: string
+}) {
+  const items = useMemo<TimelineListItem[]>(
+    () =>
+      monthGroups.map((group) => ({
+        id: group.monthKey,
+        dateLabel: group.monthLabel,
+        title:
+          group.days.length === 1
+            ? "1 active day"
+            : `${group.days.length} active days`,
       })),
     [monthGroups]
   )
 
-  const dayScrollerDays = useMemo(() => days.slice(0, DIARY_DAY_SCROLLER_MAX), [days])
-
-  const monthDays = useMemo(
-    () => daysInMonth(days, selectedMonthKey),
-    [days, selectedMonthKey]
-  )
-  const monthPreviewDays = monthDays.slice(0, DIARY_MONTH_DAY_PREVIEW)
-  const monthActiveCount = monthDays.filter((d) => d.activity > 0).length
-
-  const yearDays = useMemo(() => daysInYear(days, selectedYear), [days, selectedYear])
-  const yearActiveCount = yearDays.filter((d) => d.activity > 0).length
-  const yearMonthSummaries = useMemo(() => {
-    const byMonth = new Map<string, { monthKey: string; monthLabel: string; active: number }>()
-    for (const d of yearDays) {
-      const existing = byMonth.get(d.monthKey)
-      if (existing) {
-        if (d.activity > 0) existing.active += 1
-      } else {
-        byMonth.set(d.monthKey, {
-          monthKey: d.monthKey,
-          monthLabel:
-            monthGroups.find((g) => g.monthKey === d.monthKey)?.monthLabel ?? d.monthKey,
-          active: d.activity > 0 ? 1 : 0,
-        })
-      }
-    }
-    return Array.from(byMonth.values()).sort((a, b) => b.monthKey.localeCompare(a.monthKey))
-  }, [yearDays, monthGroups])
-
-  function handlePeriodChange(next: DiaryPeriod) {
-    setPeriod(next)
-    if (next === "day") setSelectedDay(todayDay)
-    if (next === "month") setSelectedMonthKey(todayDay.monthKey)
-    if (next === "year") {
-      setSelectedYear(new Date(todayDay.isoDate + "T12:00:00").getFullYear())
-    }
-  }
-
-  function openMonthFromYear(monthKey: string) {
-    setSelectedMonthKey(monthKey)
-    setPeriod("month")
-  }
-
   return (
-    <section className={cn(web.surfaceCard, "flex flex-col p-5", className)}>
-      <div className="flex shrink-0 items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[16px] font-semibold text-zinc-900">Daily diary</h2>
-          <p className="mt-1 text-[13px] leading-snug text-zinc-500">
-            Browse by day, month, or year — open a day for the full log
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenDiary}
-          className="shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-mind transition-colors hover:bg-mind/[0.06]"
-        >
-          See all
-        </button>
-      </div>
-
-      {onOpenDailyReview ? (
-        <button
-          type="button"
-          onClick={onOpenDailyReview}
-          className="mt-4 flex w-full shrink-0 items-center gap-3 rounded-xl border border-teal-100 bg-teal-50/80 p-3.5 text-left transition-colors hover:border-teal-200 hover:bg-teal-50"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15">
-            <Sparkles className="h-5 w-5 text-teal-600" strokeWidth={2} aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-semibold text-zinc-800">Daily review</span>
-            <span className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-zinc-500">
-              {DAILY_REVIEW_HEADLINE}
-            </span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" strokeWidth={2} aria-hidden />
-        </button>
-      ) : null}
-
-      <div className="mt-4 flex flex-col gap-4">
-        <MeDiaryPeriodTabs period={period} onChange={handlePeriodChange} />
-
-        {period === "day" ? (
-          <MeDiaryDayTimeline
-            days={dayScrollerDays}
-            selectedIso={selectedDay.isoDate}
-            onSelect={setSelectedDay}
-          />
-        ) : period === "month" ? (
-          <MeDiaryMonthTimeline
-            months={monthOptions}
-            selectedMonthKey={selectedMonthKey}
-            onSelect={setSelectedMonthKey}
-          />
-        ) : (
-          <MeDiaryYearTimeline years={years} selectedYear={selectedYear} onSelect={setSelectedYear} />
-        )}
-
-        <div className="rounded-xl border border-stone-100/90 bg-stone-50/50 p-1 dark:border-zinc-800 dark:bg-zinc-900/30">
-          {period === "day" ? (
-            <button
-              type="button"
-              onClick={() => onOpenDay(selectedDay)}
-              className="flex w-full gap-3 rounded-lg p-3.5 text-left transition-colors hover:bg-white/80 dark:hover:bg-zinc-900/60"
-            >
-              <span
-                className={cn(
-                  "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
-                  activityTimelineDotClass(selectedDay.activity)
-                )}
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1">
-                <span className="text-[11px] font-medium tabular-nums text-zinc-400">
-                  {selectedDay.homeDateLabel} · {selectedDay.weekdayLabel}
-                </span>
-                <p className="mt-0.5 text-[15px] font-semibold leading-snug text-zinc-900">
-                  {selectedDay.title}
-                </p>
-                {selectedDay.previewLine ? (
-                  <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
-                    {selectedDay.previewLine}
-                  </p>
-                ) : selectedDay.summary ? (
-                  <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
-                    {selectedDay.summary}
-                  </p>
-                ) : null}
-              </span>
-              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-zinc-300" strokeWidth={2} aria-hidden />
-            </button>
-          ) : null}
-
-          {period === "month" ? (
-            <div className="p-3">
-              <p className="text-[13px] text-zinc-600">
-                <span className="font-semibold text-zinc-800">{monthActiveCount}</span> active day
-                {monthActiveCount === 1 ? "" : "s"} in{" "}
-                <span className="font-semibold text-zinc-800">
-                  {monthOptions.find((m) => m.monthKey === selectedMonthKey)?.monthLabel ??
-                    selectedMonthKey}
-                </span>
-              </p>
-              {monthPreviewDays.length > 0 ? (
-                <div className="mt-3 max-h-[220px] overflow-y-auto scrollbar-hide">
-                  <MeTimelineLinearDayList days={monthPreviewDays} onSelectDay={onOpenDay} />
-                </div>
-              ) : (
-                <p className="mt-3 text-[13px] text-zinc-500">No captures this month yet.</p>
-              )}
-              {monthDays.length > DIARY_MONTH_DAY_PREVIEW ? (
-                <button
-                  type="button"
-                  onClick={onOpenDiary}
-                  className="mt-3 text-[13px] font-semibold text-mind hover:text-mind/85"
-                >
-                  View all {monthDays.length} days in timeline →
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-
-          {period === "year" ? (
-            <div className="p-3">
-              <p className="text-[13px] text-zinc-600">
-                <span className="font-semibold text-zinc-800">{yearActiveCount}</span> active day
-                {yearActiveCount === 1 ? "" : "s"} in{" "}
-                <span className="font-semibold text-zinc-800">{selectedYear}</span>
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {yearMonthSummaries.map((m) => (
-                  <button
-                    key={m.monthKey}
-                    type="button"
-                    onClick={() => openMonthFromYear(m.monthKey)}
-                    className="rounded-xl border border-stone-200/80 bg-white/80 px-3 py-2.5 text-left transition-colors hover:border-mind/25 hover:bg-mind/[0.04] dark:border-zinc-700 dark:bg-zinc-900/50"
-                  >
-                    <span className="block text-[13px] font-semibold text-zinc-800">{m.monthLabel}</span>
-                    <span className="mt-0.5 text-[11px] text-zinc-500">
-                      {m.active} active day{m.active === 1 ? "" : "s"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={onOpenDiary}
-                className="mt-3 text-[13px] font-semibold text-mind hover:text-mind/85"
-              >
-                Open full timeline →
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </section>
+    <MeTimelineVerticalList
+      items={items}
+      selectedId={selectedMonthKey}
+      className={className}
+      onSelectItem={(item) => onSelectMonth(item.id)}
+    />
   )
 }
 
-/** Web Me — timeline card (linear list) */
-export function MeCaptureDiaryWebCard({
+function MeTimelineYearList({
+  yearGroups,
+  selectedYear,
+  onSelectYear,
+  className,
+}: {
+  yearGroups: ReturnType<typeof groupTimelineByYear>
+  selectedYear?: number
+  onSelectYear: (year: number) => void
+  className?: string
+}) {
+  const items = useMemo<TimelineListItem[]>(
+    () =>
+      yearGroups.map((group) => {
+        const monthCount = groupTimelineByMonth(group.days).length
+        return {
+          id: String(group.year),
+          dateLabel: String(group.year),
+          title: `${group.days.length} active days · ${monthCount} month${monthCount === 1 ? "" : "s"}`,
+        }
+      }),
+    [yearGroups]
+  )
+
+  return (
+    <MeTimelineVerticalList
+      items={items}
+      selectedId={selectedYear != null ? String(selectedYear) : undefined}
+      className={className}
+      onSelectItem={(item) => onSelectYear(Number(item.id))}
+    />
+  )
+}
+
+function buildMonthNarrative(days: ActivityTimelineDay[]) {
+  if (days.length === 0) return "No active days recorded this month."
+  const highlights = days
+    .slice(0, 4)
+    .map((d) => d.title)
+    .join(" · ")
+  return `${days.length} active day${days.length === 1 ? "" : "s"} this month. Through-line: ${highlights}${days.length > 4 ? "…" : "."}`
+}
+
+function buildYearNarrative(days: ActivityTimelineDay[], year: number) {
+  const months = groupTimelineByMonth(days).length
+  if (days.length === 0) return `No captures logged in ${year}.`
+  return `${year} spans ${months} active month${months === 1 ? "" : "s"} and ${days.length} logged day${days.length === 1 ? "" : "s"}. Your timeline stayed in motion—review monthly slices for the full arc.`
+}
+
+function PeriodDetailPanel({
+  title,
+  subtitle,
+  body,
+  stats,
+  drillLabel,
+  onDrill,
+}: {
+  title: string
+  subtitle: string
+  body: string
+  stats: { label: string; value: string }[]
+  drillLabel?: string
+  onDrill?: () => void
+}) {
+  return (
+    <div
+      className={cn(
+        "scrollbar-hide min-h-0 flex-1 overflow-y-auto",
+        "bg-white dark:bg-zinc-950"
+      )}
+    >
+      <article className={cn("px-4 py-4 pb-8")}>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">{subtitle}</p>
+        <h2 className="mt-1 text-[20px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{title}</h2>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className="rounded-xl border border-stone-100 bg-stone-50/80 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/50"
+            >
+              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">{s.label}</p>
+              <p className="mt-0.5 text-[15px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{s.value}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-5 text-[14px] leading-[1.72] text-zinc-600 dark:text-zinc-300">{body}</p>
+        {drillLabel && onDrill ? (
+          <button
+            type="button"
+            onClick={onDrill}
+            className={cn(
+              "mt-8 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[15px] font-semibold text-white",
+              mx.brandCta,
+              mx.brandFocusRing
+            )}
+          >
+            {drillLabel}
+            <ArrowRight className="h-4 w-4" strokeWidth={2} aria-hidden />
+          </button>
+        ) : null}
+      </article>
+    </div>
+  )
+}
+
+function MonthDetailPanel({
+  monthKey,
+  monthLabel,
+  days,
+  onDrillToDays,
+}: {
+  monthKey: string
+  monthLabel: string
+  days: ActivityTimelineDay[]
+  onDrillToDays: () => void
+}) {
+  const totalActivity = days.reduce((sum, d) => sum + d.activity, 0)
+  return (
+    <PeriodDetailPanel
+      title={monthLabel}
+      subtitle="Monthly overview"
+      body={buildMonthNarrative(days)}
+      stats={[
+        { label: "Active days", value: String(days.length) },
+        { label: "Activity level", value: String(totalActivity) },
+      ]}
+      drillLabel="View daily timeline"
+      onDrill={onDrillToDays}
+     
+    />
+  )
+}
+
+function YearDetailPanel({
+  year,
+  days,
+  onDrillToMonths,
+}: {
+  year: number
+  days: ActivityTimelineDay[]
+  onDrillToMonths: () => void
+}) {
+  const months = groupTimelineByMonth(days).length
+  return (
+    <PeriodDetailPanel
+      title={String(year)}
+      subtitle="Yearly overview"
+      body={buildYearNarrative(days, year)}
+      stats={[
+        { label: "Active days", value: String(days.length) },
+        { label: "Active months", value: String(months) },
+      ]}
+      drillLabel="View monthly timeline"
+      onDrill={onDrillToMonths}
+     
+    />
+  )
+}
+
+/** Summary strip above the heatmap — reflects the flowing or selected day */
+function ActivityDaySummaryStrip({
+  day,
+  onOpen,
+  className,
+  flat = false,
+}: {
+  day: ActivityTimelineDay
+  onOpen?: () => void
+  className?: string
+  flat?: boolean
+}) {
+  const body = (
+    <div
+      key={day.id}
+      className="animate-[me-timeline-summary-in_0.55s_cubic-bezier(0.22,1,0.36,1)_forwards]"
+    >
+      <p className="text-[10px] font-medium tabular-nums uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+        {day.homeDateLabel}
+        {day.activity <= 0 ? " · Quiet day" : null}
+      </p>
+      <p className="mt-1 line-clamp-1 text-[13px] font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+        {day.title}
+      </p>
+      <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+        {day.previewLine}
+      </p>
+    </div>
+  )
+
+  const shellClass = cn(
+    !flat && mx.elevatedCard,
+    flat && "rounded-xl bg-stone-50/80 dark:bg-zinc-900/40",
+    "px-3 py-2.5 transition-colors",
+    onOpen && "hover:border-[#E9ECEF] dark:hover:border-zinc-600",
+    className
+  )
+
+  if (onOpen) {
+    return (
+      <button type="button" onClick={onOpen} className={cn(shellClass, "w-full text-left")}>
+        {body}
+      </button>
+    )
+  }
+
+  return <div className={shellClass}>{body}</div>
+}
+
+function pickDefaultGridDay(days: ActivityTimelineDay[], cellCount: number) {
+  const gridDays = [...days.slice(0, cellCount)].reverse()
+  if (gridDays.length === 0) return days[0] ?? null
+  const todayIso = new Date().toISOString().slice(0, 10)
+  return (
+    gridDays.find((d) => d.isoDate === todayIso) ??
+    [...gridDays].reverse().find((d) => d.activity > 0) ??
+    gridDays[gridDays.length - 1]
+  )
+}
+
+/** Me home — square heatmap density (cols × cols cells) */
+export const ME_ACTIVITY_SQUARE_COLS = 12
+
+/** Me home — unified activity card: email, flowing summary, heatmap grid */
+export function MeActivityFlowCard({
   days,
   onOpenDiary,
   onOpenDay,
-  previewCount = 10,
+  gridCols = ME_ACTIVITY_SQUARE_COLS,
   className,
 }: {
   days: ActivityTimelineDay[]
   onOpenDiary: () => void
   onOpenDay: (day: ActivityTimelineDay) => void
-  /** @deprecated */
-  gridCells?: number
-  previewCount?: number
+  /** Square grid side length — total cells = gridCols² */
+  gridCols?: number
   className?: string
 }) {
+  const gridCells = gridCols * gridCols
+  const defaultDay = pickDefaultGridDay(days, gridCells) ?? days[0]
+  const [flowDay, setFlowDay] = useState<ActivityTimelineDay>(defaultDay)
+
+  const displayDay = flowDay
+
+  const shellClass = cn(mx.elevatedCard, "overflow-hidden", className)
+
   return (
-    <section className={cn(web.surfaceCard, "p-4", className)}>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[15px] font-semibold text-zinc-800 dark:text-zinc-100">Daily diary</h2>
-          <p className="mt-0.5 text-[12px] text-zinc-500">Tap a day to open its log</p>
+    <section className={shellClass}>
+      <div className="flex items-start justify-between gap-2 px-3 pt-3 sm:px-4 sm:pt-4">
+        <div className="min-w-0">
+          <p className="text-[12px] font-semibold text-zinc-800 dark:text-zinc-200">Activity</p>
         </div>
         <button
           type="button"
           onClick={onOpenDiary}
-          className="shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-mind hover:bg-mind/[0.06]"
+          className={cn(
+            "shrink-0 font-medium text-mind hover:underline",
+            "text-[11px]"
+          )}
         >
           See all
         </button>
       </div>
-      <div className="mt-4 max-h-[400px] overflow-y-auto scrollbar-hide">
-        <MeTimelineLinearDayList days={days.slice(0, previewCount)} onSelectDay={onOpenDay} />
+
+      <div className="space-y-2 px-3 pb-3 pt-2.5 sm:px-4 sm:pb-4">
+        <ActivityDaySummaryStrip day={displayDay} flat onOpen={() => onOpenDay(displayDay)} />
+        <MeTimelineHeatmapGrid
+          days={days}
+          cellCount={gridCells}
+          cols={gridCols}
+          size="micro"
+          bare
+          squareGrid
+          sequentialTitles
+          showTitleBubbles={false}
+          selectedDayId={displayDay.id}
+          onFlowActiveDayChange={setFlowDay}
+          onSelectDay={onOpenDay}
+        />
       </div>
     </section>
+  )
+}
+
+/** @deprecated Use MeActivityFlowCard */
+export function MeActivityDiaryPreview({
+  days,
+  onOpenDiary,
+  onOpenDay,
+  gridCols = ME_ACTIVITY_SQUARE_COLS,
+  className,
+}: {
+  days: ActivityTimelineDay[]
+  onOpenDiary: () => void
+  onOpenDay: (day: ActivityTimelineDay) => void
+  gridCols?: number
+  className?: string
+}) {
+  return (
+    <MeActivityFlowCard
+      days={days}
+      onOpenDiary={onOpenDiary}
+      onOpenDay={onOpenDay}
+      gridCols={gridCols}
+      className={className}
+    />
+  )
+}
+
+/** @deprecated Use MeActivityFlowCard */
+export function MeCaptureDiaryWebCard({
+  days,
+  onOpenDiary,
+  onOpenDay,
+  gridCols = ME_ACTIVITY_SQUARE_COLS,
+  className,
+}: {
+  days: ActivityTimelineDay[]
+  onOpenDiary: () => void
+  onOpenDay: (day: ActivityTimelineDay) => void
+  gridCols?: number
+  className?: string
+}) {
+  return (
+    <MeActivityFlowCard
+      days={days}
+      onOpenDiary={onOpenDiary}
+      onOpenDay={onOpenDay}
+      gridCols={gridCols}
+      className={className}
+    />
   )
 }
 
@@ -990,9 +1004,9 @@ function TimelineRail({
         "border-r border-stone-200/90 bg-stone-50/80 dark:border-zinc-800 dark:bg-zinc-950/80"
       )}
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200/80 px-3 py-2.5 dark:border-zinc-800">
-        <span className="text-[13px] font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{year}</span>
-        <span className="rounded-full bg-stone-200/90 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-200/80 px-3 py-2 dark:border-zinc-800">
+        <span className="text-[12px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{year}</span>
+        <span className="rounded-full bg-stone-200/90 px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
           {count}
         </span>
       </div>
@@ -1000,7 +1014,7 @@ function TimelineRail({
         {monthGroups.map((group) => (
           <div key={group.monthKey} className="mb-3 last:mb-0">
             <div className="mb-1.5 flex items-center gap-1.5 px-1">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mind" aria-hidden />
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-500" aria-hidden />
               <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
                 {group.monthLabel}
               </span>
@@ -1015,8 +1029,10 @@ function TimelineRail({
                     onClick={() => onSelect(day)}
                     className={cn(
                       "aspect-square rounded-[4px] transition-all duration-200",
-                      activityHeatmapCellClass(day.activity),
-                      selected ? "scale-105 !bg-mind/42" : "hover:opacity-90"
+                      mxHeatmapCell(day.activity),
+                      selected
+                        ? "ring-2 ring-zinc-500 ring-offset-1 ring-offset-stone-50 dark:ring-zinc-400 dark:ring-offset-zinc-950"
+                        : "hover:opacity-90"
                     )}
                     title={`${day.dateLabel} · ${day.title}`}
                     aria-label={day.title}
@@ -1037,13 +1053,13 @@ function DayDetailPanel({
   uploads,
   displayName = "You",
   onShare,
-  webLayout = false,
+  onOutputFileClick,
 }: {
   day: ActivityTimelineDay
   uploads: { id: string; title: string; time: string; source: string }[]
   displayName?: string
   onShare?: () => void
-  webLayout?: boolean
+  onOutputFileClick?: (file: { id: string; title: string; kindLabel: string }) => void
 }) {
   const brief = useMemo(
     () =>
@@ -1063,32 +1079,14 @@ function DayDetailPanel({
     <div
       className={cn(
         "scrollbar-hide min-h-0 flex-1 overflow-y-auto",
-        webLayout ? "bg-white/40 dark:bg-zinc-950" : "bg-white dark:bg-zinc-950"
+        "bg-white dark:bg-zinc-950"
       )}
     >
-      <article className={cn(webLayout ? "px-5 py-4" : "px-3 py-3 pb-6 sm:px-4 sm:py-4 sm:pb-8")}>
-        {day.photoCount > 0 && !webLayout ? (
-          <div className="mb-5 flex items-center gap-3 rounded-2xl bg-stone-50/90 px-3 py-3 dark:bg-zinc-900/50">
-            <HubItemThumb
-              kind={hubItemKindFromLabel("Note", day.title)}
-              size="lg"
-              className="h-14 w-14 shrink-0 rounded-xl"
-            />
-            {day.thumbImages.length > 1 ? (
-              <div className="flex -space-x-2" aria-hidden>
-                {day.thumbImages.slice(1, 3).map((src, i) => (
-                  <span
-                    key={`${day.id}-thumb-${i}`}
-                    className="block h-10 w-10 rounded-lg bg-cover bg-center ring-2 ring-white dark:ring-zinc-900"
-                    style={{ backgroundImage: `url(${src})` }}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        <DailyBriefView content={brief} />
+      <article className={cn("px-3 py-3 pb-6 sm:px-4 sm:py-4 sm:pb-8")}>
+        <DailyBriefView
+          content={brief}
+          onOutputFileClick={onOutputFileClick}
+        />
 
         {onShare ? (
           <button
@@ -1096,8 +1094,8 @@ function DayDetailPanel({
             onClick={onShare}
             className={cn(
               "mt-8 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[15px] font-semibold text-white",
-              "mind-btn rounded-lg",
-              "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
+              mx.brandCta,
+              mx.brandFocusRing
             )}
           >
             <Share2 className="h-4 w-4" strokeWidth={2} aria-hidden />
@@ -1110,17 +1108,17 @@ function DayDetailPanel({
   )
 }
 
+type TimelineView = "browse" | "detail"
+
 export function MeActivityTimeline({
   days,
   initialDate,
   initialActivity,
   onClose,
   onShare,
+  onOutputFileClick,
   displayName = "You",
-  webLayout = false,
-  presentation = "overlay",
-  listFirst = false,
-  onNavigateToDay,
+  listFirst: _listFirst = true,
   getUploads,
 }: MeActivityTimelineProps) {
   const timelineDays = useMemo(() => {
@@ -1133,139 +1131,199 @@ export function MeActivityTimeline({
   }, [days, initialDate, initialActivity])
 
   const monthGroups = useMemo(() => groupTimelineByMonth(timelineDays), [timelineDays])
+  const yearGroups = useMemo(() => groupTimelineByYear(timelineDays), [timelineDays])
 
   const resolveDay = (iso: string, activity: number) =>
     timelineDays.find((d) => d.isoDate === iso) ?? buildActivityTimelineDay(iso, activity)
 
-  const [selected, setSelected] = useState<ActivityTimelineDay>(() =>
+  const [view, setView] = useState<TimelineView>("browse")
+  const [granularity, setGranularity] = useState<TimelineGranularity>("day")
+  const [selectedDay, setSelectedDay] = useState<ActivityTimelineDay>(() =>
     resolveDay(initialDate, initialActivity)
   )
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
+    () => resolveDay(initialDate, initialActivity).monthKey
+  )
+  const [selectedYear, setSelectedYear] = useState<number>(() =>
+    new Date(initialDate + "T12:00:00").getFullYear()
+  )
+  const [yearFilter, setYearFilter] = useState<number | null>(null)
+  const [dayFilterMonthKey, setDayFilterMonthKey] = useState<string | null>(null)
 
-  const [mobilePhase, setMobilePhase] = useState<"list" | "detail">(listFirst ? "list" : "detail")
+  const filteredMonthGroups = useMemo(() => {
+    if (yearFilter == null) return monthGroups
+    return monthGroups.filter((g) => g.monthKey.startsWith(String(yearFilter)))
+  }, [monthGroups, yearFilter])
 
-  useEffect(() => {
-    setSelected(resolveDay(initialDate, initialActivity))
-    if (listFirst) {
-      setMobilePhase("list")
+  const visibleDays = useMemo(() => {
+    if (dayFilterMonthKey) {
+      return timelineDays.filter((d) => d.monthKey === dayFilterMonthKey)
     }
-  }, [initialDate, initialActivity, timelineDays, listFirst])
+    return timelineDays
+  }, [timelineDays, dayFilterMonthKey])
 
-  const year = new Date(selected.isoDate + "T12:00:00").getFullYear()
-  const uploads = getUploads?.(selected.isoDate, selected.activity) ?? []
-
-  const showListOnly = listFirst && mobilePhase === "list"
-  const showCompactRail = mobilePhase === "detail" && !webLayout && !listFirst
-
-  const header = (
-    <header
-      className={cn(
-        "flex shrink-0 items-center gap-2 px-3 py-3",
-        webLayout ? "bg-transparent px-4" : "border-b border-stone-100/85 bg-white dark:border-zinc-800 dark:bg-zinc-900"
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => {
-          if (showListOnly) {
-            onClose()
-          } else if (listFirst) {
-            setMobilePhase("list")
-          } else {
-            onClose()
-          }
-        }}
-        className="rounded-full p-1.5 hover:bg-stone-100 dark:hover:bg-zinc-800"
-        aria-label={showListOnly ? "Close" : "Back"}
-      >
-        <ChevronRight className="h-6 w-6 rotate-180 text-zinc-600 dark:text-zinc-300" />
-      </button>
-      <h1 className="min-w-0 flex-1 truncate text-center text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">
-        {showListOnly ? "Daily diary" : formatFullDate(selected.isoDate)}
-      </h1>
-      <div className="w-8 shrink-0" aria-hidden />
-    </header>
+  const selectedMonthGroup = useMemo(
+    () => monthGroups.find((g) => g.monthKey === selectedMonthKey) ?? filteredMonthGroups[0] ?? monthGroups[0],
+    [monthGroups, filteredMonthGroups, selectedMonthKey]
   )
 
-  const isPage = presentation === "page"
+  const selectedYearGroup = useMemo(
+    () => yearGroups.find((g) => g.year === selectedYear) ?? yearGroups[0],
+    [yearGroups, selectedYear]
+  )
+
+  useEffect(() => {
+    const day = resolveDay(initialDate, initialActivity)
+    setSelectedDay(day)
+    setSelectedMonthKey(day.monthKey)
+    setSelectedYear(new Date(day.isoDate + "T12:00:00").getFullYear())
+    setGranularity("day")
+    setYearFilter(null)
+    setDayFilterMonthKey(null)
+    setView("browse")
+  }, [initialDate, initialActivity, timelineDays])
+
+  const uploads = getUploads?.(selectedDay.isoDate, selectedDay.activity) ?? []
+
+  const headerTitle = "Activity"
+
+  function handleBack() {
+    if (view === "detail") {
+      setView("browse")
+      return
+    }
+    onClose()
+  }
+
+  function handleGranularityChange(next: TimelineGranularity) {
+    setGranularity(next)
+    setYearFilter(null)
+    setDayFilterMonthKey(null)
+    setView("browse")
+    if (next === "day") {
+      setSelectedDay(timelineDays[0] ?? selectedDay)
+    } else if (next === "month") {
+      setSelectedMonthKey(monthGroups[0]?.monthKey ?? selectedMonthKey)
+    } else {
+      setSelectedYear(yearGroups[0]?.year ?? selectedYear)
+    }
+  }
+
+  function openDayDetail(day: ActivityTimelineDay) {
+    setSelectedDay(day)
+    setView("detail")
+  }
+
+  function openMonthDetail(monthKey: string) {
+    setSelectedMonthKey(monthKey)
+    setView("detail")
+  }
+
+  function openYearDetail(year: number) {
+    setSelectedYear(year)
+    setView("detail")
+  }
+
+  function drillToMonthDays(monthKey: string) {
+    const daysInMonth = timelineDays.filter((d) => d.monthKey === monthKey)
+    setDayFilterMonthKey(monthKey)
+    setGranularity("day")
+    setSelectedDay(daysInMonth[0] ?? selectedDay)
+    setView("browse")
+  }
+
+  function drillToYearMonths(year: number) {
+    const monthsInYear = monthGroups.filter((g) => g.monthKey.startsWith(String(year)))
+    setYearFilter(year)
+    setGranularity("month")
+    setSelectedMonthKey(monthsInYear[0]?.monthKey ?? selectedMonthKey)
+    setView("browse")
+  }
 
   return (
     <div
       className={cn(
-        "flex flex-col",
-        isPage
-          ? cn("relative h-full min-h-0", web.canvas, "bg-[#f8f9fc]")
-          : cn(
-              "absolute inset-0 z-[60]",
-              webLayout
-                ? cn("animate-in fade-in duration-150", web.canvas)
-                : cn("animate-in slide-in-from-right duration-200", "bg-[#fafaf9] dark:bg-zinc-950")
-            )
+        "absolute inset-0 z-[60] flex flex-col",
+        "animate-in slide-in-from-right duration-200",
+        mx.pageBg
       )}
     >
-      {header}
-      {showListOnly ? (
-        <div
-          className={cn(
-            "scrollbar-hide min-h-0 flex-1 overflow-y-auto py-4",
-            webLayout ? "px-6" : "px-4"
-          )}
+      <header
+        className={cn(
+          "flex shrink-0 items-center gap-2 border-b border-stone-100/85 bg-white px-3 py-3",
+          "dark:border-zinc-800 dark:bg-zinc-900",
+                  )}
+      >
+        <button
+          type="button"
+          onClick={handleBack}
+          className="rounded-full p-1.5 hover:bg-stone-100 dark:hover:bg-zinc-800"
+          aria-label={view === "detail" ? "Back to timeline" : "Close"}
         >
-          <p className="mb-4 text-[13px] text-zinc-500 dark:text-zinc-400">
-            Your capture diary — each row is one day. Tap to open detail.
-          </p>
-          {webLayout ? (
-            <div className="mx-auto w-full max-w-[640px]">
-              <MeTimelineLinearDayList
-                days={timelineDays}
-                onSelectDay={(day) => {
-                  if (onNavigateToDay) {
-                    onNavigateToDay(day)
-                    return
-                  }
-                  setSelected(day)
-                  setMobilePhase("detail")
-                }}
-              />
-            </div>
-          ) : (
-            <MeTimelineVerticalDayList
-              days={timelineDays}
-              onSelectDay={(day) => {
-                if (onNavigateToDay) {
-                  onNavigateToDay(day)
-                  return
-                }
-                setSelected(day)
-                setMobilePhase("detail")
-              }}
-            />
-          )}
+          <ChevronRight className="h-6 w-6 rotate-180 text-zinc-600 dark:text-zinc-300" />
+        </button>
+        <div className="min-w-0 flex-1 text-center">
+          <h1 className="truncate text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">{headerTitle}</h1>
         </div>
-      ) : (
-        <div className={cn("flex min-h-0 flex-1", webLayout && "gap-0 p-2 sm:p-4")}>
-          <div
-            className={cn(
-              "flex min-h-0 min-w-0 flex-1 overflow-hidden",
-              webLayout && cn(web.surfaceCard, "bg-white/90")
-            )}
-          >
-            {showCompactRail ? (
-              <TimelineRail
-                year={year}
-                count={timelineDays.length}
-                monthGroups={monthGroups}
-                selectedId={selected.id}
-                onSelect={setSelected}
+        <div className="w-8 shrink-0" aria-hidden />
+      </header>
+
+      {view === "browse" ? (
+        <>
+          <div className="shrink-0 border-b border-stone-100/80 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-900 sm:px-4">
+            <TimelineGranularityTabs value={granularity} onChange={handleGranularityChange} />
+          </div>
+
+          <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto bg-white px-3 py-3 dark:bg-zinc-950 sm:px-4">
+            {granularity === "day" ? (
+              <MeTimelineVerticalDayList
+                days={visibleDays}
+                selectedId={selectedDay.id}
+                onSelectDay={openDayDetail}
               />
             ) : null}
+            {granularity === "month" ? (
+              <MeTimelineMonthList
+                monthGroups={filteredMonthGroups}
+                selectedMonthKey={selectedMonthKey}
+                onSelectMonth={openMonthDetail}
+              />
+            ) : null}
+            {granularity === "year" ? (
+              <MeTimelineYearList
+                yearGroups={yearGroups}
+                selectedYear={selectedYear}
+                onSelectYear={openYearDetail}
+              />
+            ) : null}
+          </div>
+        </>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-zinc-950">
+          {granularity === "day" ? (
             <DayDetailPanel
-              day={selected}
+              day={selectedDay}
               uploads={uploads}
               displayName={displayName}
-              onShare={onShare ? () => onShare(selected) : undefined}
-              webLayout={webLayout}
+              onShare={onShare ? () => onShare(selectedDay) : undefined}
+              onOutputFileClick={onOutputFileClick}
             />
-          </div>
+          ) : null}
+          {granularity === "month" && selectedMonthGroup ? (
+            <MonthDetailPanel
+              monthKey={selectedMonthGroup.monthKey}
+              monthLabel={selectedMonthGroup.monthLabel}
+              days={selectedMonthGroup.days}
+              onDrillToDays={() => drillToMonthDays(selectedMonthGroup.monthKey)}
+            />
+          ) : null}
+          {granularity === "year" && selectedYearGroup ? (
+            <YearDetailPanel
+              year={selectedYearGroup.year}
+              days={selectedYearGroup.days}
+              onDrillToMonths={() => drillToYearMonths(selectedYearGroup.year)}
+            />
+          ) : null}
         </div>
       )}
     </div>

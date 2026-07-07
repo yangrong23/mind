@@ -1,38 +1,44 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import type { AgentExamplePrompt } from "@/lib/agent-chat-example-prompts"
 
+const promptChipBase = cn(mx.promptChipSurface, mx.typePromptChip)
+
 const stackBtnClass = cn(
-  "w-full rounded-xl border border-stone-200/90 bg-white px-4 py-3 text-left text-[14px] font-medium leading-snug text-zinc-800",
-  "transition-[background-color,border-color,box-shadow] active:scale-[0.99]",
-  "hover:border-stone-300/90 hover:bg-stone-50/80 hover:shadow-sm",
-  "dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/90"
+  promptChipBase,
+  "w-full rounded-2xl px-4 py-3 text-left"
 )
 
 const scrollBtnClass = cn(
-  "shrink-0 rounded-full border border-stone-200/90 bg-stone-50/90 px-3 py-1.5 text-left text-[12px] font-medium leading-snug text-zinc-600",
-  "transition-[background-color,border-color,box-shadow] hover:border-stone-300/90 hover:bg-white hover:shadow-sm",
-  "dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:border-zinc-600"
+  promptChipBase,
+  mx.typePromptChipCompact,
+  "shrink-0 rounded-full px-3.5 py-1.5 text-left"
 )
 
-/** Web agent empty state — wrapped rows, centered cloud of suggestions */
+/** Agent home — centered cloud of soft suggestion chips */
 const wrapBtnClass = cn(
-  "rounded-xl border border-stone-200/75 bg-stone-100/90 px-4 py-2.5 text-[14px] font-normal leading-snug text-zinc-800",
-  "transition-[background-color,border-color,box-shadow] hover:border-stone-300/80 hover:bg-stone-200/70 hover:shadow-sm",
-  "dark:border-zinc-700/80 dark:bg-zinc-800/80 dark:text-zinc-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+  promptChipBase,
+  "rounded-full px-3.5 py-2 tracking-tight"
 )
+
+const noteStackBtnClass =
+  "w-full rounded-xl px-3 py-2.5 text-left text-[15px] font-normal leading-snug text-emerald-600 transition-colors hover:bg-emerald-50/80 active:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
 
 export function AgentExamplePromptRail({
   prompts,
   onSelect,
   layout = "stack",
+  tone = "default",
   className,
 }: {
   prompts: AgentExamplePrompt[]
   onSelect: (prompt: string) => void
   /** `stack` — mobile vertical; `scroll` — horizontal chips; `wrap` — web multi-row cloud */
   layout?: "stack" | "scroll" | "wrap"
+  /** Green text stack for note-grounded chat */
+  tone?: "default" | "note"
   className?: string
 }) {
   if (prompts.length === 0) return null
@@ -40,7 +46,7 @@ export function AgentExamplePromptRail({
   if (layout === "wrap") {
     return (
       <div
-        className={cn("flex flex-wrap justify-center gap-2.5", className)}
+        className={cn("flex flex-wrap justify-center gap-2", className)}
         role="list"
         aria-label="Example questions"
       >
@@ -85,14 +91,14 @@ export function AgentExamplePromptRail({
   }
 
   return (
-    <div className={cn("flex w-full flex-col gap-2", className)} role="list" aria-label="Example questions">
+    <div className={cn("flex w-full flex-col", tone === "note" ? "gap-0.5" : "gap-2", className)} role="list" aria-label="Example questions">
       {prompts.map((item) => (
         <button
           key={item.id}
           type="button"
           role="listitem"
           onClick={() => onSelect(item.prompt)}
-          className={stackBtnClass}
+          className={tone === "note" ? noteStackBtnClass : stackBtnClass}
         >
           {item.label}
         </button>

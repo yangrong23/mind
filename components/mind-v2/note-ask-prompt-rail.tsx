@@ -34,7 +34,7 @@ export function NoteAskPromptRail({
                 className={cn(
                   "shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors",
                   selected
-                    ? "border-mind/35 bg-mind/8 text-mind dark:border-mind/40 dark:bg-mind/15"
+                    ? "border-mind/35 bg-sky-50 text-mind dark:border-mind/40 dark:bg-sky-950/40"
                     : "border-stone-200/90 bg-stone-50/90 text-zinc-600 hover:border-stone-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300"
                 )}
               >
@@ -61,7 +61,7 @@ export function NoteAskPromptRail({
               className={cn(
                 "flex min-h-[52px] flex-col items-start justify-center rounded-xl border px-3 py-2.5 text-left transition-[border-color,background-color,box-shadow]",
                 selected
-                  ? "border-mind/40 bg-mind/8 shadow-sm shadow-mind/10 dark:border-mind/35 dark:bg-mind/15"
+                  ? "border-mind/40 bg-sky-50/90 shadow-sm shadow-sky-100/80 dark:border-mind/35 dark:bg-sky-950/35"
                   : "border-stone-200/90 bg-stone-50/60 hover:border-stone-300/90 hover:bg-white hover:shadow-sm dark:border-zinc-700/90 dark:bg-zinc-900/60 dark:hover:border-zinc-600"
               )}
             >

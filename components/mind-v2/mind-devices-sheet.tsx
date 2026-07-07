@@ -1,9 +1,15 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { useEffect, type ReactNode } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import { Bluetooth, X, Battery, HardDrive, RefreshCw, Wifi } from "lucide-react"
+import {
+  DevicePairingFlowPanel,
+  MOCK_PAIR_DEVICE,
+  useDevicePairingMock,
+} from "@/components/mind-v2/device-pairing-mock"
 
 export interface MindDevicesSheetProps {
   open: boolean
@@ -27,7 +33,22 @@ export function MindDevicesSheet({
   zOverlayClass = "z-[59]",
   children,
 }: MindDevicesSheetProps) {
+  const pairing = useDevicePairingMock(() => onSetDeviceConnected(true))
+  const { step, startScan, connectSelected, cancelScan, reset } = pairing
+
+  useEffect(() => {
+    if (!open) reset()
+  }, [open, reset])
+
+  useEffect(() => {
+    if (isDeviceConnected) reset()
+  }, [isDeviceConnected, reset])
+
   if (!open) return null
+
+  const showPairFlow = !isDeviceConnected && step !== "idle"
+  const deviceLabel = isDeviceConnected ? "Mindar Recorder" : MOCK_PAIR_DEVICE.name
+  const deviceSerial = isDeviceConnected ? "MR-2024-001234" : MOCK_PAIR_DEVICE.serial
 
   return (
     <div className={cn("absolute inset-0 flex min-h-0 flex-col", zOverlayClass)}>
@@ -55,116 +76,118 @@ export function MindDevicesSheet({
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="px-5 pb-4">
-          <div
-            role={isDeviceConnected && onConnectedDeviceOpen ? "button" : undefined}
-            tabIndex={isDeviceConnected && onConnectedDeviceOpen ? 0 : undefined}
-            onClick={() => {
-              if (!isDeviceConnected || !onConnectedDeviceOpen) return
-              onConnectedDeviceOpen()
-              onClose()
-            }}
-            onKeyDown={(e) => {
-              if (!isDeviceConnected || !onConnectedDeviceOpen) return
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
-                onConnectedDeviceOpen()
-                onClose()
-              }
-            }}
-            className={cn(
-              "rounded-2xl border-2 p-4 transition-all",
-              isDeviceConnected
-                ? "border-stone-300/80 bg-gradient-to-br from-stone-100 to-stone-50"
-                : "border-stone-300 bg-stone-100",
-              isDeviceConnected && onConnectedDeviceOpen && "cursor-pointer active:scale-[0.99]"
-            )}
-          >
-            <div className="mb-4 flex items-center gap-4">
+          {!showPairFlow ? (
+            <div className="px-5 pb-4">
               <div
+                role={isDeviceConnected && onConnectedDeviceOpen ? "button" : undefined}
+                tabIndex={isDeviceConnected && onConnectedDeviceOpen ? 0 : undefined}
+                onClick={() => {
+                  if (!isDeviceConnected || !onConnectedDeviceOpen) return
+                  onConnectedDeviceOpen()
+                  onClose()
+                }}
+                onKeyDown={(e) => {
+                  if (!isDeviceConnected || !onConnectedDeviceOpen) return
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    onConnectedDeviceOpen()
+                    onClose()
+                  }
+                }}
                 className={cn(
-                  "flex h-14 w-14 items-center justify-center rounded-2xl",
-                  isDeviceConnected ? "bg-gradient-to-br from-mind to-mind" : "bg-stone-400"
+                  "rounded-2xl border-2 p-4 transition-all",
+                  isDeviceConnected
+                    ? "border-stone-300/80 bg-gradient-to-br from-stone-100 to-stone-50"
+                    : "border-stone-300 bg-stone-100 dark:border-zinc-700 dark:bg-zinc-800/50",
+                  isDeviceConnected && onConnectedDeviceOpen && "cursor-pointer active:scale-[0.99]"
                 )}
               >
-                <Bluetooth className="h-7 w-7 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="font-semibold text-zinc-900">Mind Recorder</span>
-                  <span
+                <div className="mb-4 flex items-center gap-4">
+                  <div
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-xs font-medium",
-                      isDeviceConnected ? "bg-zinc-700 text-white" : "bg-stone-300 text-zinc-700"
+                      "flex h-14 w-14 items-center justify-center rounded-2xl",
+                      isDeviceConnected ? "bg-gradient-to-br from-mind to-mind" : "bg-stone-400 dark:bg-zinc-600"
                     )}
                   >
-                    {isDeviceConnected ? "Connected" : "Disconnected"}
-                  </span>
+                    <Bluetooth className="h-7 w-7 text-white" strokeWidth={2} aria-hidden />
+                  </div>
+                  <div className="flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="font-semibold text-zinc-900 dark:text-zinc-50">{deviceLabel}</span>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-xs font-medium",
+                          isDeviceConnected ? "bg-zinc-700 text-white" : "bg-stone-300 text-zinc-700 dark:bg-zinc-600 dark:text-zinc-200"
+                        )}
+                      >
+                        {isDeviceConnected ? "Connected" : "Not connected"}
+                      </span>
+                    </div>
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">SN: {deviceSerial}</span>
+                  </div>
                 </div>
-                <span className="text-sm text-zinc-600">SN: MR-2024-001234</span>
+
+                {isDeviceConnected ? (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-xl bg-white/80 p-3 text-center dark:bg-zinc-900/60">
+                      <Battery className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} strokeWidth={2} aria-hidden />
+                      <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">55%</div>
+                      <div className="text-xs text-zinc-600 dark:text-zinc-400">Battery</div>
+                    </div>
+                    <div className="rounded-xl bg-white/80 p-3 text-center dark:bg-zinc-900/60">
+                      <HardDrive className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} strokeWidth={2} aria-hidden />
+                      <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">2.3G</div>
+                      <div className="text-xs text-zinc-600 dark:text-zinc-400">Free</div>
+                    </div>
+                    <div className="rounded-xl bg-white/80 p-3 text-center dark:bg-zinc-900/60">
+                      <Wifi className={cn("mx-auto mb-1 h-5 w-5", mx.navActiveIcon)} strokeWidth={2} aria-hidden />
+                      <div className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">v1.4</div>
+                      <div className="text-xs text-zinc-600 dark:text-zinc-400">Firmware</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    Pair your Mindar Recorder to sync captures and check battery from Memos.
+                  </p>
+                )}
               </div>
             </div>
+          ) : null}
 
-            {isDeviceConnected && (
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-xl bg-white/80 p-3 text-center">
-                  <Battery className={cn("mx-auto mb-1 h-5 w-5", "text-white dark:text-[#1a1a1a]")} />
-                  <div className="text-lg font-semibold text-zinc-900">85%</div>
-                  <div className="text-xs text-zinc-600">Battery</div>
-                </div>
-                <div className="rounded-xl bg-white/80 p-3 text-center">
-                  <HardDrive className={cn("mx-auto mb-1 h-5 w-5", "text-white dark:text-[#1a1a1a]")} />
-                  <div className="text-lg font-semibold text-zinc-900">2.3G</div>
-                  <div className="text-xs text-zinc-600">Free</div>
-                </div>
-                <div className="rounded-xl bg-white/80 p-3 text-center">
-                  <Wifi className={cn("mx-auto mb-1 h-5 w-5", "text-white dark:text-[#1a1a1a]")} />
-                  <div className="text-lg font-semibold text-zinc-900">v2.1</div>
-                  <div className="text-xs text-zinc-600">Firmware</div>
-                </div>
-              </div>
+          <div className="space-y-2 px-5 pb-4">
+            {isDeviceConnected ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.success("Sync started", {
+                      description: "Recordings and metadata upload to this library (demo).",
+                    })
+                  }}
+                  className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white", mx.brandCta)}
+                >
+                  <RefreshCw className="h-5 w-5" strokeWidth={2} aria-hidden />
+                  Sync now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSetDeviceConnected(false)}
+                  className="w-full rounded-xl bg-stone-200 py-3 font-medium text-zinc-700 hover:bg-stone-300 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                >
+                  Disconnect
+                </button>
+              </>
+            ) : (
+              <DevicePairingFlowPanel
+                step={step}
+                onStartScan={startScan}
+                onConnect={connectSelected}
+                onCancel={cancelScan}
+              />
             )}
           </div>
-        </div>
 
-        <div className="space-y-2 px-5 pb-4">
-          {isDeviceConnected ? (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  toast.success("Sync started", {
-                    description: "Recordings and metadata upload to this library (demo).",
-                  })
-                }}
-                className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white", "mind-btn rounded-lg")}
-              >
-                <RefreshCw className="h-5 w-5" />
-                Sync now
-              </button>
-              <button
-                type="button"
-                onClick={() => onSetDeviceConnected(false)}
-                className="w-full rounded-xl bg-stone-200 py-3 font-medium text-zinc-700 hover:bg-stone-300"
-              >
-                Disconnect
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onSetDeviceConnected(true)}
-              className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-3 font-medium text-white", "mind-btn rounded-lg")}
-            >
-              <Bluetooth className="h-5 w-5" />
-              Search & connect
-            </button>
-          )}
-        </div>
-
-        {children ? (
-          <div className="border-t border-stone-100 px-5 pb-6 pt-2">{children}</div>
-        ) : null}
+          {children ? <div className="border-t border-stone-100 px-5 pb-6 pt-2 dark:border-zinc-800">{children}</div> : null}
         </div>
       </div>
     </div>

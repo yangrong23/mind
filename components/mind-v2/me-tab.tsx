@@ -1,17 +1,11 @@
 "use client"
 
-import { useState, useEffect, type ReactNode } from "react"
+import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { getTodayTimelineDay } from "@/lib/mock-activity-timeline"
-import {
-  DEMO_CAPTURE_DIARY,
-  buildDayShareCardText,
-  formatHeatmapDayLabel,
-  getDayUploads,
-  getDayViralSlogan,
-} from "@/lib/me-capture-diary-helpers"
+import { mx } from "@/lib/medrix-design-tokens"
+import { buildDemoActivityTimeline, getTodayTimelineDay } from "@/lib/mock-activity-timeline"
 import {
   getMindAccount,
   MIND_ACCOUNTS,
@@ -26,45 +20,38 @@ import {
   SettingsScreenShell,
   SettingsToggleRow,
 } from "@/components/mind-v2/me-settings-ui"
-import { MeTabWebLayout } from "@/components/mind-v2/me-tab-web-layout"
-import { WebRailSettingsPanel } from "@/components/mind-v2/web-rail-settings-panel"
 import {
   MeActivityDiaryPreview,
   MeActivityTimeline,
-  MeDiaryTimelineEmbed,
-  MeDiaryTimelinePanel,
 } from "@/components/mind-v2/me-activity-timeline"
 import {
-  WebMeProfileHeader,
-  WebMeUpgradeBanner,
-  type WebMeStat,
-} from "@/components/mind-v2/web-me-shell"
-import { WebMeSettingsEntry } from "@/components/mind-v2/web-me-settings-entry"
-import { MeDailyReview } from "@/components/mind-v2/me-daily-review"
-import { WebMeSettingsDetail } from "@/components/mind-v2/web-me-settings-detail"
-import { buildTimelineSharePayload, type MindSharePayload } from "@/lib/mind-share-payload"
+  buildMeStatsSharePayload,
+  buildTimelineSharePayload,
+  type MeStatsShareFocus,
+  type MindSharePayload,
+} from "@/lib/mind-share-payload"
+import { MeStatsShareInsightPanel } from "@/components/mind-v2/me-stats-leaderboard"
 import {
   MeCollectedPersonalInfoPanel,
-  MePrivacyGuideSummaryPanel,
   MePrivacySettingsPanel,
   MeStorageSpacePanel,
   MeThirdPartySharingPanel,
 } from "@/components/mind-v2/me-settings-panels"
+import { MeLegalDocumentPanel } from "@/components/mind-v2/me-legal-document-panel"
+import type { MainlandLegalDocId } from "@/lib/mainland-legal-docs"
 import { MeCreditsPlansScreen } from "@/components/mind-v2/me-credits-billing"
+import { membershipPlanById } from "@/lib/mind-membership-plans"
 import {
   MIND_FONT_ZOOM_MAX,
   MIND_FONT_ZOOM_MIN,
   clampFontZoomPercent,
 } from "@/lib/mind-display-prefs"
 import {
-  FileText,
   ChevronRight,
-  Share2,
   User,
   Bell,
   HelpCircle,
   Globe,
-  Shield,
   Smartphone,
   Award,
   Clock,
@@ -72,67 +59,63 @@ import {
   Brain,
   Bot,
   Cloud,
-  Calendar,
-  Zap,
   Hash,
   MoreHorizontal,
   Trash2,
   Building2,
-  ChevronsUpDown,
+  Settings,
   LogOut,
   Sun,
   Moon,
   Cpu,
   HardDrive,
+  Sparkles,
 } from "lucide-react"
 
-type MeSettingsExtraId =
-  | "display"
-  | "notifications"
-  | "storage"
-  | "devices"
-  | "privacy"
-  | "account"
-  | "help"
+const DEMO_CAPTURE_DIARY = buildDemoActivityTimeline()
 
-function settingsExtraTitle(settingsExtra: MeSettingsExtraId): string {
-  const map: Record<MeSettingsExtraId, string> = {
-    display: "Display",
-    notifications: "Notifications",
-    storage: "Storage",
-    devices: "Devices",
-    privacy: "Privacy",
-    account: "Account",
-    help: "Help",
-  }
-  return map[settingsExtra] ?? "Settings"
+function hashDateString(s: string) {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i)
+  return Math.abs(h)
 }
 
-function MeSettingsShell({
-  webLayout,
-  title,
-  onBack,
-  children,
-  zClass,
-}: {
-  webLayout?: boolean
-  title: string
-  onBack: () => void
-  children: ReactNode
-  zClass?: string
-}) {
-  if (webLayout) {
-    return (
-      <WebMeSettingsDetail title={title} onBack={onBack}>
-        {children}
-      </WebMeSettingsDetail>
-    )
+function formatHeatmapDayLabel(isoDate: string) {
+  const d = new Date(isoDate + "T12:00:00")
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+}
+
+function getDayUploads(isoDate: string, activity: number) {
+  if (activity <= 0) return []
+  const h = hashDateString(isoDate)
+  const titles = [
+    "Product requirements sync",
+    "Quick voice memo — ideas",
+    "1:1 with design",
+    "Customer call notes",
+    "Sprint planning snippet",
+  ]
+  const times = ["8:02 AM", "10:18 AM", "12:40 PM", "3:05 PM", "6:22 PM"]
+  const count = Math.min(activity + 1, 5)
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${isoDate}-${i}`,
+    title: titles[(h + i) % titles.length],
+    time: times[(h + i * 2) % times.length],
+    source: (h + i) % 2 === 0 ? "Phone" : "Mindar Recorder",
+  }))
+}
+
+function getDailyReviewForDay(isoDate: string, activity: number) {
+  if (activity <= 0) {
+    return "A light day in your capture log—no new uploads. Use the space to reflect or queue one small topic for tomorrow's first recording."
   }
-  return (
-    <SettingsScreenShell title={title} onBack={onBack} zClass={zClass}>
-      {children}
-    </SettingsScreenShell>
-  )
+  const h = hashDateString(isoDate)
+  const flavors = [
+    "You leaned into product and customer context—several threads point to the same roadmap bet. Carry one concrete decision into your next session.",
+    "Captures skew toward meetings and async notes. The through-line is clarity on next steps; consider tagging follow-ups so they surface in weekly review.",
+    "Mix of device and phone recordings. Energy looks steady; try linking one highlight to your knowledge library so it compounds.",
+  ]
+  return flavors[h % flavors.length]
 }
 
 function DisplayThemeSegment() {
@@ -175,7 +158,67 @@ function DisplayThemeSegment() {
   )
 }
 
-export interface MeTabProps {
+function getDayLeadLine(isoDate: string, activity: number) {
+  const n = getDayUploads(isoDate, activity).length
+  if (n === 0) {
+    return "No captures logged for this date."
+  }
+  return `This day: ${n} capture${n === 1 ? "" : "s"} · activity level ${activity}.`
+}
+
+function buildDayExpandedShareText(isoDate: string, activity: number) {
+  const label = formatHeatmapDayLabel(isoDate)
+  const lead = getDayLeadLine(isoDate, activity)
+  const narrative = getDailyReviewForDay(isoDate, activity)
+  const uploads = getDayUploads(isoDate, activity)
+  const titles = uploads.map((u) => `• ${u.title}`).join("\n")
+  return [label, lead, narrative, uploads.length ? `Recorded:\n${titles}` : ""].filter(Boolean).join("\n\n")
+}
+
+function heatmapDaySharePreview(isoDate: string, activity: number) {
+  const full = buildDayExpandedShareText(isoDate, activity)
+  return full.length > 320 ? full.slice(0, 320) + "…" : full
+}
+
+const HEATMAP_VIRAL_SLOGANS_ACTIVE = [
+  "Your future self is built\none square at a time.",
+  "Ideas decay in memory.\nThey compound on your timeline.",
+  "I didn't wait for inspiration—\nI captured it.",
+  "Consistency is the quiet flex\nnobody sees until they do.",
+  "Every recorded thought is a vote\nfor who you're becoming.",
+  "Show up empty, leave with clarity—\nthat's the whole game.",
+  "The best thinkers don't have better ideas.\nThey have better logs.",
+] as const
+
+const HEATMAP_VIRAL_SLOGANS_QUIET = [
+  "Even quiet days count.\nRest is part of the streak.",
+  "Blank squares aren't failure—\nthey're space for tomorrow.",
+  "Not every day roars.\nSome days whisper—and that's enough.",
+] as const
+
+function getDayViralSlogan(isoDate: string, activity: number) {
+  const h = hashDateString(isoDate)
+  const pool = activity > 0 ? HEATMAP_VIRAL_SLOGANS_ACTIVE : HEATMAP_VIRAL_SLOGANS_QUIET
+  return pool[h % pool.length]
+}
+
+function buildDayShareCardText(
+  isoDate: string,
+  activity: number,
+  displayName: string,
+  streakDays: number
+) {
+  const slogan = getDayViralSlogan(isoDate, activity).replace(/\n/g, " ")
+  const label = formatHeatmapDayLabel(isoDate)
+  const captures = getDayUploads(isoDate, activity).length
+  const activityLine =
+    activity > 0
+      ? `${captures} capture${captures === 1 ? "" : "s"} · level ${activity}`
+      : "A quiet day on my timeline"
+  return `${slogan}\n\n${label} · ${activityLine}\n${streakDays}-day streak on Mindar · ${displayName}`
+}
+
+interface MeTabProps {
   activeAccountId: MindAccountId
   onActiveAccountChange: (id: MindAccountId) => void
   /** When provided, Sign out in the account sheet ends the demo session (guest gate). */
@@ -184,19 +227,10 @@ export interface MeTabProps {
   fontZoomPercent?: number
   onFontZoomPercentChange?: (pct: number) => void
   /** Desktop: profile + activity timeline */
-  webLayout?: boolean
   /** Increment from web rail to open credits / plans */
   creditsOpenSignal?: number
-  /** Web: navigate to full timeline page */
-  onOpenTimeline?: () => void
-  /** Web: navigate to a single-day log page */
-  onOpenTimelineDay?: (day: { isoDate: string; activity: number }) => void
-  /** Web: open membership comparison (table layout in shell modal) */
-  onOpenCreditsPlans?: () => void
-  /** Web: full settings panel (under Me) */
-  settingsOpen?: boolean
-  onOpenSettings?: () => void
-  onCloseSettings?: () => void
+  isDeviceConnected: boolean
+  onSetDeviceConnected: (connected: boolean) => void
 }
 
 export function MeTab({
@@ -205,14 +239,9 @@ export function MeTab({
   onSessionSignOut,
   fontZoomPercent = 100,
   onFontZoomPercentChange,
-  webLayout = false,
   creditsOpenSignal = 0,
-  onOpenTimeline,
-  onOpenTimelineDay,
-  onOpenCreditsPlans,
-  settingsOpen = false,
-  onOpenSettings,
-  onCloseSettings,
+  isDeviceConnected,
+  onSetDeviceConnected,
 }: MeTabProps) {
   const activeAccount = getMindAccount(activeAccountId)
   const [activityDiary, setActivityDiary] = useState<{
@@ -221,24 +250,16 @@ export function MeTab({
     listFirst?: boolean
   } | null>(null)
 
-  const openActivityDiaryDay = (day: { isoDate: string; activity: number }) => {
-    if (webLayout && onOpenTimelineDay) {
-      onOpenTimelineDay(day)
-      return
-    }
-    setActivityDiary({ date: day.isoDate, value: day.activity, listFirst: false })
+  const openActivityDiaryList = () => {
+    const today = getTodayTimelineDay(DEMO_CAPTURE_DIARY)
+    setActivityDiary({ date: today.isoDate, value: today.activity, listFirst: false })
   }
 
-  const openActivityDiaryList = () => {
-    if (webLayout && onOpenTimeline) {
-      onOpenTimeline()
-      return
-    }
-    const today = getTodayTimelineDay(DEMO_CAPTURE_DIARY)
-    setActivityDiary({ date: today.isoDate, value: today.activity, listFirst: true })
+  const openActivityDiaryDay = (day: { isoDate: string; activity: number }) => {
+    setActivityDiary({ date: day.isoDate, value: day.activity, listFirst: false })
   }
   const [shareSheet, setShareSheet] = useState<MindSharePayload | null>(null)
-  const [showShareCard, setShowShareCard] = useState(false)
+  const [statsInsight, setStatsInsight] = useState<Exclude<MeStatsShareFocus, "overview"> | null>(null)
   const [showPreferences, setShowPreferences] = useState(false)
   const [showCloudSync, setShowCloudSync] = useState(false)
   const [showPersonalization, setShowPersonalization] = useState(false)
@@ -246,13 +267,8 @@ export function MeTab({
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false)
   const [showCreditsPlans, setShowCreditsPlans] = useState(false)
   useEffect(() => {
-    if (creditsOpenSignal <= 0) return
-    if (webLayout && onOpenCreditsPlans) {
-      onOpenCreditsPlans()
-      return
-    }
-    setShowCreditsPlans(true)
-  }, [creditsOpenSignal, webLayout, onOpenCreditsPlans])
+    if (creditsOpenSignal > 0) setShowCreditsPlans(true)
+  }, [creditsOpenSignal])
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(false)
   const [wifiOnlySync, setWifiOnlySync] = useState(false)
   const [useMemory, setUseMemory] = useState(false)
@@ -270,158 +286,221 @@ export function MeTab({
   ])
   const [offlineOnly, setOfflineOnly] = useState(false)
   const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false)
-  const [isDeviceConnected, setIsDeviceConnected] = useState(true)
-  const [settingsExtra, setSettingsExtra] = useState<MeSettingsExtraId | null>(null)
+  const [settingsExtra, setSettingsExtra] = useState<
+    | null
+    | "menu"
+    | "display"
+    | "notifications"
+    | "storage"
+    | "devices"
+    | "features"
+    | "privacy"
+    | "about"
+    | "help"
+  >(null)
+  const [legalDoc, setLegalDoc] = useState<MainlandLegalDocId | null>(null)
   const [showStorageSpace, setShowStorageSpace] = useState(false)
   const [privacyDetail, setPrivacyDetail] = useState<
-    null | "guide" | "thirdParty" | "collected" | "privacySettings"
+    null | "thirdParty" | "collected" | "privacySettings"
   >(null)
-  const themeForHub = useTheme()
-  const [themeHubMounted, setThemeHubMounted] = useState(false)
-  useEffect(() => setThemeHubMounted(true), [])
+  const [frontierInsights, setFrontierInsights] = useState(true)
+  const [notifCaptureReady, setNotifCaptureReady] = useState(true)
+  const [notifDigest, setNotifDigest] = useState(false)
   const [privacyCrashReports, setPrivacyCrashReports] = useState(true)
-  const [showDailyReview, setShowDailyReview] = useState(false)
 
   const stats = {
     totalNotes: 156,
     totalDays: 23,
     consecutiveDays: 7,
-    totalHours: 12.5,
     totalRecordings: 89,
     knowledgeItems: 234,
     creditsRemaining: 32_400,
     creditsMonthlyAllowance: 50_000,
   }
 
-  const currentMembershipPlanId = "standard" as const
+  function openStatsInsight(metric: Exclude<MeStatsShareFocus, "overview">) {
+    setStatsInsight(metric)
+  }
 
-  const appearanceLabel =
-    !themeHubMounted || !themeForHub.resolvedTheme
-      ? "…"
-      : themeForHub.resolvedTheme === "dark"
-        ? "Dark"
-        : "Light"
+  function buildStatsSharePayload(focus: MeStatsShareFocus) {
+    return buildMeStatsSharePayload({
+      focus,
+      displayName: activeAccount.displayName,
+      memos: stats.totalNotes,
+      streak: stats.consecutiveDays,
+      usedDays: stats.totalDays,
+    })
+  }
+
+  const statsInsightSharePayload =
+    statsInsight != null
+      ? buildStatsSharePayload(
+          statsInsight === "memos"
+            ? "memos"
+            : statsInsight === "days"
+              ? "days"
+              : "streak"
+        )
+      : null
+
+  const currentMembershipPlanId = "standard" as const
+  const currentPlan = membershipPlanById(currentMembershipPlanId)
+  const upgradePlan = membershipPlanById("pro")
+
   const profileHeroBlock = (
-    <div className={cn(webLayout ? "p-0" : cn("px-5 pt-4 pb-4", "bg-[#0a1530] text-white"))}>
-        <div className="flex items-start justify-between gap-3">
+    <div className="px-5 pt-4 pb-4">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setShowAccountSwitcher(true)}
             className={cn(
-              "flex min-w-0 flex-1 items-center gap-3 rounded-xl py-0.5 pl-0.5 pr-2 text-left transition-colors focus:outline-none",
-              "hover:bg-white/10",
-              "focus-visible:ring-2 focus-visible:ring-mind/35 focus-visible:ring-offset-2"
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold transition-opacity hover:opacity-90",
+              activeAccount.kind === "work"
+                ? "bg-gradient-to-br from-stone-100 to-stone-50 ring-1 ring-stone-200/70"
+                : cn(mx.accentPersonalAvatar, mx.accentPersonalRing)
             )}
             aria-label="Switch account"
           >
-            <div
-              className={cn(
-                "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold",
-                activeAccount.kind === "work"
-                  ? "bg-gradient-to-br from-stone-100 to-stone-50 ring-1 ring-stone-200/70"
-                  : cn("bg-mind text-white", "ring-2 ring-mind/20")
-              )}
+            {activeAccount.kind === "work" ? (
+              <User className={cn("h-6 w-6", mx.accentWorkIcon)} />
+            ) : (
+              <span className="text-white">{activeAccount.initial}</span>
+            )}
+          </button>
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => setShowAccountSwitcher(true)}
+              className="block min-w-0 max-w-full text-left"
+              aria-label="Switch account"
             >
-              {activeAccount.kind === "work" ? (
-                <User className={cn("h-6 w-6", "text-mind")} />
-              ) : (
-                <span className="text-white">{activeAccount.initial}</span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <h2 className={cn("text-[17px] font-semibold leading-tight tracking-tight", "text-white")}>
-                  {activeAccount.displayName}
-                </h2>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                    activeAccount.kind === "work"
-                      ? cn("bg-mind/8", "text-mind")
-                      : cn("bg-mind/8", "text-mind")
-                  )}
-                >
-                  {accountSpaceLabel(activeAccount.kind)}
+              <h2 className={cn("truncate text-[17px] font-semibold leading-tight tracking-tight", mx.brandOnHero)}>
+                {accountSpaceLabel(activeAccount.kind)}
+              </h2>
+            </button>
+            <div className="mt-0.5 flex min-w-0 items-center gap-2">
+              {currentPlan ? (
+                <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                  {currentPlan.name}
                 </span>
-              </div>
-              <p className={cn("mt-0.5 truncate text-[13px]", "text-[#a4a097]")}>{activeAccount.email}</p>
-              <p className={cn("mt-0.5 text-[12px]", "text-[#a4a097]")}>
-                {stats.totalDays} active days · {stats.consecutiveDays}-day streak
-              </p>
+              ) : null}
             </div>
-            <ChevronsUpDown className={cn("h-4 w-4 shrink-0 opacity-50", "text-[#a4a097]")} aria-hidden />
+          </div>
+          <button
+            type="button"
+            onClick={() => setSettingsExtra("menu")}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-stone-100/80 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
+            aria-label="Settings"
+          >
+            <Settings className="h-[19px] w-[19px]" strokeWidth={1.85} />
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-stone-200 pt-3">
-          {[
-            { value: stats.totalNotes, label: "Memos" },
-            { value: stats.consecutiveDays, label: "Streak" },
-          ].map((s) => (
-            <div key={s.label} className="text-center">
-              <div className={cn("text-lg font-semibold tabular-nums leading-none", "text-white")}>{s.value}</div>
-              <div className={cn("mt-1 text-[11px]", "text-[#a4a097]")}>{s.label}</div>
+        {upgradePlan ? (
+          <button
+            type="button"
+            onClick={() => setShowCreditsPlans(true)}
+            className={cn(
+              "group relative mt-3 w-full overflow-hidden rounded-2xl text-left",
+              "border border-mind/20 bg-gradient-to-br from-mind/[0.09] via-white to-sky-50/70",
+              "shadow-[0_8px_28px_-12px_rgba(56,189,248,0.35),0_2px_8px_-4px_rgba(15,23,42,0.06)]",
+              "transition-[transform,box-shadow,border-color] duration-300",
+              "hover:border-mind/30 hover:shadow-[0_12px_36px_-12px_rgba(56,189,248,0.42),0_4px_12px_-6px_rgba(15,23,42,0.08)]",
+              "active:scale-[0.99] dark:border-mind/25 dark:from-mind/15 dark:via-zinc-900 dark:to-zinc-900",
+              mx.brandFocusRing
+            )}
+            aria-label={`Upgrade to ${upgradePlan.name}`}
+          >
+            <span
+              className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-mind/20 blur-2xl dark:bg-mind/25"
+              aria-hidden
+            />
+            <span
+              className="pointer-events-none absolute -bottom-6 left-1/3 h-20 w-20 rounded-full bg-sky-300/15 blur-2xl dark:bg-sky-500/10"
+              aria-hidden
+            />
+            <span
+              className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/10"
+              aria-hidden
+            />
+
+            <div className="relative flex items-center gap-3 px-4 py-3.5">
+              <span
+                className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                  "bg-gradient-to-br from-mind to-sky-500 text-white",
+                  "shadow-[0_6px_16px_-4px_rgba(56,189,248,0.55)] ring-1 ring-white/30",
+                  "transition-transform duration-300 group-hover:scale-[1.03]"
+                )}
+                aria-hidden
+              >
+                <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.1} />
+              </span>
+
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="text-[14px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                    Upgrade to {upgradePlan.name}
+                  </span>
+                  <span className="rounded-full bg-mind/12 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-mind dark:bg-mind/20 dark:text-sky-300">
+                    Best value
+                  </span>
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                  {upgradePlan.monthlyCreditsLabel} credits · {upgradePlan.features[1]?.toLowerCase() ?? upgradePlan.blurb}
+                </span>
+              </span>
+
+              <span
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                  "bg-white/80 text-mind ring-1 ring-mind/15",
+                  "transition-transform duration-300 group-hover:translate-x-0.5",
+                  "dark:bg-zinc-900/80 dark:text-sky-300 dark:ring-mind/25"
+                )}
+                aria-hidden
+              >
+                <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+              </span>
             </div>
+          </button>
+        ) : null}
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {(
+            [
+              { value: stats.totalNotes, label: "Memos", metric: "memos" as const },
+              { value: stats.consecutiveDays, label: "Streak", metric: "streak" as const },
+              { value: stats.totalDays, label: "Days", metric: "days" as const },
+            ] as const
+          ).map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => openStatsInsight(s.metric)}
+              className={cn(
+                mx.elevatedCard,
+                "px-2 py-3 text-center transition-all active:scale-[0.98]",
+                "hover:border-[#E9ECEF] dark:hover:border-zinc-600",
+                mx.brandFocusRing
+              )}
+              aria-label={`View ${s.label} stats`}
+            >
+              <div className={cn("text-lg font-semibold tabular-nums leading-none", mx.brandOnHero)}>{s.value}</div>
+              <div className={cn("mt-1 text-[11px] font-medium uppercase tracking-wide", mx.brandOnHeroMuted)}>
+                {s.label}
+              </div>
+            </button>
           ))}
         </div>
 
-        {!webLayout ? (
-          <div className="mt-3">
-            <WebMeUpgradeBanner
-              creditsRemaining={stats.creditsRemaining}
-              creditsMonthlyAllowance={stats.creditsMonthlyAllowance}
-              planName="Standard"
-              onUpgrade={() => setShowCreditsPlans(true)}
-            />
-          </div>
-        ) : null}
-
-        {!webLayout ? (
-        <div className="mt-3 space-y-3 rounded-xl border border-stone-200 bg-white/55 p-3 shadow-sm shadow-stone-900/5 backdrop-blur-sm">
+        <div className="mt-3">
           <MeActivityDiaryPreview
             days={DEMO_CAPTURE_DIARY}
             onOpenDiary={openActivityDiaryList}
             onOpenDay={openActivityDiaryDay}
           />
         </div>
-        ) : null}
-    </div>
-  )
-
-  const webMeStats: WebMeStat[] = [
-    { label: "Notes", value: stats.totalNotes, icon: FileText, tone: "blue" },
-    { label: "Streak", value: stats.consecutiveDays, icon: Award, tone: "orange" },
-  ]
-
-  const openCreditsPlans = () => {
-    if (webLayout && onOpenCreditsPlans) {
-      onOpenCreditsPlans()
-      return
-    }
-    setShowCreditsPlans(true)
-  }
-
-  const webTimelinePanel = (
-    <MeDiaryTimelinePanel
-      days={DEMO_CAPTURE_DIARY}
-      onOpenDiary={openActivityDiaryList}
-      onOpenDay={openActivityDiaryDay}
-      onOpenDailyReview={() => setShowDailyReview(true)}
-    />
-  )
-
-  const webProfileHero = (
-    <div className="flex flex-col gap-5">
-      <WebMeProfileHeader
-        account={activeAccount}
-        stats={webMeStats}
-        creditsRemaining={stats.creditsRemaining}
-        creditsMonthlyAllowance={stats.creditsMonthlyAllowance}
-        planName="Standard"
-        onOpenAccountSwitcher={() => setShowAccountSwitcher(true)}
-        onOpenCredits={openCreditsPlans}
-      />
-      {onOpenSettings ? <WebMeSettingsEntry onOpenSettings={onOpenSettings} /> : null}
     </div>
   )
 
@@ -446,9 +525,6 @@ export function MeTab({
               <p id="account-switch-title" className="text-[16px] font-semibold text-zinc-900">
                 Switch account
               </p>
-              <p className="mt-1.5 text-[13px] leading-snug text-zinc-500">
-                Work and personal spaces stay separate; switching does not mix their UI or content.
-              </p>
             </div>
 
             <div className="px-5 pb-1 pt-2">
@@ -458,16 +534,16 @@ export function MeTab({
                     "flex h-[68px] w-[68px] items-center justify-center rounded-full text-2xl font-semibold shadow-inner",
                     activeAccount.kind === "work"
                       ? "bg-gradient-to-br from-stone-100 to-stone-50 ring-2 ring-stone-200/80"
-                      : cn("bg-mind text-white", "ring-2 ring-stone-200/90")
+                      : cn(mx.accentPersonalAvatar, "ring-2 ring-stone-200/90")
                   )}
                 >
                   {activeAccount.kind === "work" ? (
-                    <User className={cn("h-8 w-8", "text-mind")} />
+                    <User className={cn("h-8 w-8", mx.accentWorkIcon)} />
                   ) : (
                     <span className="text-white">{activeAccount.initial}</span>
                   )}
                 </div>
-                <p className="mt-3 text-[17px] font-semibold text-zinc-900">{activeAccount.displayName}</p>
+                <p className="mt-3 text-[15px] font-semibold text-zinc-900">{accountSpaceLabel(activeAccount.kind)}</p>
                 <p className="mt-0.5 max-w-full truncate px-1 text-[13px] text-zinc-500">{activeAccount.email}</p>
                 <p className="mt-2 rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-medium text-zinc-600">
                   Current · {accountSpaceLabel(activeAccount.kind)}
@@ -494,31 +570,31 @@ export function MeTab({
                       "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
                       acc.kind === "work"
                         ? "bg-stone-50 ring-1 ring-zinc-200/60"
-                        : cn("bg-mind text-white")
+                        : cn(mx.accentPersonalAvatar)
                     )}
                   >
                     {acc.kind === "work" ? (
-                      <User className={cn("h-5 w-5", "text-mind")} />
+                      <User className={cn("h-5 w-5", mx.accentWorkIcon)} />
                     ) : (
                       <span className="text-white">{acc.initial}</span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-medium text-zinc-900">{acc.displayName}</span>
+                      <span className="text-[15px] font-medium text-zinc-900">{accountSpaceLabel(acc.kind)}</span>
                       <span
                         className={cn(
                           "rounded px-1.5 py-0.5 text-[10px] font-semibold",
-                          acc.kind === "work" ? cn("bg-mind/8", "text-mind") : "bg-stone-50 text-mind"
+                          acc.kind === "work" ? cn(mx.accentWorkSoft, "text-mind") : "bg-stone-50 text-mind"
                         )}
                       >
-                        {accountSpaceLabel(acc.kind)}
+                        {acc.kind === "work" ? "Work" : "Personal"}
                       </span>
                     </div>
                     <div className="truncate text-[13px] text-zinc-500">{acc.email}</div>
                   </div>
                   {acc.kind === "work" ? (
-                    <Building2 className={cn("h-5 w-5 shrink-0", "text-mind")} aria-hidden />
+                    <Building2 className={cn("h-5 w-5 shrink-0", mx.accentWorkIcon)} aria-hidden />
                   ) : (
                     <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" aria-hidden />
                   )}
@@ -531,8 +607,8 @@ export function MeTab({
                 type="button"
                 className={cn(
                   "w-full rounded-lg py-2.5 text-[15px] font-medium transition-colors",
-                  "text-mind",
-                  "hover:text-mind/90"
+                  mx.accentBlue,
+                  mx.accentBlueHover
                 )}
                 onClick={() => {
                   toast.message("Add account", { description: "Would open the system account flow (demo)." })
@@ -545,8 +621,8 @@ export function MeTab({
                 type="button"
                 className={cn(
                   "flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-[15px] font-medium transition-colors",
-                  "text-mind",
-                  "hover:text-mind/90"
+                  mx.accentBlue,
+                  mx.accentBlueHover
                 )}
                 onClick={() => {
                   setShowAccountSwitcher(false)
@@ -565,140 +641,15 @@ export function MeTab({
         </div>
       )}
 
-      {/* Share card modal */}
-      {showShareCard && (
-        <div className="absolute inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setShowShareCard(false)} />
-          
-          <div className="absolute inset-x-4 top-20 flex flex-col items-center">
-            {/* Card body */}
-            <div className="mb-6 w-full max-w-[340px] rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-900">
-              {/* User row */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-stone-200 flex items-center justify-center">
-                  <User className="w-6 h-6 text-zinc-500" />
-                </div>
-                <span className="text-lg font-semibold text-zinc-900">{activeAccount.displayName}</span>
-              </div>
-
-              <h3 className="text-xl font-bold text-zinc-900 mb-6">Notes in the last year</h3>
-
-              {/* Stats grid */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="text-center">
-                  <div className={cn("text-sm mb-1", "text-zinc-500")}>All notes</div>
-                  <div className="text-4xl font-bold text-zinc-900">{stats.totalNotes}</div>
-                </div>
-                <div className="text-center">
-                  <div className={cn("text-sm mb-1", "text-zinc-500")}>Total days</div>
-                  <div className="text-4xl font-bold text-zinc-900">{stats.totalDays}</div>
-                </div>
-                <div className="text-center">
-                  <div className={cn("text-sm mb-1", "text-zinc-500")}>Day streak</div>
-                  <div className="text-4xl font-bold text-zinc-900">{stats.consecutiveDays}</div>
-                </div>
-              </div>
-
-              <div className="mb-6 rounded-xl border border-stone-100/90 bg-stone-50/50 p-3">
-                <p className="text-[12px] font-medium text-zinc-600">Capture diary</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-                  {DEMO_CAPTURE_DIARY.length} days summarized · {stats.consecutiveDays}-day streak
-                </p>
-                {DEMO_CAPTURE_DIARY[0] ? (
-                  <p className="mt-2 truncate text-[11px] font-medium text-zinc-600">
-                    Latest: {DEMO_CAPTURE_DIARY[0].title}
-                  </p>
-                ) : null}
-              </div>
-
-              {/* Brand + QR */}
-              <div className="flex items-center justify-between pt-4 border-t border-stone-100/85">
-                <div>
-                  <div className="text-lg font-bold text-zinc-900">Mind Notes</div>
-                  <div className="text-xs text-zinc-400">Scan to try Mind Notes</div>
-                </div>
-                <div className="w-20 h-20 bg-stone-100 rounded-lg flex items-center justify-center">
-                  <div className="grid grid-cols-5 gap-[2px]">
-                    {Array(25).fill(0).map((_, i) => (
-                      <div key={i} className={cn(
-                        "w-3 h-3",
-                        Math.random() > 0.5 ? "bg-zinc-800" : "bg-white"
-                      )} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Share actions */}
-            <div className="w-full max-w-[340px] rounded-2xl bg-white p-4 dark:bg-zinc-900">
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                <button
-                  type="button"
-                  onClick={() => toast.success("Share opened", { description: "WeChat (demo)" })}
-                  className="flex flex-col items-center gap-2"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-500">
-                    <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8.5 14.5c0 1.93 1.57 3.5 3.5 3.5 1.93 0 3.5-1.57 3.5-3.5M12 9c-1.93 0-3.5 1.57-3.5 3.5h7c0-1.93-1.57-3.5-3.5-3.5zM3 12a9 9 0 1118 0 9 9 0 01-18 0z"/>
-                    </svg>
-                  </div>
-                  <span className="text-xs text-zinc-600">WeChat</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toast.success("Share opened", { description: "Moments (demo)" })}
-                  className="flex flex-col items-center gap-2"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-600">
-                    <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                      <circle cx="12" cy="12" r="3"/>
-                      <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/>
-                    </svg>
-                  </div>
-                  <span className="text-xs text-zinc-600">Moments</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    toast.success("Saved to photos", { description: "Share card saved (demo)." })
-                  }
-                  className="flex flex-col items-center gap-2"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
-                    <svg className="h-6 w-6 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                    </svg>
-                  </div>
-                  <span className="text-xs text-zinc-600">Save image</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    toast.message("More ways to share", { description: "System share sheet (demo)." })
-                  }
-                  className="flex flex-col items-center gap-2"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
-                    <svg className="h-6 w-6 text-zinc-600" viewBox="0 0 24 24" fill="currentColor">
-                      <circle cx="5" cy="12" r="2"/>
-                      <circle cx="12" cy="12" r="2"/>
-                      <circle cx="19" cy="12" r="2"/>
-                    </svg>
-                  </div>
-                  <span className="text-xs text-zinc-600">More</span>
-                </button>
-              </div>
-              <button
-                onClick={() => setShowShareCard(false)}
-                className="w-full py-3 bg-stone-100 rounded-xl text-zinc-600 font-medium"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {statsInsight != null && statsInsightSharePayload ? (
+        <MeStatsShareInsightPanel
+          displayName={activeAccount.displayName}
+          sharePayload={statsInsightSharePayload}
+          timelineDays={DEMO_CAPTURE_DIARY}
+          onShare={() => setShareSheet(statsInsightSharePayload)}
+          onBack={() => setStatsInsight(null)}
+        />
+      ) : null}
 
       {offlineConfirmOpen && (
         <div className="absolute inset-0 z-[60] flex items-center justify-center px-5">
@@ -734,7 +685,7 @@ export function MeTab({
                   setOfflineOnly(true)
                   setOfflineConfirmOpen(false)
                 }}
-                className={cn("flex-1 rounded-xl py-3 text-[15px] font-semibold text-white", "mind-btn rounded-lg")}
+                className={cn("flex-1 rounded-xl py-3 text-[15px] font-semibold text-white", mx.brandCta)}
               >
                 Enable offline
               </button>
@@ -745,15 +696,51 @@ export function MeTab({
 
       {/* Settings — drill-down */}
       {settingsExtra && (
-        <MeSettingsShell
-          webLayout={webLayout}
-          title={settingsExtraTitle(settingsExtra)}
+        <SettingsScreenShell
+          title={
+            settingsExtra === "menu"
+              ? "Settings"
+              : settingsExtra === "display"
+              ? "Display"
+              : settingsExtra === "notifications"
+                ? "Notifications"
+                : settingsExtra === "storage"
+                  ? "Cloud storage"
+                  : settingsExtra === "devices"
+                    ? "Devices"
+                    : settingsExtra === "features"
+                    ? "AI"
+                    : settingsExtra === "privacy"
+                      ? "Privacy"
+                      : settingsExtra === "about"
+                        ? "About"
+                        : "Help"
+          }
+          subtitle={settingsExtra === "storage" ? "Notes & knowledge bases" : undefined}
           onBack={() => {
-            setSettingsExtra(null)
+            if (settingsExtra === "menu") {
+              setSettingsExtra(null)
+            } else {
+              setSettingsExtra("menu")
+            }
             setPrivacyDetail(null)
+            setLegalDoc(null)
             setShowStorageSpace(false)
           }}
         >
+          {settingsExtra === "menu" && (
+            <SettingsGroup>
+              <SettingsLinkRow label="Display" onClick={() => setSettingsExtra("display")} />
+              <SettingsLinkRow label="Notifications" onClick={() => setSettingsExtra("notifications")} />
+              <SettingsLinkRow label="Cloud storage" onClick={() => setSettingsExtra("storage")} />
+              <SettingsLinkRow label="Devices" onClick={() => setSettingsExtra("devices")} />
+              <SettingsLinkRow label="AI" onClick={() => setSettingsExtra("features")} />
+              <SettingsLinkRow label="Privacy" onClick={() => setSettingsExtra("privacy")} />
+              <SettingsLinkRow label="About" onClick={() => setSettingsExtra("about")} />
+              <SettingsLinkRow label="Help" onClick={() => setSettingsExtra("help")} last />
+            </SettingsGroup>
+          )}
+
           {settingsExtra === "display" && (
             <SettingsGroup>
               <div className="border-b border-stone-100/90 px-4 py-3.5 dark:border-zinc-800">
@@ -782,11 +769,21 @@ export function MeTab({
           {settingsExtra === "notifications" && (
             <SettingsGroup>
               <SettingsToggleRow
-                label="Push notifications"
-                checked
+                label="Recording ready"
+                checked={notifCaptureReady}
                 onChange={() => {
-                  toast.message("Notifications", { description: "Preference saved (demo)." })
+                  setNotifCaptureReady((v) => !v)
+                  toast.success("Saved")
                 }}
+              />
+              <SettingsToggleRow
+                label="Weekly digest"
+                checked={notifDigest}
+                onChange={() => {
+                  setNotifDigest((v) => !v)
+                  toast.success("Saved")
+                }}
+                last
               />
             </SettingsGroup>
           )}
@@ -794,7 +791,7 @@ export function MeTab({
           {settingsExtra === "storage" && (
             <SettingsGroup>
               <SettingsLinkRow
-                label="Storage breakdown"
+                label="Usage breakdown"
                 onClick={() => setShowStorageSpace(true)}
               />
               <SettingsLinkRow
@@ -809,7 +806,7 @@ export function MeTab({
           {settingsExtra === "devices" && (
             <MeDevicesSettingsPanel
               isDeviceConnected={isDeviceConnected}
-              onSetDeviceConnected={setIsDeviceConnected}
+              onSetDeviceConnected={onSetDeviceConnected}
               lexiconDraft={lexiconDraft}
               onLexiconDraftChange={setLexiconDraft}
               lexiconTags={lexiconTags}
@@ -817,68 +814,96 @@ export function MeTab({
               offlineOnly={offlineOnly}
               onRequestOfflineEnable={() => setOfflineConfirmOpen(true)}
               onOfflineDisable={() => setOfflineOnly(false)}
+              onOpenPersonalization={() => {
+                setSettingsExtra(null)
+                setShowPersonalization(true)
+              }}
+              onOpenCloudSync={() => {
+                setSettingsExtra(null)
+                setShowCloudSync(true)
+              }}
+              onOpenRecordingSecurity={() => {
+                setSettingsExtra(null)
+                setShowPreferences(true)
+              }}
             />
           )}
 
-          {settingsExtra === "privacy" && (
-            <SettingsGroup>
-              <SettingsLinkRow label="Protection guide" onClick={() => setPrivacyDetail("guide")} />
-              <SettingsLinkRow label="Privacy settings" onClick={() => setPrivacyDetail("privacySettings")} />
-              <SettingsLinkRow label="Data collected" onClick={() => setPrivacyDetail("collected")} />
-              <SettingsLinkRow label="Third-party sharing" onClick={() => setPrivacyDetail("thirdParty")} last />
-            </SettingsGroup>
-          )}
-
-          {settingsExtra === "account" && (
+          {settingsExtra === "features" && (
             <SettingsGroup>
               <SettingsLinkRow
-                label="Personalization"
-                onClick={() => {
-                  setSettingsExtra(null)
-                  setShowPersonalization(true)
-                }}
+                label="Model"
+                value="Light"
+                onClick={() =>
+                  toast.message("Model settings", {
+                    description: "Custom models and routing (demo).",
+                  })
+                }
               />
-              <SettingsLinkRow
-                label="Cloud sync"
-                onClick={() => {
-                  setSettingsExtra(null)
-                  setShowCloudSync(true)
-                }}
-              />
-              <SettingsLinkRow
-                label="Recording & security"
-                onClick={() => {
-                  setSettingsExtra(null)
-                  setShowPreferences(true)
+              <SettingsToggleRow
+                label="Frontier insights"
+                checked={frontierInsights}
+                onChange={() => {
+                  setFrontierInsights((v) => !v)
+                  toast.success("Saved")
                 }}
                 last
               />
             </SettingsGroup>
           )}
 
-          {settingsExtra === "help" && (
+          {settingsExtra === "privacy" && (
             <SettingsGroup>
-              {[
-                "User guide",
-                "Contact support",
-                "Rate Mind",
-              ].map((label, i, arr) => (
-                <SettingsLinkRow
-                  key={label}
-                  label={label}
-                  onClick={() => toast.message(label, { description: "Demo." })}
-                  last={i === arr.length - 1}
-                />
-              ))}
+              <SettingsLinkRow
+                label="Privacy Policy"
+                onClick={() => setLegalDoc("privacyPolicy")}
+              />
+              <SettingsLinkRow label="Privacy settings" onClick={() => setPrivacyDetail("privacySettings")} />
+              <SettingsLinkRow label="Data collected" onClick={() => setPrivacyDetail("collected")} />
+              <SettingsLinkRow label="Third-party sharing" onClick={() => setPrivacyDetail("thirdParty")} />
+              <SettingsLinkRow
+                label="Delete account"
+                onClick={() => setLegalDoc("deleteAccount")}
+                last
+              />
             </SettingsGroup>
           )}
-        </MeSettingsShell>
+
+          {settingsExtra === "about" && (
+            <SettingsGroup>
+              <SettingsLinkRow
+                label="Terms of Service"
+                onClick={() => setLegalDoc("termsOfService")}
+              />
+              <SettingsLinkRow
+                label="Privacy Policy"
+                onClick={() => setLegalDoc("privacyPolicy")}
+              />
+              <SettingsLinkRow
+                label="Company information"
+                onClick={() => setLegalDoc("companyInfo")}
+              />
+              <SettingsLinkRow label="Contact" onClick={() => setLegalDoc("contact")} last />
+            </SettingsGroup>
+          )}
+
+          {settingsExtra === "help" && (
+            <SettingsGroup>
+              <SettingsLinkRow label="Support" onClick={() => setLegalDoc("support")} />
+              <SettingsLinkRow label="Contact support" onClick={() => setLegalDoc("contact")} />
+              <SettingsLinkRow
+                label="Rate Mindar"
+                onClick={() => toast.message("Rate Mindar", { description: "Would open the app store rating flow." })}
+                last
+              />
+            </SettingsGroup>
+          )}
+        </SettingsScreenShell>
       )}
 
-      {/* Recording & security (from Account) */}
+      {/* Recording & security (from Devices) */}
       {showPreferences && (
-        <MeSettingsShell
-          webLayout={webLayout}
+        <SettingsScreenShell
           zClass="z-50"
           title="Recording & security"
           onBack={() => setShowPreferences(false)}
@@ -931,7 +956,7 @@ export function MeTab({
               last
             />
           </SettingsGroup>
-        </MeSettingsShell>
+        </SettingsScreenShell>
       )}
 
       {/* Private cloud sync */}
@@ -966,7 +991,7 @@ export function MeTab({
                     onClick={() => setCloudSyncEnabled(!cloudSyncEnabled)}
                     className={cn(
                       "w-12 h-7 rounded-full transition-colors relative",
-                      cloudSyncEnabled ? "bg-mind" : cn("bg-stone-200 dark:bg-zinc-600")
+                      cloudSyncEnabled ? "bg-mind" : cn(mx.toggleTrackOff)
                     )}
                   >
                     <div className={cn(
@@ -982,7 +1007,7 @@ export function MeTab({
                       onClick={() => setWifiOnlySync(!wifiOnlySync)}
                       className={cn(
                         "w-12 h-7 rounded-full transition-colors relative",
-                        wifiOnlySync ? "bg-mind" : cn("bg-stone-200 dark:bg-zinc-600")
+                        wifiOnlySync ? "bg-mind" : cn(mx.toggleTrackOff)
                       )}
                     >
                       <div className={cn(
@@ -1109,7 +1134,7 @@ export function MeTab({
                     onClick={() => setUseMemory(!useMemory)}
                     className={cn(
                       "w-12 h-7 rounded-full transition-colors relative",
-                      useMemory ? "bg-mind" : cn("bg-stone-200 dark:bg-zinc-600")
+                      useMemory ? "bg-mind" : cn(mx.toggleTrackOff)
                     )}
                   >
                     <div className={cn(
@@ -1119,8 +1144,8 @@ export function MeTab({
                   </button>
                 </div>
                 <p className="text-xs text-zinc-400">
-                  When on, Mind may use saved context for more relevant replies.
-                  <span className={cn("underline underline-offset-2 decoration-stone-300", "text-mind hover:text-mind/90")}>
+                  When on, Mindar may use saved context for more relevant replies.
+                  <span className={cn("underline underline-offset-2 decoration-stone-300", mx.citationLink)}>
                     Learn more
                   </span>
                 </p>
@@ -1138,7 +1163,7 @@ export function MeTab({
       )}
 
       {/* Credits & plan purchase */}
-      {showCreditsPlans && !(webLayout && onOpenCreditsPlans) && (
+      {showCreditsPlans && (
         <MeCreditsPlansScreen
           onClose={() => setShowCreditsPlans(false)}
           stats={{
@@ -1212,14 +1237,12 @@ export function MeTab({
         </div>
       )}
 
-      {activityDiary && !(webLayout && (onOpenTimeline || onOpenTimelineDay)) ? (
+      {activityDiary ? (
         <MeActivityTimeline
           days={DEMO_CAPTURE_DIARY}
           initialDate={activityDiary.date}
           initialActivity={activityDiary.value}
           displayName={activeAccount.displayName}
-          webLayout={webLayout}
-          listFirst={activityDiary.listFirst ?? true}
           onClose={() => setActivityDiary(null)}
           getUploads={getDayUploads}
           onShare={(day) => {
@@ -1246,75 +1269,35 @@ export function MeTab({
               })
             )
           }}
+          onOutputFileClick={(file) =>
+            toast.message("Open file", { description: `${file.kindLabel}: ${file.title} (demo)` })
+          }
         />
       ) : null}
 
       <MindShareSheet open={shareSheet != null} payload={shareSheet} onClose={() => setShareSheet(null)} />
 
       {showStorageSpace && <MeStorageSpacePanel onBack={() => setShowStorageSpace(false)} />}
-      {privacyDetail === "guide" && <MePrivacyGuideSummaryPanel onBack={() => setPrivacyDetail(null)} />}
       {privacyDetail === "thirdParty" && <MeThirdPartySharingPanel onBack={() => setPrivacyDetail(null)} />}
       {privacyDetail === "collected" && <MeCollectedPersonalInfoPanel onBack={() => setPrivacyDetail(null)} />}
       {privacyDetail === "privacySettings" && (
         <MePrivacySettingsPanel
           onBack={() => setPrivacyDetail(null)}
+          onOpenDeleteAccount={() => {
+            setPrivacyDetail(null)
+            setLegalDoc("deleteAccount")
+          }}
           crashReportsEnabled={privacyCrashReports}
           onCrashReportsChange={setPrivacyCrashReports}
         />
       )}
+      {legalDoc ? <MeLegalDocumentPanel docId={legalDoc} onBack={() => setLegalDoc(null)} /> : null}
     </>
   )
 
-  if (webLayout) {
-    if (settingsOpen && onCloseSettings) {
-      return (
-        <div className="relative h-full min-h-0">
-          <WebRailSettingsPanel
-            embedded
-            open
-            onClose={onCloseSettings}
-            fontZoomPercent={fontZoomPercent}
-            onFontZoomPercentChange={onFontZoomPercentChange ?? (() => {})}
-          />
-          {accountAndOverlays}
-        </div>
-      )
-    }
-
-    return (
-      <div className="relative h-full min-h-0">
-        <MeTabWebLayout
-          profileHero={webProfileHero}
-          timelinePanel={webTimelinePanel}
-          overlays={
-            <>
-              {accountAndOverlays}
-              {showDailyReview ? (
-                <MeDailyReview
-                  presentation="overlay"
-                  displayName={activeAccount.displayName}
-                  onClose={() => setShowDailyReview(false)}
-                  onShare={(payload) => {
-                    setShareSheet(payload)
-                    setShowDailyReview(false)
-                  }}
-                  onOpenTodayActivity={() => {
-                    setShowDailyReview(false)
-                    openActivityDiaryList()
-                  }}
-                  getUploads={getDayUploads}
-                />
-              ) : null}
-            </>
-          }
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className={cn("relative flex h-full min-h-0 flex-col", "bg-[#fafaf9] dark:bg-zinc-950")}>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-8">{profileHeroBlock}</div>
+    <div className={cn("relative flex h-full min-h-0 flex-col", mx.pageBg)}>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-4">{profileHeroBlock}</div>
       {accountAndOverlays}
     </div>
   )

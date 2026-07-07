@@ -3,14 +3,18 @@ import type { ReactNode } from "react"
 
 import { ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
+
 export function SettingsScreenShell({
   title,
+  subtitle,
   onBack,
   children,
   zClass = "z-[51]",
   headerRight,
 }: {
   title: string
+  subtitle?: string
   onBack: () => void
   children: ReactNode
   zClass?: string
@@ -32,9 +36,12 @@ export function SettingsScreenShell({
         >
           <ChevronRight className="h-6 w-6 rotate-180 text-zinc-600 dark:text-zinc-300" />
         </button>
-        <h1 className="min-w-0 truncate px-1 text-center text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">
-          {title}
-        </h1>
+        <div className="min-w-0 px-1 text-center">
+          <h1 className="truncate text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">{title}</h1>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-[12px] text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+          ) : null}
+        </div>
         <div className="flex min-w-0 items-center justify-end">{headerRight ?? null}</div>
       </header>
       <div className="scrollbar-hide min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -48,7 +55,8 @@ export function SettingsGroup({ children, className }: { children: ReactNode; cl
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-stone-100/90 bg-white dark:border-zinc-800 dark:bg-zinc-900",
+        "overflow-hidden rounded-2xl border border-[#E9ECEF] bg-white dark:border-zinc-800 dark:bg-zinc-900",
+        mx.elevatedShadow,
         className
       )}
     >
@@ -59,11 +67,13 @@ export function SettingsGroup({ children, className }: { children: ReactNode; cl
 
 export function SettingsLinkRow({
   label,
+  hint,
   value,
   onClick,
   last,
 }: {
   label: string
+  hint?: string
   value?: string
   onClick?: () => void
   last?: boolean
@@ -79,7 +89,10 @@ export function SettingsLinkRow({
         !last && "border-b border-stone-100/90 dark:border-zinc-800"
       )}
     >
-      <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">{label}</span>
+      <div className="min-w-0">
+        <span className="text-[15px] font-medium text-zinc-900 dark:text-zinc-100">{label}</span>
+        {hint ? <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">{hint}</p> : null}
+      </div>
       <div className="flex min-w-0 shrink-0 items-center gap-1">
         {value ? (
           <span className="max-w-[9rem] truncate text-[14px] tabular-nums text-zinc-500 dark:text-zinc-400">
@@ -118,7 +131,7 @@ export function SettingsToggleRow({
         onClick={onChange}
         className={cn(
           "relative h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-          checked ? "bg-mind" : "bg-stone-200 dark:bg-zinc-600"
+          checked ? "bg-mind" : mx.toggleTrackOff
         )}
       >
         <span

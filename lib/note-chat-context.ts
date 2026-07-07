@@ -13,7 +13,21 @@ export type NoteChatLaunchContext = {
 
 export function noteChatEntryHint(ctx: Pick<NoteChatLaunchContext, "noteTitle" | "noteType">) {
   if (ctx.noteType === "text") {
-    return `Answers are grounded on your rich note “${ctx.noteTitle}”.`
+    return "Hi, I'm Mindar — ask me to read your notes, answer questions, or turn ideas into deliverables."
   }
-  return `Answers are grounded on “${ctx.noteTitle}” — transcript, summary, and highlights from this capture.`
+  return "I'll answer from this recording's transcript, summary, and highlights."
+}
+
+export function buildNoteChatLaunchContext(
+  note: Note,
+  initialPrompt?: string
+): NoteChatLaunchContext {
+  return {
+    returnNote: note,
+    noteId: note.id,
+    noteTitle: note.title,
+    notePreview: note.preview,
+    noteType: note.type,
+    initialPrompt,
+  }
 }

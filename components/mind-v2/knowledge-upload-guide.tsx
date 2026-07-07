@@ -1,8 +1,7 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import { ClipboardPaste, Cloud, Link2 } from "lucide-react"
-import { KbUploadFileIcon } from "@/components/mind-v2/kb-upload-file-icon"
+import { ClipboardPaste, Cloud, Link2, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const DEFAULT_MAX_ITEMS = 50
@@ -18,8 +17,15 @@ const copy = {
   en: {
     dropTitle: "Or drag and drop files",
     dropHint: "PDF, images, documents, audio, etc.",
+    onboardingTitle: "Drop files here to get started",
+    onboardingHint: "PDF, Word, PowerPoint, Excel, images, and audio — up to 50 sources per library.",
+    stepUpload: "Upload",
+    stepAsk: "Ask Mindar",
+    stepStudio: "Use Studio",
     uploadFile: "Upload files",
     website: "Website",
+    youtube: "YouTube",
+    podcast: "Podcast",
     cloudDrive: "Cloud drive",
     pastedText: "Pasted text",
     count: (n: number, max: number) => `${n}/${max}`,
@@ -27,8 +33,15 @@ const copy = {
   zh: {
     dropTitle: "或拖放文件",
     dropHint: "PDF、图片、文档、音频，等等",
+    onboardingTitle: "拖放文件即可开始",
+    onboardingHint: "支持 PDF、Word、PPT、Excel、图片与音频 — 每个知识库最多 50 个来源。",
+    stepUpload: "上传",
+    stepAsk: "问 Mindar",
+    stepStudio: "用 Studio",
     uploadFile: "上传文件",
     website: "网站",
+    youtube: "YouTube",
+    podcast: "播客",
     cloudDrive: "云端硬盘",
     pastedText: "复制的文字",
     count: (n: number, max: number) => `${n}/${max}`,
@@ -64,6 +77,8 @@ export type KnowledgeUploadGuideProps = {
   maxItems?: number
   onFiles: (files: FileList) => void
   onWebsite: () => void
+  onYouTube?: () => void
+  onPodcast?: () => void
   onCloudDrive: () => void
   onPasteText: () => void
   className?: string
@@ -71,6 +86,8 @@ export type KnowledgeUploadGuideProps = {
   variant?: "default" | "compact"
   /** Hide pill actions — use with KnowledgeAddSourceMenu panel */
   hideActionPills?: boolean
+  /** First-time empty personal library — clearer headline and steps */
+  intent?: "default" | "onboarding"
 }
 
 export function KnowledgeUploadGuide({
@@ -79,16 +96,20 @@ export function KnowledgeUploadGuide({
   maxItems = DEFAULT_MAX_ITEMS,
   onFiles,
   onWebsite,
+  onYouTube,
+  onPodcast,
   onCloudDrive,
   onPasteText,
   className,
   variant = "default",
   hideActionPills = false,
+  intent = "default",
 }: KnowledgeUploadGuideProps) {
   const t = copy[locale]
   const fileRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const compact = variant === "compact"
+  const onboarding = intent === "onboarding" && itemCount === 0
   const ratio = Math.min(100, Math.round((itemCount / maxItems) * 100))
   const pillClass = cn(
     "inline-flex items-center gap-1.5 rounded-full border border-stone-200/90 bg-white font-medium text-zinc-700 shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50",
@@ -107,6 +128,24 @@ export function KnowledgeUploadGuide({
 
   return (
     <div className={cn("w-full", className)}>
+      {onboarding ? (
+        <ol className="mb-4 flex items-center justify-center gap-2 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+          <li className="flex items-center gap-1.5 rounded-full bg-mind/10 px-2.5 py-1 text-mind">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-mind text-[10px] font-bold text-white">
+              1
+            </span>
+            {t.stepUpload}
+          </li>
+          <li className="text-zinc-300 dark:text-zinc-600" aria-hidden>
+            →
+          </li>
+          <li className="rounded-full bg-stone-100 px-2.5 py-1 dark:bg-zinc-800">{t.stepAsk}</li>
+          <li className="text-zinc-300 dark:text-zinc-600" aria-hidden>
+            →
+          </li>
+          <li className="rounded-full bg-stone-100 px-2.5 py-1 dark:bg-zinc-800">{t.stepStudio}</li>
+        </ol>
+      ) : null}
       <div
         role="region"
         aria-label={t.dropTitle}
@@ -131,10 +170,10 @@ export function KnowledgeUploadGuide({
             compact ? "text-[15px]" : "text-[17px] sm:text-[18px]"
           )}
         >
-          {t.dropTitle}
+          {onboarding ? t.onboardingTitle : t.dropTitle}
         </p>
         <p className={cn("mt-1.5 text-center text-zinc-500", compact ? "text-[12px]" : "text-[13px]")}>
-          {t.dropHint}
+          {onboarding ? t.onboardingHint : t.dropHint}
         </p>
 
         {!hideActionPills ? (
@@ -149,14 +188,25 @@ export function KnowledgeUploadGuide({
               onClick={() => fileRef.current?.click()}
               className={pillClass}
             >
-              <KbUploadFileIcon className={iconClass} strokeWidth={1.85} />
+              <Upload className={iconClass} strokeWidth={1.85} />
               {t.uploadFile}
             </button>
             <button type="button" onClick={onWebsite} className={pillClass}>
               <Link2 className={iconClass} strokeWidth={1.85} />
               {t.website}
-              <YouTubeIcon className="h-4 w-4 shrink-0" />
             </button>
+            {onYouTube ? (
+              <button type="button" onClick={onYouTube} className={pillClass}>
+                <YouTubeIcon className={iconClass} />
+                {t.youtube}
+              </button>
+            ) : null}
+            {onPodcast ? (
+              <button type="button" onClick={onPodcast} className={pillClass}>
+                <Link2 className={iconClass} strokeWidth={1.85} />
+                {t.podcast}
+              </button>
+            ) : null}
             <button type="button" onClick={onCloudDrive} className={pillClass}>
               <Cloud className={iconClass} strokeWidth={1.85} />
               {t.cloudDrive}

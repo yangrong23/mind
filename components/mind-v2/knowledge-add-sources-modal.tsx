@@ -16,6 +16,8 @@ export function KnowledgeAddSourcesModal({
   maxItems = 50,
   onFiles,
   onWebsite,
+  onYouTube,
+  onPodcast,
   onCloudDrive,
   onPasteText,
   onMoreAction,
@@ -27,6 +29,8 @@ export function KnowledgeAddSourcesModal({
   maxItems?: number
   onFiles: (files: FileList) => void
   onWebsite: () => void
+  onYouTube?: () => void
+  onPodcast?: () => void
   onCloudDrive: () => void
   onPasteText: () => void
   onMoreAction?: (action: KnowledgeAddSourceAction) => void
@@ -73,6 +77,8 @@ export function KnowledgeAddSourcesModal({
             maxItems={maxItems}
             onFiles={onFiles}
             onWebsite={onWebsite}
+            onYouTube={onYouTube}
+            onPodcast={onPodcast}
             onCloudDrive={onCloudDrive}
             onPasteText={onPasteText}
           />

@@ -1,6 +1,5 @@
 "use client"
 
-import { agentFactoryTone, kbFactoryTone } from "@/lib/factory-tone-classes"
 import {
   createContext,
   useContext,
@@ -10,6 +9,7 @@ import {
   type ReactNode,
 } from "react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import {
   FACTORY_CARD_INNER_FILL,
   FACTORY_CARD_RADIUS,
@@ -72,7 +72,7 @@ function useFactoryOptionSurface() {
 
 function useFactoryTone(kind: FactoryModalKind) {
   const surface = useFactoryOptionSurface()
-  return surface === "filled" ? kbFactoryTone(kind) : agentFactoryTone(kind)
+  return surface === "filled" ? mx.kbFactoryTone[kind] : mx.factoryTone[kind]
 }
 
 interface ContentFactoryModalsProps {
@@ -514,7 +514,7 @@ function GenerateFooter({ onGenerate, onClose }: { onGenerate?: () => void; onCl
           }}
           className={cn(
             "rounded-full px-6 py-2.5 text-[15px] font-semibold text-white shadow-sm",
-            "mind-btn rounded-lg"
+            mx.brandCta
           )}
         >
           Generate

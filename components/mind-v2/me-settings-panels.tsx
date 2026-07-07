@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
 import { ChevronRight, Download, Gift, UserPlus } from "lucide-react"
 import { toast } from "sonner"
+import { MAINLAND_LEGAL_DOCUMENTS } from "@/lib/mainland-legal-docs"
 
 const KB_BYTES = 1 * 1024 * 1024
 const NOTES_BYTES = 11.2 * 1024 * 1024
@@ -20,11 +22,13 @@ function formatMb(bytes: number) {
 
 function PanelChrome({
   title,
+  subtitle,
   onBack,
   children,
   darkHeader,
 }: {
   title: string
+  subtitle?: string
   onBack: () => void
   children: React.ReactNode
   darkHeader?: boolean
@@ -49,14 +53,26 @@ function PanelChrome({
             className={cn("h-6 w-6 rotate-180", darkHeader ? "text-white" : "text-zinc-600")}
           />
         </button>
-        <h1
-          className={cn(
-            "min-w-0 flex-1 truncate text-center text-[15px] font-semibold leading-snug",
-            darkHeader ? "text-white" : "text-zinc-900 dark:text-zinc-100"
-          )}
-        >
-          {title}
-        </h1>
+        <div className="min-w-0 flex-1 text-center">
+          <h1
+            className={cn(
+              "truncate text-[15px] font-semibold leading-snug",
+              darkHeader ? "text-white" : "text-zinc-900 dark:text-zinc-100"
+            )}
+          >
+            {title}
+          </h1>
+          {subtitle ? (
+            <p
+              className={cn(
+                "mt-0.5 truncate text-[12px]",
+                darkHeader ? "text-white/70" : "text-zinc-500 dark:text-zinc-400"
+              )}
+            >
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
         <div className="w-8 shrink-0" />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
@@ -70,7 +86,7 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
   const usedOfTotalPct = Math.min(100, (USED_BYTES / TOTAL_BYTES) * 100)
 
   return (
-    <PanelChrome title="Storage space" onBack={onBack}>
+    <PanelChrome title="Cloud storage" subtitle="Notes & knowledge bases" onBack={onBack}>
       <div className="space-y-5 p-5">
         <div className="overflow-hidden rounded-2xl border border-stone-200/90 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-xs font-medium text-zinc-500">Used</p>
@@ -118,7 +134,7 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
               type="button"
               onClick={() =>
                 toast.message("Limited-time offer", {
-                  description: "Download Mind on phone and desktop to claim bonus cloud storage (demo).",
+                  description: "Download Mindar on phone and desktop to claim bonus cloud storage (demo).",
                 })
               }
               className="flex w-full items-start gap-3 rounded-2xl border border-stone-200/90 bg-white p-4 text-left shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/80"
@@ -136,7 +152,7 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
                   </span>
                 </div>
                 <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                  Install Mind on mobile and desktop to unlock extra space for work and study files.
+                  Install Mindar on mobile and desktop to unlock extra space for work and study files.
                 </p>
               </div>
               <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-zinc-300" />
@@ -158,7 +174,7 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
                   Invite friends, expand free space
                 </span>
                 <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                  For every new Mind user you invite, receive 10 GB free storage — up to 50 GB.
+                  For every new Mindar user you invite, receive 10 GB free storage — up to 50 GB.
                 </p>
               </div>
               <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-zinc-300" />
@@ -167,7 +183,7 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
         </div>
 
         <p className="text-center text-[11px] text-zinc-400">
-          Storage covers notes and knowledge bases only. Other caches are listed under Settings → General.
+          Cloud storage covers notes and knowledge bases only. Device recording space is under Settings → Devices.
         </p>
       </div>
     </PanelChrome>
@@ -176,28 +192,28 @@ export function MeStorageSpacePanel({ onBack }: { onBack: () => void }) {
 
 const COLLECTED_INFO_ROWS = [
   {
-    title: "User identity & authentication",
-    subtitle: "Avatar, display name, nickname, and similar profile fields.",
-  },
-  {
     title: "Account information",
-    subtitle: "Registered account identifiers and linked sign-in methods.",
+    subtitle: "Name, email address, authentication details, and workspace membership.",
   },
   {
-    title: "User content signals",
-    subtitle: "Notification payloads and clipboard snippets you allow the app to read.",
+    title: "User-provided content",
+    subtitle: "Notes, audio recordings, transcripts, documents, prompts, and summaries.",
   },
   {
-    title: "Service logs (search)",
-    subtitle: "In-app search history used to improve recall and ranking.",
+    title: "Workspace metadata",
+    subtitle: "Decisions, tags, and related workspace context tied to your account.",
   },
   {
-    title: "Service logs (browsing)",
-    subtitle: "Screens and articles you open inside Mind for continuity.",
+    title: "Support messages",
+    subtitle: "Messages you send when contacting support or requesting account changes.",
   },
   {
     title: "Device information",
-    subtitle: "Hardware model, OS version, and a stable device identifier for security.",
+    subtitle: "Device type, app version, operating system, and stable device identifiers.",
+  },
+  {
+    title: "Diagnostics and usage",
+    subtitle: "Crash logs, diagnostics, IP-derived region, and usage events for reliability.",
   },
 ] as const
 
@@ -231,9 +247,11 @@ export function MeCollectedPersonalInfoPanel({ onBack }: { onBack: () => void })
 function DocMetaBar({
   onDownload,
   dark,
+  lastUpdated = "June 12, 2026",
 }: {
   onDownload: () => void
   dark?: boolean
+  lastUpdated?: string
 }) {
   return (
     <div
@@ -244,14 +262,13 @@ function DocMetaBar({
           : "border-stone-100 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/80"
       )}
     >
-      <span>Updated · 2026-01-12</span>
-      <span>Effective · 2026-01-19</span>
+      <span>Updated · {lastUpdated}</span>
       <button
         type="button"
         onClick={onDownload}
         className={cn(
           "inline-flex items-center gap-1 font-medium",
-          dark ? "text-mind/28" : cn("text-mind", "text-mind hover:text-mind/90")
+          dark ? "text-mind/28" : cn("text-mind", mx.citationLink)
         )}
       >
         <Download className="h-3.5 w-3.5" />
@@ -269,7 +286,7 @@ export function MePrivacyGuideSummaryPanel({ onBack }: { onBack: () => void }) {
           <ChevronRight className="h-6 w-6 rotate-180 text-white" />
         </button>
         <p className="min-w-0 flex-1 text-center text-[13px] font-semibold leading-snug">
-          Mind — privacy protection guide (summary)
+          Mindar — privacy protection guide (summary)
         </p>
         <div className="w-8 shrink-0" />
       </div>
@@ -282,7 +299,7 @@ export function MePrivacyGuideSummaryPanel({ onBack }: { onBack: () => void }) {
         <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
           We take your personal information seriously. This summary explains how we collect, use, and protect it in
           line with applicable laws and common industry practice. For the full guide, open{" "}
-          <span className="font-medium text-zinc-800 dark:text-zinc-200">Me → Settings → About Mind</span> (demo).
+          <span className="font-medium text-zinc-800 dark:text-zinc-200">Me → Settings → About Mindar</span> (demo).
         </p>
         <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">I. Information we collect</h3>
         <div className="overflow-x-auto rounded-lg border border-zinc-200 text-left text-[11px] dark:border-zinc-700">
@@ -319,6 +336,10 @@ export function MePrivacyGuideSummaryPanel({ onBack }: { onBack: () => void }) {
 }
 
 export function MeThirdPartySharingPanel({ onBack }: { onBack: () => void }) {
+  const sharingSection = MAINLAND_LEGAL_DOCUMENTS.privacyPolicy.sections.find(
+    (section) => section.heading === "Sharing and service providers"
+  )
+
   return (
     <div className="absolute inset-0 z-[56] flex flex-col bg-white animate-in slide-in-from-right duration-200 dark:bg-zinc-950">
       <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 bg-zinc-800 px-3 py-3 text-white dark:bg-zinc-900">
@@ -326,21 +347,25 @@ export function MeThirdPartySharingPanel({ onBack }: { onBack: () => void }) {
           <ChevronRight className="h-6 w-6 rotate-180 text-white" />
         </button>
         <p className="min-w-0 flex-1 text-center text-[13px] font-semibold leading-snug">
-          Mind — personal information shared with third parties
+          Third-party sharing
         </p>
         <div className="w-8 shrink-0" />
       </div>
       <DocMetaBar
         dark
+        lastUpdated="June 12, 2026"
         onDownload={() => toast.success("Download started", { description: "PDF export is a demo." })}
       />
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5">
-        <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100">Introduction</h2>
+        <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100">Sharing and service providers</h2>
+        {sharingSection?.paragraphs.map((paragraph) => (
+          <p key={paragraph} className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+            {paragraph}
+          </p>
+        ))}
         <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-          Some features rely on third-party SDKs or services (for example push delivery, crash analytics, or cloud
-          storage). We only share the minimum information required for those features to function, under strict
-          contracts. Each provider processes data under their own privacy policy; we review them before integration.
-          This document is a high-level overview — download the full notice for legal detail (demo).
+          Each provider processes data under their own privacy policy; we review them before integration. See the full
+          Privacy Policy under Settings → Privacy or About for complete legal detail.
         </p>
       </div>
     </div>
@@ -349,10 +374,12 @@ export function MeThirdPartySharingPanel({ onBack }: { onBack: () => void }) {
 
 export function MePrivacySettingsPanel({
   onBack,
+  onOpenDeleteAccount,
   crashReportsEnabled,
   onCrashReportsChange,
 }: {
   onBack: () => void
+  onOpenDeleteAccount?: () => void
   crashReportsEnabled: boolean
   onCrashReportsChange: (v: boolean) => void
 }) {
@@ -391,7 +418,7 @@ export function MePrivacySettingsPanel({
               }}
               className={cn(
                 "relative mt-0.5 h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                personalized ? "bg-mind" : cn("bg-stone-200 dark:bg-zinc-600")
+                personalized ? "bg-mind" : cn(mx.toggleTrackOff)
               )}
             >
               <span
@@ -464,7 +491,7 @@ export function MePrivacySettingsPanel({
               }}
               className={cn(
                 "relative mt-0.5 h-7 w-12 shrink-0 rounded-full p-0.5 transition-colors",
-                crashReportsEnabled ? "bg-mind" : cn("bg-stone-200 dark:bg-zinc-600")
+                crashReportsEnabled ? "bg-mind" : cn(mx.toggleTrackOff)
               )}
             >
               <span
@@ -489,6 +516,17 @@ export function MePrivacySettingsPanel({
           <span className="text-[15px] text-zinc-900 dark:text-zinc-100">Export my data</span>
           <ChevronRight className="h-5 w-5 text-zinc-300" />
         </button>
+
+        {onOpenDeleteAccount ? (
+          <button
+            type="button"
+            onClick={onOpenDeleteAccount}
+            className="flex w-full items-center justify-between rounded-xl border border-red-100 bg-white px-4 py-4 text-left shadow-sm dark:border-red-900/40 dark:bg-zinc-900"
+          >
+            <span className="text-[15px] font-medium text-red-600 dark:text-red-400">Delete account</span>
+            <ChevronRight className="h-5 w-5 text-red-300" />
+          </button>
+        ) : null}
       </div>
     </PanelChrome>
   )

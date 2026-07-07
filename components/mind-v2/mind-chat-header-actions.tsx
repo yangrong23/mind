@@ -1,7 +1,10 @@
 "use client"
 
+import type React from "react"
 import { History, MessageSquarePlus } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { mx } from "@/lib/medrix-design-tokens"
+
 export type MindChatHeaderActionsProps = {
   onNewChat: () => void
   onOpenHistory: () => void
@@ -10,6 +13,8 @@ export type MindChatHeaderActionsProps = {
   size?: "default" | "compact"
   /** Knowledge Ask uses neutral chrome; Agent chat keeps mind accent on new chat */
   newChatAccent?: boolean
+  /** Optional control before new-chat / history (e.g. linked libraries) */
+  leading?: React.ReactNode
 }
 
 const btnBase =
@@ -21,11 +26,13 @@ export function MindChatHeaderActions({
   className,
   size = "default",
   newChatAccent = true,
+  leading,
 }: MindChatHeaderActionsProps) {
   const dim = size === "compact" ? "h-9 w-9" : "h-10 w-10"
   const icon = size === "compact" ? "h-[18px] w-[18px]" : "h-5 w-5"
   return (
     <div className={cn("flex shrink-0 items-center gap-0.5", className)}>
+      {leading}
       <button
         type="button"
         className={cn(
@@ -35,7 +42,7 @@ export function MindChatHeaderActions({
             ? cn(
                 "bg-mind/10 text-mind ring-1 ring-mind/20 hover:bg-mind/15 hover:text-mind active:bg-mind/20",
                 "dark:bg-mind/15 dark:text-mind dark:ring-mind/30 dark:hover:bg-mind/20",
-                "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                mx.navEase
               )
             : "text-zinc-600 hover:bg-stone-200/70 dark:text-zinc-300 dark:hover:bg-zinc-800/80"
         )}
